@@ -1,0 +1,8 @@
+# Dados sensíveis — nunca versionar
+*.xlsx
+*.xls
+
+# Arquivos de sistema
+.DS_Store
+Thumbs.db
+desktop.ini
