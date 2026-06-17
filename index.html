@@ -692,6 +692,52 @@
     <canvas id="grafico-scatter-preco-pdv" style="max-height:360px;"></canvas>
   </div>
 
+  <!-- ═══ SEÇÃO 8 — MARCAS ═══ -->
+  <div class="secao-header" id="sec-marcas" style="display:none;">8 — Marcas</div>
+
+  <!-- A: Heatmap Marca × Cliente — Faturamento -->
+  <div class="card" id="area-heatmap-marcas" style="display:none;">
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Faturamento por Marca × Cliente</div>
+    <div class="subtitulo">Faturamento sell-out · Linhas = marcas ordenadas por total · Colunas = clientes ordenados por total · Azul mais escuro = maior faturamento</div>
+    <div id="heatmap-marcas-container" style="overflow-x:auto;margin-top:.75rem;"></div>
+  </div>
+
+  <!-- B: Mix de marcas por cliente — barras 100% empilhadas -->
+  <div class="card" id="area-mix-marca-cliente" style="display:none;">
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Mix de Marcas por Cliente</div>
+    <div class="subtitulo">Participação % de cada marca no faturamento sell-out de cada cliente · Barras 100% empilhadas</div>
+    <canvas id="grafico-mix-marca-cliente" style="max-height:380px;"></canvas>
+  </div>
+
+  <!-- C: Evolução de faturamento por marca -->
+  <div class="card" id="area-evolucao-marca" style="display:none;">
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Evolução do Faturamento por Marca</div>
+    <div class="subtitulo">Faturamento sell-out mensal · Uma linha por marca · Selecione as marcas abaixo</div>
+    <div style="margin:.6rem 0 1rem;">
+      <div style="font-size:.78rem;color:#718096;margin-bottom:.4rem;">
+        Marcas exibidas —
+        <a href="#" style="color:#2b6cb0;text-decoration:none;" onclick="event.preventDefault();selecionarTodosMarcasEvolucao(true)">todas</a> ·
+        <a href="#" style="color:#2b6cb0;text-decoration:none;" onclick="event.preventDefault();selecionarTodosMarcasEvolucao(false)">nenhuma</a>
+      </div>
+      <div id="container-marca-evolucao" style="display:flex;flex-wrap:wrap;gap:.4rem .9rem;"></div>
+    </div>
+    <canvas id="grafico-evolucao-marca" style="max-height:340px;"></canvas>
+  </div>
+
+  <!-- D: Margem Bravir % por marca — só produtos próprios -->
+  <div class="card" id="area-margem-marca" style="display:none;">
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Margem Bravir % por Marca — Produtos Próprios</div>
+    <div class="subtitulo">Apenas marcas próprias Bravir · Margem contribuição Bravir ÷ Sell in · Barras horizontais ordenadas do maior para o menor</div>
+    <canvas id="grafico-margem-marca" style="max-height:260px;"></canvas>
+  </div>
+
+  <!-- E: Ranking de marcas — barras empilhadas decompostas -->
+  <div class="card" id="area-ranking-marcas" style="display:none;">
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Ranking de Marcas — Decomposição do Faturamento Sell-out</div>
+    <div class="subtitulo">Altura total da barra = Faturamento Sell-out · Verde = Margem Bravir · Cinza = Sell In excl. Margem · Azul = Markup Varejista (Sell Out − Sell In)</div>
+    <canvas id="grafico-ranking-marcas" style="max-height:380px;"></canvas>
+  </div>
+
 </main>
 
 <script>
@@ -703,10 +749,19 @@ const MESES_ORDEM = {
   "Setembro": 9, "Outubro": 10, "Novembro": 11, "Dezembro": 12
 };
 
-// Cores fixas para os clientes (máx. 9)
+// Marcas próprias Bravir — sempre aparecem primeiro nas tabelas e gráficos da seção 8
+function prioridadeMarca(nome) {
+  const n = (nome || '').toUpperCase();
+  if (n.includes('LABY'))    return 0;
+  if (n.includes('BENDITA')) return 1;
+  if (n.includes('BRAVIR'))  return 2;
+  return 3; // white label (terceiros)
+}
+
+// Cores fixas para os clientes — usando módulo para suportar qualquer número de clientes
 const CORES = [
   '#2b6cb0', '#2c7a7b', '#276749', '#744210',
-  '#702459', '#553c9a', '#9c4221', '#2d3748', '#1a365d'
+  '#702459', '#553c9a', '#9c4221', '#2d3748', '#1a365d', '#c05621'
 ];
 
 const BRL = v =>
@@ -744,6 +799,10 @@ let graficoRankingVariacaoPreco  = null;
 let graficoMargemComp          = null;
 let graficoMargemCat           = null;
 let graficoScatterMargemBravir = null;
+let graficoMixMarcaCliente     = null;
+let graficoEvolucaoMarcas      = null;
+let graficoMargemMarca         = null;
+let graficoRankingMarcas       = null;
 
 // ─── Leitura do arquivo ───────────────────────────────────────────────────────
 
@@ -837,6 +896,15 @@ document.getElementById('input-arquivo').addEventListener('change', function (e)
       document.getElementById('area-preco-margem-bravir').style.display      = 'block';
       document.getElementById('area-ranking-variacao-preco').style.display   = 'block';
       document.getElementById('area-scatter-preco-pdv').style.display        = 'block';
+
+      // Seção 8 — Marcas
+      document.getElementById('sec-marcas').style.display               = 'block';
+      document.getElementById('area-heatmap-marcas').style.display      = 'block';
+      document.getElementById('area-mix-marca-cliente').style.display   = 'block';
+      document.getElementById('area-evolucao-marca').style.display      = 'block';
+      document.getElementById('area-margem-marca').style.display        = 'block';
+      document.getElementById('area-ranking-marcas').style.display      = 'block';
+
       popularSKUs();
       popularClienteTemperatura();
       popularSKUPreco();
@@ -1157,6 +1225,11 @@ function atualizarGrafico() {
   renderizarRankingVariacaoPreco();
   popularScatterPrecoPDV();
   renderizarScatterPrecoPDV();
+  renderizarHeatmapMarcas();
+  renderizarMixMarcaCliente();
+  renderizarEvolucaoMarcas();
+  renderizarMargemMarca();
+  renderizarRankingMarcas();
 
   // Destroi gráfico anterior para não acumular
   if (graficoAtual) graficoAtual.destroy();
@@ -1398,12 +1471,14 @@ const CORES_CAT = ['#2b6cb0', '#276749', '#744210', '#702459', '#2c7a7b'];
 // ─── Coordenadas por região para busca de temperatura histórica (Open-Meteo) ──
 const COORDS_REGIAO = {
   'São Paulo (SP)':      { lat: -23.55, lon: -46.63 }, // São Paulo capital
+  'Estado de SP':        { lat: -22.00, lon: -48.50 }, // Centro geográfico do estado de SP (região de Bauru)
   'Interior SP':         { lat: -22.90, lon: -47.06 }, // Campinas
   'Nordeste (capitais)': { lat:  -3.72, lon: -38.54 }, // Fortaleza
   'BH (região metro)':   { lat: -19.92, lon: -43.94 }, // Belo Horizonte
   'Norte MG':            { lat: -16.73, lon: -43.86 }, // Montes Claros
   'RS / SC':             { lat: -30.03, lon: -51.22 }, // Porto Alegre
   'Rio de Janeiro':      { lat: -22.91, lon: -43.17 }, // Rio de Janeiro
+  'Curitiba (PR)':       { lat: -25.43, lon: -49.27 }, // Curitiba
 };
 
 // Cache para não re-buscar a mesma região
@@ -1455,18 +1530,34 @@ const MESES_TEMP = [
   '2026|Janeiro','2026|Fevereiro','2026|Março','2026|Abril','2026|Maio'
 ];
 
-function regiaoDeCliente(nome) {
+// Retorna array de regiões para o cliente (suporta múltiplas regiões → temperatura média)
+function regioesDe(nome) {
   const n = (nome || '').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-  if (n.includes('RAIA') || n.includes('DROGASIL'))          return 'São Paulo (SP)';
-  if (n.includes('DPSP'))                                     return 'São Paulo (SP)';
-  if (n.includes('DROGAL'))                                   return 'Interior SP';
-  if (n.includes('PAGUE MENOS') || n.includes('EXTRAFARMA')) return 'Nordeste (capitais)';
-  if (n.includes('ARAUJO'))                                   return 'BH (região metro)';
-  if (n.includes('INDIANA'))                                  return 'Norte MG';
-  if (n.includes('PANVEL'))                                   return 'RS / SC';
-  if (n.includes('SAO JOAO') || n.includes('JOAO'))          return 'RS / SC';
-  if (n.includes('VENANCIO'))                                 return 'Rio de Janeiro';
-  return null;
+  if (n.includes('RAIA') || n.includes('DROGASIL'))          return ['Estado de SP'];
+  if (n.includes('DPSP'))                                     return ['São Paulo (SP)', 'Rio de Janeiro'];
+  if (n.includes('DROGAL'))                                   return ['Interior SP'];
+  if (n.includes('PAGUE MENOS') || n.includes('EXTRAFARMA')) return ['Nordeste (capitais)'];
+  if (n.includes('ARAUJO'))                                   return ['BH (região metro)'];
+  if (n.includes('INDIANA'))                                  return ['Norte MG'];
+  if (n.includes('PANVEL'))                                   return ['RS / SC'];
+  if (n.includes('SAO JOAO') || n.includes('JOAO'))          return ['RS / SC'];
+  if (n.includes('VENANCIO'))                                 return ['Rio de Janeiro'];
+  if (n.includes('NISSEI'))                                   return ['Curitiba (PR)'];
+  return [];
+}
+
+// Busca temperatura para múltiplas regiões em paralelo e retorna a média ponto a ponto
+async function buscarTemperaturaMedia(regioes) {
+  if (!regioes || regioes.length === 0) return null;
+  const resultados = await Promise.all(regioes.map(r => buscarTemperaturaRegiao(r)));
+  const validos = resultados.filter(Boolean);
+  if (validos.length === 0) return null;
+  // Para cada posição nos arrays, faz a média ignorando nulls
+  const mediaArray = (campo) => MESES_TEMP.map((_, i) => {
+    const vals = validos.map(r => r[campo][i]).filter(v => v !== null && v !== undefined);
+    return vals.length > 0 ? parseFloat((vals.reduce((s, v) => s + v, 0) / vals.length).toFixed(1)) : null;
+  });
+  return { mean: mediaArray('mean'), min: mediaArray('min') };
 }
 
 // ─── Donut: mix de categorias ─────────────────────────────────────────────────
@@ -1619,8 +1710,8 @@ function renderizarVendaPorPDV(dados) {
       labels: clientes.map(c => c.nome),
       datasets: [{
         data: clientes.map(c => c.vpdv),
-        backgroundColor: CORES.slice(0, clientes.length).map(c => c + 'cc'),
-        borderColor:     CORES.slice(0, clientes.length),
+        backgroundColor: clientes.map((_, i) => CORES[i % CORES.length] + 'cc'),
+        borderColor:     clientes.map((_, i) => CORES[i % CORES.length]),
         borderWidth: 1, borderRadius: 4,
       }]
     },
@@ -2590,8 +2681,9 @@ async function renderizarTemperatura() {
   const cli = document.getElementById('sel-cliente-temp').value;
   if (!cli) return;
 
-  const regiao = regiaoDeCliente(cli);
+  const regioes = regioesDe(cli);
   const tituloEl = document.getElementById('titulo-temperatura');
+  const labelRegiao = regioes.length > 1 ? regioes.join(' + ') : regioes[0] || null;
 
   // Sell-out por mês para este cliente
   const base = dadosFiltradosSemPeriodo();
@@ -2604,13 +2696,13 @@ async function renderizarTemperatura() {
   const rotulos = MESES_TEMP.map(m => { const [a, ms] = m.split('|'); return `${ms.slice(0,3)}/${a}`; });
   const sellOut = MESES_TEMP.map(m => porMes[m] || 0);
 
-  // Busca temperatura histórica real
+  // Busca temperatura histórica real (média entre regiões quando há mais de uma)
   let temps = null;
-  if (regiao) {
+  if (regioes.length > 0) {
     tituloEl.textContent = `${cli} — carregando temperatura histórica…`;
     try {
-      temps = await buscarTemperaturaRegiao(regiao);
-      tituloEl.textContent = `${cli} — Sell Out × Temperatura Real (${regiao})`;
+      temps = await buscarTemperaturaMedia(regioes);
+      tituloEl.textContent = `${cli} — Sell Out × Temperatura Real (${labelRegiao})`;
     } catch (e) {
       tituloEl.textContent = `${cli} — Sell Out (erro ao buscar temperatura: ${e.message})`;
     }
@@ -3120,8 +3212,9 @@ function renderizarMarkupCliente() {
   const gMax = todosVals.length ? Math.max(...todosVals) : 1;
   const gSpan = gMax - gMin || 1;
 
+  const thV = s => `<th style="writing-mode:vertical-rl;transform:rotate(180deg);height:120px;vertical-align:bottom;text-align:left;padding:.5rem .25rem .25rem;white-space:nowrap;font-size:.78rem;">${s}</th>`;
   let html = `<table class="heatmap-preco">
-    <thead><tr><th>Mês</th>${clientesOrd.map(c => `<th>${c}</th>`).join('')}</tr></thead>
+    <thead><tr><th>Mês</th>${clientesOrd.map(c => thV(c)).join('')}</tr></thead>
     <tbody>`;
 
   meses.forEach(m => {
@@ -3176,7 +3269,8 @@ function renderizarHeatmapPreco() {
   const topSKUs  = Object.keys(fatSKU).sort((a, b) => fatSKU[b] - fatSKU[a]).slice(0, 15);
   const clientes = [...new Set(dados.map(r => r['Cliente']).filter(Boolean))].sort();
 
-  let html = `<table class="heatmap-preco"><thead><tr><th>SKU</th>${clientes.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>`;
+  const thVP = s => `<th style="writing-mode:vertical-rl;transform:rotate(180deg);height:120px;vertical-align:bottom;text-align:left;padding:.5rem .25rem .25rem;white-space:nowrap;font-size:.78rem;">${s}</th>`;
+  let html = `<table class="heatmap-preco"><thead><tr><th>SKU</th>${clientes.map(c => thVP(c)).join('')}</tr></thead><tbody>`;
 
   topSKUs.forEach(sku => {
     const precos = clientes.map(cli => {
@@ -3676,6 +3770,376 @@ function renderizarEvolucaoPreco() {
         y: {
           beginAtZero: true,
           title: { display: true, text: 'Preço médio (R$)' },
+          ticks: { callback: v => BRL(v) }
+        }
+      }
+    }
+  });
+}
+
+// ─── Seção 8: Marcas ──────────────────────────────────────────────────────────
+
+function renderizarHeatmapMarcas() {
+  const dados = filtrarDados();
+  const por = {};
+  const marcaSet = new Set(), cliSet = new Set();
+
+  dados.forEach(r => {
+    const marca = r['Marca'], cli = r['Cliente'];
+    const fat = num(r['Valor (R$) Sell Out']);
+    if (!marca || !cli || fat <= 0) return;
+    if (!por[marca]) por[marca] = {};
+    por[marca][cli] = (por[marca][cli] || 0) + fat;
+    marcaSet.add(marca); cliSet.add(cli);
+  });
+
+  const totMarcaFn = m => Object.values(por[m] || {}).reduce((s, v) => s + v, 0);
+  const marcas = [...marcaSet].sort((a, b) => {
+    const pA = prioridadeMarca(a), pB = prioridadeMarca(b);
+    if (pA !== pB) return pA - pB;
+    return totMarcaFn(b) - totMarcaFn(a);
+  });
+  const clientes = [...cliSet].sort((a, b) => {
+    let tA = 0, tB = 0;
+    marcas.forEach(m => { tA += por[m]?.[a] || 0; tB += por[m]?.[b] || 0; });
+    return tB - tA;
+  });
+
+  let globalMax = 0;
+  marcas.forEach(m => clientes.forEach(c => { globalMax = Math.max(globalMax, por[m]?.[c] || 0); }));
+
+  const thVert = s => `<th style="writing-mode:vertical-rl;transform:rotate(180deg);height:120px;vertical-align:bottom;text-align:left;padding:.5rem .25rem .25rem;white-space:nowrap;font-size:.78rem;border-bottom:2px solid #e2e8f0;">${s}</th>`;
+  const tdFixo = (s, extra = '') => `<td style="position:sticky;left:0;z-index:1;background:#fff;padding:.4rem .6rem;white-space:nowrap;font-weight:600;border-right:1px solid #e2e8f0;${extra}">${s}</td>`;
+  let html = '<table style="border-collapse:collapse;font-size:.82rem;">';
+  html += '<thead><tr>';
+  html += `<th style="position:sticky;left:0;z-index:2;background:#fff;padding:.4rem .6rem;text-align:left;border-bottom:2px solid #e2e8f0;border-right:1px solid #e2e8f0;white-space:nowrap;">Marca</th>`;
+  clientes.forEach(c => { html += thVert(c); });
+  html += thVert('<b>Total</b>') + '</tr></thead><tbody>';
+
+  marcas.forEach((m, idx) => {
+    const bg = idx % 2 === 0 ? '#fff' : '#f7fafc';
+    let totMarca = 0;
+    html += `<tr style="background:${bg};">` + tdFixo(m, `background:${bg};`);
+    clientes.forEach(c => {
+      const v = por[m]?.[c] || 0;
+      totMarca += v;
+      const t = globalMax > 0 ? v / globalMax : 0;
+      const alpha = v > 0 ? 0.12 + t * 0.78 : 0;
+      const cellBg = v > 0 ? `rgba(43,108,176,${alpha.toFixed(2)})` : 'transparent';
+      const cor = alpha > 0.55 ? '#fff' : '#2d3748';
+      html += `<td style="padding:.4rem .6rem;text-align:right;background:${cellBg};color:${cor};">${v > 0 ? BRL(v) : '—'}</td>`;
+    });
+    html += `<td style="padding:.4rem .6rem;text-align:right;font-weight:600;background:#edf2f7;">${BRL(totMarca)}</td></tr>`;
+  });
+
+  html += '<tr style="font-weight:700;border-top:2px solid #e2e8f0;background:#e2e8f0;">' + tdFixo('Total', 'background:#e2e8f0;');
+  let grandTotal = 0;
+  clientes.forEach(c => {
+    let t = 0; marcas.forEach(m => { t += por[m]?.[c] || 0; }); grandTotal += t;
+    html += `<td style="padding:.4rem .6rem;text-align:right;">${BRL(t)}</td>`;
+  });
+  html += `<td style="padding:.4rem .6rem;text-align:right;background:#cbd5e0;">${BRL(grandTotal)}</td></tr>`;
+  html += '</tbody></table>';
+  document.getElementById('heatmap-marcas-container').innerHTML = html;
+}
+
+function renderizarMixMarcaCliente() {
+  const dados = filtrarDados();
+  const por = {};
+  const cliSet = new Set(), marcaSet = new Set();
+
+  dados.forEach(r => {
+    const cli = r['Cliente'], marca = r['Marca'];
+    const fat = num(r['Valor (R$) Sell Out']);
+    if (!cli || !marca || fat <= 0) return;
+    if (!por[cli]) por[cli] = {};
+    por[cli][marca] = (por[cli][marca] || 0) + fat;
+    cliSet.add(cli); marcaSet.add(marca);
+  });
+
+  const clientes = [...cliSet].sort((a, b) => {
+    const tA = Object.values(por[a] || {}).reduce((s, v) => s + v, 0);
+    const tB = Object.values(por[b] || {}).reduce((s, v) => s + v, 0);
+    return tA - tB; // crescente pois indexAxis='y' inverte a ordem visual
+  });
+
+  const marcas = [...marcaSet].sort((a, b) => {
+    const pA = prioridadeMarca(a), pB = prioridadeMarca(b);
+    if (pA !== pB) return pA - pB;
+    let tA = 0, tB = 0;
+    [...cliSet].forEach(c => { tA += por[c]?.[a] || 0; tB += por[c]?.[b] || 0; });
+    return tB - tA;
+  });
+
+  const CORES_M = ['#2b6cb0','#276749','#744210','#702459','#2c7a7b','#c05621','#553c9a','#97266d','#2d3748','#1a365d','#e53e3e'];
+
+  const datasets = marcas.map((marca, i) => ({
+    label: marca,
+    data: clientes.map(c => {
+      const totCli = Object.values(por[c] || {}).reduce((s, v) => s + v, 0);
+      const v = por[c]?.[marca] || 0;
+      return totCli > 0 ? parseFloat(((v / totCli) * 100).toFixed(1)) : 0;
+    }),
+    backgroundColor: CORES_M[i % CORES_M.length] + 'cc',
+    borderColor: CORES_M[i % CORES_M.length],
+    borderWidth: 1,
+  }));
+
+  if (graficoMixMarcaCliente) graficoMixMarcaCliente.destroy();
+  graficoMixMarcaCliente = new Chart(document.getElementById('grafico-mix-marca-cliente'), {
+    type: 'bar',
+    data: { labels: clientes, datasets },
+    options: {
+      indexAxis: 'y', responsive: true,
+      plugins: {
+        legend: { display: true, position: 'right', labels: { font: { size: 11 } } },
+        tooltip: { callbacks: { label: ctx => `  ${ctx.dataset.label}: ${ctx.parsed.x.toFixed(1)}%` } }
+      },
+      scales: {
+        x: { stacked: true, min: 0, max: 100, ticks: { callback: v => v + '%' } },
+        y: { stacked: true }
+      }
+    }
+  });
+}
+
+function popularCheckboxesMarcasEvolucao(marcasOrdenadas) {
+  const container = document.getElementById('container-marca-evolucao');
+  const listaAtual = marcasOrdenadas.join('|');
+  if (container.dataset.lista === listaAtual) return;
+  container.dataset.lista = listaAtual;
+
+  const marcadosAntes = new Set(
+    [...container.querySelectorAll('input[type=checkbox]:checked')].map(c => c.value)
+  );
+  const primeiraVez = marcadosAntes.size === 0 && container.children.length === 0;
+
+  container.innerHTML = '';
+  marcasOrdenadas.forEach(marca => {
+    const marcado = primeiraVez ? true : marcadosAntes.has(marca);
+    const label = document.createElement('label');
+    label.style.cssText = 'display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:#2d3748;cursor:pointer;white-space:nowrap;';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.value = marca; cb.checked = marcado;
+    cb.style.accentColor = '#2b6cb0';
+    cb.addEventListener('change', renderizarEvolucaoMarcas);
+    label.appendChild(cb);
+    label.appendChild(document.createTextNode(marca));
+    container.appendChild(label);
+  });
+}
+
+function selecionarTodosMarcasEvolucao(todos) {
+  document.querySelectorAll('#container-marca-evolucao input[type=checkbox]')
+    .forEach(cb => { cb.checked = todos; });
+  renderizarEvolucaoMarcas();
+}
+
+function renderizarEvolucaoMarcas() {
+  const dados = filtrarDados();
+
+  // Descobre todas as marcas disponíveis (ordenadas: Bravir primeiro, depois por faturamento)
+  const fatPorMarca = {};
+  dados.forEach(r => {
+    const marca = r['Marca'];
+    if (marca) fatPorMarca[marca] = (fatPorMarca[marca] || 0) + num(r['Valor (R$) Sell Out']);
+  });
+  const marcasDisp = Object.keys(fatPorMarca).sort((a, b) => {
+    const pA = prioridadeMarca(a), pB = prioridadeMarca(b);
+    if (pA !== pB) return pA - pB;
+    return fatPorMarca[b] - fatPorMarca[a];
+  });
+  popularCheckboxesMarcasEvolucao(marcasDisp);
+
+  // Filtra dados pelas marcas selecionadas
+  const selecionadas = new Set(
+    [...document.querySelectorAll('#container-marca-evolucao input[type=checkbox]:checked')]
+      .map(c => c.value)
+  );
+
+  const por = {};
+  const mesSet = new Set();
+
+  dados.forEach(r => {
+    const marca = r['Marca'];
+    const fat = num(r['Valor (R$) Sell Out']);
+    if (!marca || !selecionadas.has(marca) || fat <= 0) return;
+    const ch = `${r['Ano']}|${r['Mês']}`;
+    if (!por[marca]) por[marca] = {};
+    por[marca][ch] = (por[marca][ch] || 0) + fat;
+    mesSet.add(ch);
+  });
+
+  // Mantém a ordem do seletor (Bravir primeiro, depois por faturamento)
+  const marcas = marcasDisp.filter(m => selecionadas.has(m) && por[m]);
+
+  const meses = [...mesSet].sort((a, b) => {
+    const [aA, mA] = a.split('|'), [aB, mB] = b.split('|');
+    return (parseInt(aA)*100+(MESES_ORDEM[mA]||0)) - (parseInt(aB)*100+(MESES_ORDEM[mB]||0));
+  });
+  const rotulos = meses.map(m => { const [a, ms] = m.split('|'); return `${ms.slice(0,3)}/${a}`; });
+
+  const CORES_M = ['#2b6cb0','#276749','#744210','#702459','#2c7a7b','#c05621','#553c9a','#97266d','#2d3748','#1a365d','#e53e3e'];
+
+  const datasets = marcas.map((marca, i) => ({
+    label: marca,
+    data: meses.map(m => por[marca]?.[m] || 0),
+    borderColor: CORES_M[i % CORES_M.length],
+    backgroundColor: CORES_M[i % CORES_M.length] + '22',
+    borderWidth: 2, pointRadius: 3, fill: false, tension: 0.3,
+  }));
+
+  if (graficoEvolucaoMarcas) graficoEvolucaoMarcas.destroy();
+  graficoEvolucaoMarcas = new Chart(document.getElementById('grafico-evolucao-marca'), {
+    type: 'line',
+    data: { labels: rotulos, datasets },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: true, position: 'top', labels: { font: { size: 11 } } },
+        tooltip: { callbacks: { label: ctx => `  ${ctx.dataset.label}: ${BRL(ctx.parsed.y)}` } }
+      },
+      scales: {
+        x: { ticks: { font: { size: 11 } } },
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: 'Faturamento Sell-out (R$)' },
+          ticks: { callback: v => BRL(v) }
+        }
+      }
+    }
+  });
+}
+
+function renderizarMargemMarca() {
+  const dados = filtrarDados().filter(r => r['Bravir / Terceiros'] === 'Bravir');
+  const por = {};
+
+  dados.forEach(r => {
+    const marca = r['Marca'];
+    const mb = r['Margem Contribuição Bravir (R$)'];
+    if (!marca || vazio(mb)) return;
+    if (!por[marca]) por[marca] = { mb: 0, si: 0 };
+    por[marca].mb += num(mb);
+    por[marca].si += num(r['Valor (R$) Sell in']);
+  });
+
+  const marcas = Object.keys(por)
+    .filter(m => por[m].si > 0)
+    .sort((a, b) => {
+      const pA = prioridadeMarca(a), pB = prioridadeMarca(b);
+      if (pA !== pB) return pA - pB;
+      return (por[b].mb / por[b].si) - (por[a].mb / por[a].si);
+    });
+
+  const valores = marcas.map(m => parseFloat(((por[m].mb / por[m].si) * 100).toFixed(1)));
+
+  if (graficoMargemMarca) graficoMargemMarca.destroy();
+  graficoMargemMarca = new Chart(document.getElementById('grafico-margem-marca'), {
+    type: 'bar',
+    data: {
+      labels: marcas,
+      datasets: [{
+        label: 'Margem Bravir %',
+        data: valores,
+        backgroundColor: valores.map(v => (v >= 0 ? '#276749cc' : '#9c4221cc')),
+        borderColor:     valores.map(v => (v >= 0 ? '#276749'   : '#9c4221')),
+        borderWidth: 1, borderRadius: 4,
+      }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => `  Margem Bravir: ${ctx.parsed.x.toFixed(1)}%` } }
+      },
+      scales: {
+        x: { title: { display: true, text: 'Margem Contribuição Bravir (%)' }, ticks: { callback: v => v + '%' } }
+      }
+    }
+  });
+}
+
+function renderizarRankingMarcas() {
+  const dados = filtrarDados();
+  const por = {};
+
+  dados.forEach(r => {
+    const marca = r['Marca'];
+    if (!marca) return;
+    if (!por[marca]) por[marca] = { fat: 0, qtd: 0, mb: 0, si: 0, temMb: false };
+    por[marca].fat += num(r['Valor (R$) Sell Out']);
+    por[marca].qtd += num(r['Quantidade Sell Out']);
+    por[marca].si  += num(r['Valor (R$) Sell in']);
+    const mb = r['Margem Contribuição Bravir (R$)'];
+    if (!vazio(mb)) { por[marca].mb += num(mb); por[marca].temMb = true; }
+  });
+
+  const marcas = Object.keys(por).sort((a, b) => {
+    const pA = prioridadeMarca(a), pB = prioridadeMarca(b);
+    if (pA !== pB) return pA - pB;
+    return por[b].fat - por[a].fat;
+  });
+
+  // Decompõe Sell Out em 3 partes empilhadas:
+  // Baixo (verde)  = Margem Bravir (R$)
+  // Meio (cinza)   = Sell In − Margem Bravir  ("custo Bravir ao varejista")
+  // Cima (azul)    = Sell Out − Sell In        ("markup do varejista")
+  // Total da barra = Sell Out (R$)
+  const mbVal  = m => por[m].temMb ? Math.max(0, por[m].mb) : 0;
+  const siExMb = m => Math.max(0, por[m].si - mbVal(m));
+  const soExSi = m => Math.max(0, por[m].fat - por[m].si);
+
+  if (graficoRankingMarcas) graficoRankingMarcas.destroy();
+  graficoRankingMarcas = new Chart(document.getElementById('grafico-ranking-marcas'), {
+    type: 'bar',
+    data: {
+      labels: marcas,
+      datasets: [
+        {
+          label: 'Margem Bravir (R$)',
+          data: marcas.map(mbVal),
+          backgroundColor: '#276749cc', borderColor: '#276749', borderWidth: 1,
+          stack: 'total',
+        },
+        {
+          label: 'Sell In excl. Margem (R$)',
+          data: marcas.map(siExMb),
+          backgroundColor: '#a0aec0cc', borderColor: '#a0aec0', borderWidth: 1,
+          stack: 'total',
+        },
+        {
+          label: 'Markup Varejista (R$)',
+          data: marcas.map(soExSi),
+          backgroundColor: '#2b6cb0cc', borderColor: '#2b6cb0', borderWidth: 1,
+          stack: 'total',
+        },
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: true, position: 'top' },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const v = ctx.parsed.y;
+              if (!v) return null;
+              return `  ${ctx.dataset.label}: ${BRL(v)}`;
+            },
+            footer: ctxs => {
+              const total = ctxs.reduce((s, c) => s + (c.parsed.y || 0), 0);
+              return `  Sell Out total: ${BRL(total)}`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { stacked: true, ticks: { font: { size: 11 } } },
+        y: {
+          stacked: true, beginAtZero: true,
+          title: { display: true, text: 'Valor (R$)' },
           ticks: { callback: v => BRL(v) }
         }
       }
