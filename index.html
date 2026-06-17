@@ -150,7 +150,7 @@
     #tabela-container table {
       width: 100%;
       border-collapse: collapse;
-      font-size: .775rem;
+      font-size: .72rem;
     }
     #tabela-elasticidade table {
       width: 100%;
@@ -161,7 +161,7 @@
     #tabela-elasticidade th {
       background: #edf2f7;
       text-align: left;
-      padding: .4rem .6rem;
+      padding: .35rem .45rem;
       font-weight: 600;
       color: #2d3748;
       border-bottom: 2px solid #cbd5e0;
@@ -170,7 +170,7 @@
     #tabela-container th.num, #tabela-container td.num,
     #tabela-elasticidade th.num, #tabela-elasticidade td.num { text-align: right; }
     #tabela-container td {
-      padding: .35rem .6rem;
+      padding: .3rem .45rem;
       border-bottom: 1px solid #e2e8f0;
       color: #4a5568;
     }
@@ -487,6 +487,20 @@
     <canvas id="grafico-evolucao-qtd" style="max-height:320px;"></canvas>
   </div>
 
+  <!-- Evolução Sell In por Cliente (empilhado) -->
+  <div class="card" id="area-evolucao-sellin-cliente" style="display:none;">
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Evolução do Sell In por Cliente</div>
+    <div class="subtitulo">Faturamento sell-in mensal (R$) · Barras empilhadas — participação de cada cliente</div>
+    <canvas id="grafico-evolucao-sellin-cliente" style="max-height:340px;"></canvas>
+  </div>
+
+  <!-- Evolução Sell In por Marca (empilhado) -->
+  <div class="card" id="area-evolucao-sellin-marca" style="display:none;">
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Evolução do Sell In por Marca</div>
+    <div class="subtitulo">Faturamento sell-in mensal (R$) · Barras empilhadas — participação de cada marca · Marcas Bravir primeiro</div>
+    <canvas id="grafico-evolucao-sellin-marca" style="max-height:340px;"></canvas>
+  </div>
+
   <!-- Venda por PDV -->
   <div class="card" id="area-venda-pdv" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.4rem;">Venda por PDV por Cliente — Média Mensal</div>
@@ -565,8 +579,16 @@
 
   <!-- Evolução de Estoque por Cliente -->
   <div class="card" id="area-estoque" style="display:none;">
-    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.4rem;">Evolução de Estoque por Cliente</div>
-    <div style="font-size:.78rem;color:#718096;margin-bottom:1rem;">Estoque CD + Loja no último dia do mês · Pontos ausentes = dado não disponível</div>
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Evolução de Estoque por Cliente</div>
+    <div style="font-size:.78rem;color:#718096;margin-bottom:.6rem;">Estoque CD + Loja no último dia do mês · Pontos ausentes = dado não disponível</div>
+    <div style="margin:.0rem 0 1rem;">
+      <div style="font-size:.78rem;color:#718096;margin-bottom:.4rem;">
+        Clientes exibidos —
+        <a href="#" style="color:#2b6cb0;text-decoration:none;" onclick="event.preventDefault();selecionarTodosEstoqueLinha(true)">todos</a> ·
+        <a href="#" style="color:#2b6cb0;text-decoration:none;" onclick="event.preventDefault();selecionarTodosEstoqueLinha(false)">nenhum</a>
+      </div>
+      <div id="container-cli-estoque-linha" style="display:flex;flex-wrap:wrap;gap:.4rem .9rem;"></div>
+    </div>
     <canvas id="grafico-estoque" style="max-height:340px;"></canvas>
   </div>
 
@@ -588,7 +610,15 @@
   <!-- Cobertura de Estoque -->
   <div class="card" id="area-cobertura" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Cobertura de Estoque (dias)</div>
-    <div class="subtitulo">Estoque ÷ (média móvel 3 meses de sell-out ÷ 30) · Quantos dias de venda o estoque cobre · Mesmos clientes do gráfico acima</div>
+    <div class="subtitulo">Estoque ÷ (média móvel 3 meses de sell-out ÷ 30) · Quantos dias de venda o estoque cobre</div>
+    <div style="margin:.6rem 0 1rem;">
+      <div style="font-size:.78rem;color:#718096;margin-bottom:.4rem;">
+        Clientes exibidos —
+        <a href="#" style="color:#2b6cb0;text-decoration:none;" onclick="event.preventDefault();selecionarTodosCobertura(true)">todos</a> ·
+        <a href="#" style="color:#2b6cb0;text-decoration:none;" onclick="event.preventDefault();selecionarTodosCobertura(false)">nenhum</a>
+      </div>
+      <div id="container-cli-cobertura" style="display:flex;flex-wrap:wrap;gap:.4rem .9rem;"></div>
+    </div>
     <canvas id="grafico-cobertura" style="max-height:340px;"></canvas>
   </div>
 
@@ -799,10 +829,12 @@ let graficoRankingVariacaoPreco  = null;
 let graficoMargemComp          = null;
 let graficoMargemCat           = null;
 let graficoScatterMargemBravir = null;
-let graficoMixMarcaCliente     = null;
-let graficoEvolucaoMarcas      = null;
-let graficoMargemMarca         = null;
-let graficoRankingMarcas       = null;
+let graficoMixMarcaCliente        = null;
+let graficoEvolucaoMarcas         = null;
+let graficoMargemMarca            = null;
+let graficoRankingMarcas          = null;
+let graficoEvolucaoSellInCliente  = null;
+let graficoEvolucaoSellInMarca    = null;
 
 // ─── Leitura do arquivo ───────────────────────────────────────────────────────
 
@@ -860,9 +892,11 @@ document.getElementById('input-arquivo').addEventListener('change', function (e)
 
       // Seção 3 — Clientes
       document.getElementById('sec-clientes').style.display             = 'block';
-      document.getElementById('area-sell-in-out').style.display         = 'block';
-      document.getElementById('area-evolucao-qtd').style.display        = 'block';
-      document.getElementById('area-venda-pdv').style.display           = 'block';
+      document.getElementById('area-sell-in-out').style.display              = 'block';
+      document.getElementById('area-evolucao-qtd').style.display             = 'block';
+      document.getElementById('area-evolucao-sellin-cliente').style.display  = 'block';
+      document.getElementById('area-evolucao-sellin-marca').style.display    = 'block';
+      document.getElementById('area-venda-pdv').style.display                = 'block';
       document.getElementById('area-margem-comp').style.display         = 'block';
       document.getElementById('area-margem').style.display              = 'block';
       document.getElementById('area-matriz').style.display              = 'block';
@@ -1179,9 +1213,10 @@ function atualizarGrafico() {
   });
 
   // Ordena por valor decrescente
-  const clientes = Object.keys(agrupado).sort((a, b) => agrupado[b].valor - agrupado[a].valor);
-  const valores  = clientes.map(c => agrupado[c].valor);
-  const total    = valores.reduce((s, v) => s + v, 0);
+  const clientes   = Object.keys(agrupado).sort((a, b) => agrupado[b].valorIn - agrupado[a].valorIn);
+  const valores    = clientes.map(c => agrupado[c].valor);
+  const valoresIn  = clientes.map(c => agrupado[c].valorIn);
+  const total      = valores.reduce((s, v) => s + v, 0);
 
   const labelDe  = chaveDE  ? chaveDE.split('|').reverse().join('/') : '';
   const labelAte = chaveATE ? chaveATE.split('|').reverse().join('/') : '';
@@ -1202,6 +1237,8 @@ function atualizarGrafico() {
   renderizarTop5SKUsEvolucao(dados);
   renderizarSellInVsSellOut(dados);
   renderizarEvolucaoQtd();
+  renderizarEvolucaoSellInCliente();
+  renderizarEvolucaoSellInMarca();
   renderizarMargem(dados);
   renderizarMargemComparativa(dados);
   renderizarMargemBravirPorCategoria(dados);
@@ -1211,6 +1248,7 @@ function atualizarGrafico() {
   renderizarScatterMargemBravir(dados);
   renderizarEstoque();
   renderizarEstoquePDV();
+  renderizarCobertura();
   renderizarScatterSellin(dados);
   popularSKUs();
   renderizarElasticidade();
@@ -1238,22 +1276,32 @@ function atualizarGrafico() {
     type: 'bar',
     data: {
       labels: clientes,
-      datasets: [{
-        label: 'Valor (R$) Sell Out',
-        data: valores,
-        backgroundColor: clientes.map((_, i) => CORES[i % CORES.length] + 'cc'),
-        borderColor:     clientes.map((_, i) => CORES[i % CORES.length]),
-        borderWidth: 1,
-        borderRadius: 4,
-      }]
+      datasets: [
+        {
+          label: 'Valor Sell In',
+          data: valoresIn,
+          backgroundColor: '#a0aec0cc',
+          borderColor:     '#a0aec0',
+          borderWidth: 1,
+          borderRadius: 4,
+        },
+        {
+          label: 'Valor Sell Out',
+          data: valores,
+          backgroundColor: '#2b6cb0cc',
+          borderColor:     '#2b6cb0',
+          borderWidth: 1,
+          borderRadius: 4,
+        },
+      ]
     },
     options: {
       responsive: true,
       plugins: {
-        legend: { display: false },
+        legend: { display: true, position: 'top' },
         tooltip: {
           callbacks: {
-            label: ctx => '  ' + BRL(ctx.parsed.y)
+            label: ctx => `  ${ctx.dataset.label}: ${BRL(ctx.parsed.y)}`
           }
         }
       },
@@ -1434,6 +1482,7 @@ function renderizarTabela(clientes, agrupado) {
           <th class="num">Valor Sell Out</th>
           <th class="num">Preço Médio Sell Out</th>
           <th class="num">Margem Cliente %</th>
+          <th class="num">Valor Sell In</th>
           <th class="num">Preço Médio Sell In</th>
           <th class="num">Margem Bravir %</th>
         </tr>
@@ -1455,10 +1504,35 @@ function renderizarTabela(clientes, agrupado) {
           <td class="num">${BRL(d.valor)}</td>
           <td class="num">${d.qtd > 0 ? BRL(d.valor / d.qtd) : '—'}</td>
           <td class="num">${margem}</td>
+          <td class="num">${BRL(d.valorIn)}</td>
           <td class="num">${d.qtdIn > 0 ? BRL(d.valorIn / d.qtdIn) : '—'}</td>
           <td class="num">${bravirPct}</td>
         </tr>`;
   });
+
+  // Linha de totais
+  const totQtd      = clientes.reduce((s, c) => s + agrupado[c].qtd,      0);
+  const totValor    = clientes.reduce((s, c) => s + agrupado[c].valor,     0);
+  const totValorIn  = clientes.reduce((s, c) => s + agrupado[c].valorIn,   0);
+  const totQtdIn    = clientes.reduce((s, c) => s + agrupado[c].qtdIn,     0);
+  const totMargemRS = clientes.reduce((s, c) => s + (agrupado[c].temMargem ? agrupado[c].margemRS : 0), 0);
+  const temMargem   = clientes.some(c => agrupado[c].temMargem);
+  const totBravir   = clientes.reduce((s, c) => s + (agrupado[c].temBravir ? agrupado[c].bravir : 0), 0);
+  const temBravir   = clientes.some(c => agrupado[c].temBravir);
+
+  html += `
+    <tfoot>
+      <tr style="font-weight:700;border-top:2px solid #cbd5e0;background:#edf2f7;">
+        <td>Total</td>
+        <td class="num">${N(totQtd)}</td>
+        <td class="num">${BRL(totValor)}</td>
+        <td class="num">${totQtd > 0 ? BRL(totValor / totQtd) : '—'}</td>
+        <td class="num">${temMargem && totValor > 0 ? PCT(totMargemRS / totValor) : '—'}</td>
+        <td class="num">${BRL(totValorIn)}</td>
+        <td class="num">${totQtdIn > 0 ? BRL(totValorIn / totQtdIn) : '—'}</td>
+        <td class="num">${temBravir && totValorIn > 0 ? PCT(totBravir / totValorIn) : '—'}</td>
+      </tr>
+    </tfoot>`;
 
   html += '</tbody></table>';
   document.getElementById('tabela-container').innerHTML = html;
@@ -1788,26 +1862,69 @@ function renderizarMatriz(dados) {
 
 // ─── Evolução de estoque por cliente ─────────────────────────────────────────
 
+function popularCheckboxesEstoqueLinha(clientesOrdenados) {
+  const container = document.getElementById('container-cli-estoque-linha');
+  const listaAtual = clientesOrdenados.join('|');
+  if (container.dataset.lista === listaAtual) return;
+  container.dataset.lista = listaAtual;
+
+  const marcadosAntes = new Set(
+    [...container.querySelectorAll('input[type=checkbox]:checked')].map(c => c.value)
+  );
+  const primeiraVez = marcadosAntes.size === 0 && container.children.length === 0;
+
+  container.innerHTML = '';
+  clientesOrdenados.forEach((cli, i) => {
+    const marcado = primeiraVez ? i < 4 : marcadosAntes.has(cli);
+    const label = document.createElement('label');
+    label.style.cssText = 'display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:#2d3748;cursor:pointer;white-space:nowrap;';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.value = cli; cb.checked = marcado;
+    cb.style.accentColor = '#2b6cb0';
+    cb.addEventListener('change', renderizarEstoque);
+    label.appendChild(cb);
+    label.appendChild(document.createTextNode(cli));
+    container.appendChild(label);
+  });
+}
+
+function selecionarTodosEstoqueLinha(todos) {
+  document.querySelectorAll('#container-cli-estoque-linha input[type=checkbox]')
+    .forEach(cb => { cb.checked = todos; });
+  renderizarEstoque();
+}
+
 function renderizarEstoque() {
   const CAMPO_EST = 'Estoque CD + Loja (último dia do mês)';
   const dados = filtrarDados();
 
-  const porMesCli = {}, mesesSet = new Set(), clientesSet = new Set();
+  const porMesCli = {}, mesesSet = new Set(), totCli = {};
   dados.forEach(r => {
     const cli = r['Cliente'], est = r[CAMPO_EST];
     if (!cli || vazio(est)) return;
     const chave = `${r['Ano']}|${r['Mês']}`;
     if (!porMesCli[chave]) porMesCli[chave] = {};
     porMesCli[chave][cli] = (porMesCli[chave][cli] || 0) + num(est);
-    mesesSet.add(chave); clientesSet.add(cli);
+    totCli[cli] = (totCli[cli] || 0) + num(est);
+    mesesSet.add(chave);
   });
+
+  // Ordena clientes por estoque total decrescente e popula o seletor
+  const clientesOrdenados = Object.keys(totCli).sort((a, b) => totCli[b] - totCli[a]);
+  popularCheckboxesEstoqueLinha(clientesOrdenados);
+
+  // Lê quais estão marcados
+  const selecionados = new Set(
+    [...document.querySelectorAll('#container-cli-estoque-linha input[type=checkbox]:checked')]
+      .map(c => c.value)
+  );
 
   const mesesOrdenados = [...mesesSet].sort((a, b) => {
     const [anoA, mesA] = a.split('|'), [anoB, mesB] = b.split('|');
     return (parseInt(anoA)*100+(MESES_ORDEM[mesA]||0)) - (parseInt(anoB)*100+(MESES_ORDEM[mesB]||0));
   });
   const rotulos  = mesesOrdenados.map(m => { const [a,ms]=m.split('|'); return `${ms.slice(0,3)}/${a}`; });
-  const clientes = [...clientesSet].sort();
+  const clientes = clientesOrdenados.filter(c => selecionados.has(c));
 
   const datasets = clientes.map((cli, i) => ({
     label: cli,
@@ -1990,51 +2107,6 @@ function renderizarEstoquePDV() {
     }
   });
 
-  // ── Gráfico 2: Cobertura de Estoque em dias (linhas) ──
-  const dsCobertura = clientes.map((cli, i) => ({
-    label: cli,
-    data: meses.map(m => {
-      const d = estPDV[m]?.[cli];
-      if (!d) return null;
-      const media = ma3(cli, m);
-      if (!media || media === 0) return null;
-      return parseFloat((d.est / (media / 30)).toFixed(1));
-    }),
-    borderColor: CORES[i % CORES.length],
-    backgroundColor: CORES[i % CORES.length] + '22',
-    borderWidth: 2,
-    pointRadius: 3, pointHoverRadius: 5,
-    fill: false, tension: 0.3, spanGaps: false,
-  }));
-
-  if (graficoCobertura) graficoCobertura.destroy();
-  graficoCobertura = new Chart(document.getElementById('grafico-cobertura'), {
-    type: 'line',
-    data: { labels: rotulos, datasets: dsCobertura },
-    options: {
-      responsive: true,
-      interaction: { mode: 'nearest', intersect: true },
-      plugins: {
-        legend: { display: true, position: 'top' },
-        tooltip: {
-          callbacks: {
-            title: ctx => `${ctx[0].dataset.label} · ${ctx[0].label}`,
-            label: ctx => ctx.parsed.y !== null
-              ? `  ${ctx.parsed.y.toFixed(0)} dias`
-              : null
-          }
-        }
-      },
-      scales: {
-        x: { ticks: { font: { size: 11 } } },
-        y: {
-          beginAtZero: true,
-          title: { display: true, text: 'Cobertura (dias)' },
-          ticks: { callback: v => v + ' d' }
-        }
-      }
-    }
-  });
 }
 
 // ─── Top 10 SKUs ─────────────────────────────────────────────────────────────
@@ -2362,6 +2434,137 @@ function renderizarMargem(dados) {
           ticks: { callback: v => v + '%' }
         },
         y: { ticks: { font: { size: 12 } } }
+      }
+    }
+  });
+}
+
+// ─── Cobertura de Estoque (autônoma, seletor próprio) ────────────────────────
+
+function popularCheckboxesCobertura(clientesOrdenados) {
+  const container = document.getElementById('container-cli-cobertura');
+  const listaAtual = clientesOrdenados.join('|');
+  if (container.dataset.lista === listaAtual) return;
+  container.dataset.lista = listaAtual;
+
+  const marcadosAntes = new Set(
+    [...container.querySelectorAll('input[type=checkbox]:checked')].map(c => c.value)
+  );
+  const primeiraVez = marcadosAntes.size === 0 && container.children.length === 0;
+
+  container.innerHTML = '';
+  clientesOrdenados.forEach((cli, i) => {
+    const marcado = primeiraVez ? i < 4 : marcadosAntes.has(cli);
+    const label = document.createElement('label');
+    label.style.cssText = 'display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:#2d3748;cursor:pointer;white-space:nowrap;';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.value = cli; cb.checked = marcado;
+    cb.style.accentColor = '#2b6cb0';
+    cb.addEventListener('change', renderizarCobertura);
+    label.appendChild(cb);
+    label.appendChild(document.createTextNode(cli));
+    container.appendChild(label);
+  });
+}
+
+function selecionarTodosCobertura(todos) {
+  document.querySelectorAll('#container-cli-cobertura input[type=checkbox]')
+    .forEach(cb => { cb.checked = todos; });
+  renderizarCobertura();
+}
+
+function renderizarCobertura() {
+  const CAMPO_EST = 'Estoque CD + Loja (último dia do mês)';
+  const dadosTodos   = dadosFiltradosSemPeriodo();
+  const dadosPeriodo = filtrarDados();
+
+  // Estoque por cliente × mês (período filtrado)
+  const est = {}, totCli = {};
+  dadosPeriodo.forEach(r => {
+    const cli = r['Cliente'], v = r[CAMPO_EST];
+    if (!cli || vazio(v)) return;
+    const ch = `${r['Ano']}|${r['Mês']}`;
+    if (!est[ch]) est[ch] = {};
+    est[ch][cli] = (est[ch][cli] || 0) + num(v);
+    totCli[cli] = (totCli[cli] || 0) + num(v);
+  });
+
+  // Sell-out mensal por cliente (sem filtro de período — base para MA3)
+  const so = {};
+  dadosTodos.forEach(r => {
+    const cli = r['Cliente'];
+    if (!cli) return;
+    const ch = `${r['Ano']}|${r['Mês']}`;
+    if (!so[cli]) so[cli] = {};
+    so[cli][ch] = (so[cli][ch] || 0) + num(r['Quantidade Sell Out']);
+  });
+
+  const mesesSet = new Set(Object.keys(est));
+  const meses = [...mesesSet].sort((a, b) => {
+    const [aA, mA] = a.split('|'), [aB, mB] = b.split('|');
+    return (parseInt(aA)*100+(MESES_ORDEM[mA]||0)) - (parseInt(aB)*100+(MESES_ORDEM[mB]||0));
+  });
+  const rotulos = meses.map(m => { const [a, ms] = m.split('|'); return `${ms.slice(0,3)}/${a}`; });
+
+  function ma3(cli, chAtual) {
+    const todos = Object.keys(so[cli] || {}).sort((a, b) => {
+      const [aA, mA] = a.split('|'), [aB, mB] = b.split('|');
+      return (parseInt(aA)*100+(MESES_ORDEM[mA]||0)) - (parseInt(aB)*100+(MESES_ORDEM[mB]||0));
+    });
+    const idx = todos.indexOf(chAtual);
+    if (idx < 0) return null;
+    const janela = todos.slice(Math.max(0, idx - 2), idx + 1);
+    const soma = janela.reduce((s, m) => s + (so[cli][m] || 0), 0);
+    return soma / janela.length;
+  }
+
+  const clientesOrdenados = Object.keys(totCli).sort((a, b) => totCli[b] - totCli[a]);
+  popularCheckboxesCobertura(clientesOrdenados);
+
+  const selecionados = new Set(
+    [...document.querySelectorAll('#container-cli-cobertura input[type=checkbox]:checked')]
+      .map(c => c.value)
+  );
+  const clientes = clientesOrdenados.filter(c => selecionados.has(c));
+
+  const datasets = clientes.map((cli, i) => ({
+    label: cli,
+    data: meses.map(m => {
+      const estoq = est[m]?.[cli];
+      if (estoq === undefined) return null;
+      const media = ma3(cli, m);
+      if (!media || media === 0) return null;
+      return parseFloat((estoq / (media / 30)).toFixed(1));
+    }),
+    borderColor: CORES[i % CORES.length],
+    backgroundColor: CORES[i % CORES.length] + '22',
+    borderWidth: 2, pointRadius: 3, pointHoverRadius: 5,
+    fill: false, tension: 0.3, spanGaps: false,
+  }));
+
+  if (graficoCobertura) graficoCobertura.destroy();
+  graficoCobertura = new Chart(document.getElementById('grafico-cobertura'), {
+    type: 'line',
+    data: { labels: rotulos, datasets },
+    options: {
+      responsive: true,
+      interaction: { mode: 'nearest', intersect: true },
+      plugins: {
+        legend: { display: true, position: 'top' },
+        tooltip: {
+          callbacks: {
+            title: ctx => `${ctx[0].dataset.label} · ${ctx[0].label}`,
+            label: ctx => ctx.parsed.y !== null ? `  ${ctx.parsed.y.toFixed(0)} dias` : null
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { font: { size: 11 } } },
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: 'Cobertura (dias)' },
+          ticks: { callback: v => v + ' d' }
+        }
       }
     }
   });
@@ -3593,7 +3796,7 @@ function renderizarPrecoCategoria() {
     data: { labels: rotulos, datasets },
     options: {
       responsive: true,
-      interaction: { mode: 'index', intersect: false },
+      interaction: { mode: 'nearest', intersect: true },
       plugins: {
         legend: { display: true, position: 'top' },
         tooltip: {
@@ -3915,8 +4118,8 @@ function popularCheckboxesMarcasEvolucao(marcasOrdenadas) {
   const primeiraVez = marcadosAntes.size === 0 && container.children.length === 0;
 
   container.innerHTML = '';
-  marcasOrdenadas.forEach(marca => {
-    const marcado = primeiraVez ? true : marcadosAntes.has(marca);
+  marcasOrdenadas.forEach((marca, i) => {
+    const marcado = primeiraVez ? i < 4 : marcadosAntes.has(marca);
     const label = document.createElement('label');
     label.style.cssText = 'display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:#2d3748;cursor:pointer;white-space:nowrap;';
     const cb = document.createElement('input');
@@ -4141,6 +4344,156 @@ function renderizarRankingMarcas() {
           stacked: true, beginAtZero: true,
           title: { display: true, text: 'Valor (R$)' },
           ticks: { callback: v => BRL(v) }
+        }
+      }
+    }
+  });
+}
+
+// ─── Evolução do Sell In por Cliente (barras empilhadas) ──────────────────────
+
+function renderizarEvolucaoSellInCliente() {
+  const dados = filtrarDados();
+  const por = {};         // por[cliente][mes] = valorIn
+  const cliSet = new Set(), mesSet = new Set();
+
+  dados.forEach(r => {
+    const cli = r['Cliente'];
+    const v   = num(r['Valor (R$) Sell in']);
+    if (!cli || v <= 0) return;
+    const ch = `${r['Ano']}|${r['Mês']}`;
+    if (!por[cli]) por[cli] = {};
+    por[cli][ch] = (por[cli][ch] || 0) + v;
+    cliSet.add(cli); mesSet.add(ch);
+  });
+
+  const meses = [...mesSet].sort((a, b) => {
+    const [aA, mA] = a.split('|'), [aB, mB] = b.split('|');
+    return (parseInt(aA)*100+(MESES_ORDEM[mA]||0)) - (parseInt(aB)*100+(MESES_ORDEM[mB]||0));
+  });
+  const rotulos = meses.map(m => { const [a, ms] = m.split('|'); return `${ms.slice(0,3)}/${a}`; });
+
+  // Ordena clientes por sell in total decrescente
+  const clientes = [...cliSet].sort((a, b) => {
+    const tA = Object.values(por[a]).reduce((s, v) => s + v, 0);
+    const tB = Object.values(por[b]).reduce((s, v) => s + v, 0);
+    return tB - tA;
+  });
+
+  const datasets = clientes.map((cli, i) => ({
+    label: cli,
+    data: meses.map(m => por[cli]?.[m] || 0),
+    backgroundColor: CORES[i % CORES.length] + 'cc',
+    borderColor:     CORES[i % CORES.length],
+    borderWidth: 1,
+    stack: 'total',
+  }));
+
+  if (graficoEvolucaoSellInCliente) graficoEvolucaoSellInCliente.destroy();
+  graficoEvolucaoSellInCliente = new Chart(document.getElementById('grafico-evolucao-sellin-cliente'), {
+    type: 'bar',
+    data: { labels: rotulos, datasets },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: true, position: 'top', labels: { font: { size: 11 } } },
+        tooltip: {
+          callbacks: {
+            label: ctx => ctx.parsed.y > 0 ? `  ${ctx.dataset.label}: ${BRL(ctx.parsed.y)}` : null,
+            footer: ctxs => `  Total: ${BRL(ctxs.reduce((s, c) => s + (c.parsed.y || 0), 0))}`
+          }
+        }
+      },
+      scales: {
+        x: { stacked: true, ticks: { font: { size: 11 } } },
+        y: {
+          stacked: true, beginAtZero: true,
+          title: { display: true, text: 'Sell In (R$)' },
+          ticks: {
+            callback: v => {
+              if (v >= 1_000_000) return 'R$ ' + (v / 1_000_000).toFixed(1) + 'M';
+              if (v >= 1_000)     return 'R$ ' + (v / 1_000).toFixed(0) + 'k';
+              return 'R$ ' + v;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+// ─── Evolução do Sell In por Marca (barras empilhadas) ───────────────────────
+
+function renderizarEvolucaoSellInMarca() {
+  const dados = filtrarDados();
+  const por = {};         // por[marca][mes] = valorIn
+  const marcaSet = new Set(), mesSet = new Set();
+
+  dados.forEach(r => {
+    const marca = r['Marca'];
+    const v     = num(r['Valor (R$) Sell in']);
+    if (!marca || v <= 0) return;
+    const ch = `${r['Ano']}|${r['Mês']}`;
+    if (!por[marca]) por[marca] = {};
+    por[marca][ch] = (por[marca][ch] || 0) + v;
+    marcaSet.add(marca); mesSet.add(ch);
+  });
+
+  const meses = [...mesSet].sort((a, b) => {
+    const [aA, mA] = a.split('|'), [aB, mB] = b.split('|');
+    return (parseInt(aA)*100+(MESES_ORDEM[mA]||0)) - (parseInt(aB)*100+(MESES_ORDEM[mB]||0));
+  });
+  const rotulos = meses.map(m => { const [a, ms] = m.split('|'); return `${ms.slice(0,3)}/${a}`; });
+
+  // Bravir primeiro, depois por sell in total decrescente
+  const marcas = [...marcaSet].sort((a, b) => {
+    const pA = prioridadeMarca(a), pB = prioridadeMarca(b);
+    if (pA !== pB) return pA - pB;
+    const tA = Object.values(por[a]).reduce((s, v) => s + v, 0);
+    const tB = Object.values(por[b]).reduce((s, v) => s + v, 0);
+    return tB - tA;
+  });
+
+  const CORES_M = ['#2b6cb0','#276749','#744210','#702459','#2c7a7b','#c05621','#553c9a','#97266d','#2d3748','#1a365d','#e53e3e'];
+
+  const datasets = marcas.map((marca, i) => ({
+    label: marca,
+    data: meses.map(m => por[marca]?.[m] || 0),
+    backgroundColor: CORES_M[i % CORES_M.length] + 'cc',
+    borderColor:     CORES_M[i % CORES_M.length],
+    borderWidth: 1,
+    stack: 'total',
+  }));
+
+  if (graficoEvolucaoSellInMarca) graficoEvolucaoSellInMarca.destroy();
+  graficoEvolucaoSellInMarca = new Chart(document.getElementById('grafico-evolucao-sellin-marca'), {
+    type: 'bar',
+    data: { labels: rotulos, datasets },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: true, position: 'top', labels: { font: { size: 11 } } },
+        tooltip: {
+          callbacks: {
+            label: ctx => ctx.parsed.y > 0 ? `  ${ctx.dataset.label}: ${BRL(ctx.parsed.y)}` : null,
+            footer: ctxs => `  Total: ${BRL(ctxs.reduce((s, c) => s + (c.parsed.y || 0), 0))}`
+          }
+        }
+      },
+      scales: {
+        x: { stacked: true, ticks: { font: { size: 11 } } },
+        y: {
+          stacked: true, beginAtZero: true,
+          title: { display: true, text: 'Sell In (R$)' },
+          ticks: {
+            callback: v => {
+              if (v >= 1_000_000) return 'R$ ' + (v / 1_000_000).toFixed(1) + 'M';
+              if (v >= 1_000)     return 'R$ ' + (v / 1_000).toFixed(0) + 'k';
+              return 'R$ ' + v;
+            }
+          }
         }
       }
     }
