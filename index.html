@@ -340,6 +340,13 @@
       padding: .4rem .65rem; border-bottom: 1px solid #e2e8f0; color: #4a5568;
     }
     .tabela-ranking tr:last-child td { border-bottom: none; }
+
+    /* ---- Heatmap de preços ---- */
+    .heatmap-preco { border-collapse: collapse; font-size: .75rem; width: 100%; }
+    .heatmap-preco th { background: #edf2f7; padding: .35rem .55rem; font-weight: 600; color: #2d3748;
+      border: 1px solid #e2e8f0; white-space: nowrap; text-align: center; }
+    .heatmap-preco th:first-child { text-align: left; min-width: 140px; }
+    .heatmap-preco td { padding: .3rem .5rem; border: 1px solid #e2e8f0; white-space: nowrap; }
     .tabela-ranking tr:hover td { background: #f7fafc; }
   </style>
 </head>
@@ -475,8 +482,8 @@
 
   <!-- Venda por PDV -->
   <div class="card" id="area-venda-pdv" style="display:none;">
-    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.4rem;">Venda por PDV por Cliente</div>
-    <div style="font-size:.78rem;color:#718096;margin-bottom:1rem;">R$ de sell-out dividido pela média de PDVs do cliente no período</div>
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.4rem;">Venda por PDV por Cliente — Média Mensal</div>
+    <div style="font-size:.78rem;color:#718096;margin-bottom:1rem;">Faturamento sell-out médio por loja por mês · R$ / PDV / mês no período filtrado</div>
     <canvas id="grafico-venda-pdv" style="max-height:340px;"></canvas>
   </div>
 
@@ -635,6 +642,49 @@
     <canvas id="grafico-evolucao-preco" style="max-height:320px;"></canvas>
   </div>
 
+  <!-- Markup varejista por cliente ao longo do tempo -->
+  <div class="card" id="area-markup-cliente" style="display:none;">
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Markup Varejista por Cliente</div>
+    <div class="subtitulo">(Preço sell-out − Preço sell-in) ÷ Preço sell-in · Linhas = meses · Colunas = clientes ordenados por markup médio · Azul mais escuro = markup maior</div>
+    <div id="heatmap-markup-container" style="overflow-x:auto;margin-top:.75rem;"></div>
+  </div>
+
+  <!-- Heatmap Preço SKU × Cliente -->
+  <div class="card" id="area-heatmap-preco" style="display:none;">
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Mapa de Preços — Top SKUs × Clientes</div>
+    <div class="subtitulo">Preço sell-out médio ponderado · Azul mais escuro = preço mais alto · Cores relativas por linha (SKU) · Top 15 SKUs por faturamento</div>
+    <div id="heatmap-preco-container" style="margin-top:.75rem;overflow-x:auto;"></div>
+  </div>
+
+  <!-- Preço × Margem Bravir por SKU -->
+  <div class="card" id="area-preco-margem-bravir" style="display:none;">
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Preço Sell-out × Margem Bravir % — por SKU</div>
+    <div class="subtitulo">Apenas produtos Bravir · Cada ponto = um SKU · Cor = categoria · Produtos mais caros entregam margem melhor?</div>
+    <canvas id="grafico-preco-margem-bravir" style="max-height:360px;"></canvas>
+  </div>
+
+  <!-- Ranking variação de preço -->
+  <div class="card" id="area-ranking-variacao-preco" style="display:none;">
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Ranking de Variação de Preço por SKU</div>
+    <div class="subtitulo">Variação % do preço sell-out médio entre o primeiro e o último mês do período filtrado · Verde = alta · Vermelho = queda</div>
+    <canvas id="grafico-ranking-variacao-preco" style="max-height:420px;"></canvas>
+  </div>
+
+  <!-- Preço × Qtd/PDV por Cliente (por SKU ou Marca) -->
+  <div class="card" id="area-scatter-preco-pdv" style="display:none;">
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Preço Sell-out × Quantidade por PDV — por Cliente</div>
+    <div class="subtitulo">Um ponto por cliente · Selecione um SKU ou Marca · Clientes com preço menor tendem a vender mais unidades por loja?</div>
+    <div class="linha-filtro" style="margin-bottom:1rem;">
+      <label>Ver por:</label>
+      <select id="tipo-scatter-preco-pdv" onchange="popularScatterPrecoPDV(); renderizarScatterPrecoPDV();">
+        <option value="sku">SKU</option>
+        <option value="marca">Marca</option>
+      </select>
+      <select id="sel-scatter-preco-pdv" style="max-width:320px;" onchange="renderizarScatterPrecoPDV();"></select>
+    </div>
+    <canvas id="grafico-scatter-preco-pdv" style="max-height:360px;"></canvas>
+  </div>
+
 </main>
 
 <script>
@@ -679,6 +729,10 @@ let graficoCobertura           = null;
 let graficoPrecoCategoria      = null;
 let graficoPrecoCliente        = null;
 let graficoEvolucaoPreco       = null;
+let graficoScatterPrecoPDV       = null;
+let graficoMarkupCliente         = null;
+let graficoPrecoMargemBravir     = null;
+let graficoRankingVariacaoPreco  = null;
 let graficoMargemComp          = null;
 let graficoMargemCat           = null;
 let graficoScatterMargemBravir = null;
@@ -768,10 +822,16 @@ document.getElementById('input-arquivo').addEventListener('change', function (e)
       document.getElementById('sec-precos').style.display               = 'block';
       document.getElementById('area-preco-categoria').style.display     = 'block';
       document.getElementById('area-preco-cliente').style.display       = 'block';
-      document.getElementById('area-evolucao-preco').style.display      = 'block';
+      document.getElementById('area-evolucao-preco').style.display           = 'block';
+      document.getElementById('area-markup-cliente').style.display           = 'block';
+      document.getElementById('area-heatmap-preco').style.display            = 'block';
+      document.getElementById('area-preco-margem-bravir').style.display      = 'block';
+      document.getElementById('area-ranking-variacao-preco').style.display   = 'block';
+      document.getElementById('area-scatter-preco-pdv').style.display        = 'block';
       popularSKUs();
       popularClienteTemperatura();
       popularSKUPreco();
+      popularScatterPrecoPDV();
       atualizarGrafico();
       renderizarElasticidade();
       renderizarTemperatura();
@@ -907,7 +967,7 @@ function popularMarcas(dados) {
 function popularSKUsFiltro(dados) {
   const fat = {};
   dados.forEach(r => { const sku = r['SKU']; if (sku) fat[sku] = (fat[sku] || 0) + num(r['Valor (R$) Sell Out']); });
-  const skus = Object.keys(fat).sort((a, b) => fat[b] - fat[a]);
+  const skus = Object.keys(fat).sort((a, b) => a.localeCompare(b, 'pt-BR'));
   popularDropdownMulti('fdrop-sku', 'fbtn-sku', 'SKU', skus, atualizarGrafico, true);
 }
 
@@ -1081,6 +1141,12 @@ function atualizarGrafico() {
   renderizarPrecoCategoria();
   renderizarPrecoCliente();
   renderizarEvolucaoPreco();
+  renderizarMarkupCliente();
+  renderizarHeatmapPreco();
+  renderizarScatterPrecoMargemBravir();
+  renderizarRankingVariacaoPreco();
+  popularScatterPrecoPDV();
+  renderizarScatterPrecoPDV();
 
   // Destroi gráfico anterior para não acumular
   if (graficoAtual) graficoAtual.destroy();
@@ -1521,9 +1587,10 @@ function renderizarVendaPorPDV(dados) {
     if (pdvs > 0) { agrupado[cli].pdvSoma += pdvs; agrupado[cli].pdvContagem++; }
   });
 
+  // vpdv mensal = valor total / Σ(PDVs × meses) = média de R$/PDV em cada mês do período
   const clientes = Object.keys(agrupado)
-    .filter(c => agrupado[c].pdvContagem > 0)
-    .map(c => ({ nome: c, vpdv: agrupado[c].valor / (agrupado[c].pdvSoma / agrupado[c].pdvContagem) }))
+    .filter(c => agrupado[c].pdvSoma > 0)
+    .map(c => ({ nome: c, vpdv: agrupado[c].valor / agrupado[c].pdvSoma }))
     .sort((a, b) => b.vpdv - a.vpdv);
 
   if (graficoVendaPDV) graficoVendaPDV.destroy();
@@ -1542,7 +1609,7 @@ function renderizarVendaPorPDV(dados) {
       indexAxis: 'y', responsive: true,
       plugins: {
         legend: { display: false },
-        tooltip: { callbacks: { label: ctx => '  ' + BRL(ctx.parsed.x) + ' / PDV' } }
+        tooltip: { callbacks: { label: ctx => '  ' + BRL(ctx.parsed.x) + ' / PDV / mês' } }
       },
       scales: {
         x: { beginAtZero: true, ticks: { callback: v => v >= 1e6 ? 'R$ '+(v/1e6).toFixed(1)+'M' : v >= 1e3 ? 'R$ '+(v/1e3).toFixed(0)+'k' : 'R$ '+v } },
@@ -1790,13 +1857,14 @@ function renderizarEstoquePDV() {
     data: { labels: rotulos, datasets: dsEstPDV },
     options: {
       responsive: true,
-      interaction: { mode: 'index', intersect: false },
+      interaction: { mode: 'nearest', intersect: true },
       plugins: {
         legend: { display: true, position: 'top' },
         tooltip: {
           callbacks: {
+            title: ctx => `${ctx[0].dataset.label} · ${ctx[0].label}`,
             label: ctx => ctx.parsed.y !== null
-              ? `  ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)} un./loja`
+              ? `  ${ctx.parsed.y.toFixed(1)} un./loja`
               : null
           }
         }
@@ -1835,13 +1903,14 @@ function renderizarEstoquePDV() {
     data: { labels: rotulos, datasets: dsCobertura },
     options: {
       responsive: true,
-      interaction: { mode: 'index', intersect: false },
+      interaction: { mode: 'nearest', intersect: true },
       plugins: {
         legend: { display: true, position: 'top' },
         tooltip: {
           callbacks: {
+            title: ctx => `${ctx[0].dataset.label} · ${ctx[0].label}`,
             label: ctx => ctx.parsed.y !== null
-              ? `  ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(0)} dias`
+              ? `  ${ctx.parsed.y.toFixed(0)} dias`
               : null
           }
         }
@@ -2888,6 +2957,367 @@ function setStatus(msg, erro = false) {
   const el = document.getElementById('status');
   el.textContent = msg;
   el.className = erro ? 'erro' : '';
+}
+
+// ─── Markup varejista por cliente ────────────────────────────────────────────
+
+function renderizarMarkupCliente() {
+  const dados = filtrarDados();
+  const porCliMes = {};
+
+  dados.forEach(r => {
+    const cli = r['Cliente'];
+    if (!cli) return;
+    const ch = `${r['Ano']}|${r['Mês']}`;
+    if (!porCliMes[cli]) porCliMes[cli] = {};
+    if (!porCliMes[cli][ch]) porCliMes[cli][ch] = { vOut: 0, qOut: 0, vIn: 0, qIn: 0 };
+    porCliMes[cli][ch].vOut += num(r['Valor (R$) Sell Out']);
+    porCliMes[cli][ch].qOut += num(r['Quantidade Sell Out']);
+    porCliMes[cli][ch].vIn  += num(r['Valor (R$) Sell in']);
+    porCliMes[cli][ch].qIn  += num(r['Quantidade Sell in']);
+  });
+
+  const mesSet = new Set();
+  Object.values(porCliMes).forEach(m => Object.keys(m).forEach(ch => mesSet.add(ch)));
+  const meses = [...mesSet].sort((a, b) => {
+    const [aA, mA] = a.split('|'), [aB, mB] = b.split('|');
+    return (parseInt(aA)*100+(MESES_ORDEM[mA]||0)) - (parseInt(aB)*100+(MESES_ORDEM[mB]||0));
+  });
+
+  // Calcula markup % por cliente × mês
+  const markup = {};
+  const clientes = Object.keys(porCliMes);
+  clientes.forEach(cli => {
+    markup[cli] = {};
+    meses.forEach(m => {
+      const d = porCliMes[cli]?.[m];
+      if (!d || d.qOut === 0 || d.qIn === 0) return;
+      const pOut = d.vOut / d.qOut, pIn = d.vIn / d.qIn;
+      if (pIn > 0) markup[cli][m] = (pOut - pIn) / pIn * 100;
+    });
+  });
+
+  // Ordena clientes por markup médio decrescente
+  const mediaMarkup = cli => {
+    const vals = Object.values(markup[cli]);
+    return vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : 0;
+  };
+  const clientesOrd = [...clientes].sort((a, b) => mediaMarkup(b) - mediaMarkup(a));
+
+  // Min/max global para escala de cor
+  const todosVals = clientesOrd.flatMap(cli => Object.values(markup[cli]));
+  const gMin = todosVals.length ? Math.min(...todosVals) : 0;
+  const gMax = todosVals.length ? Math.max(...todosVals) : 1;
+  const gSpan = gMax - gMin || 1;
+
+  let html = `<table class="heatmap-preco">
+    <thead><tr><th>Mês</th>${clientesOrd.map(c => `<th>${c}</th>`).join('')}</tr></thead>
+    <tbody>`;
+
+  meses.forEach(m => {
+    const [ano, mes] = m.split('|');
+    const rotulo = `${mes.slice(0, 3)}/${ano}`;
+    html += `<tr><td style="font-size:.75rem;white-space:nowrap;">${rotulo}</td>`;
+    clientesOrd.forEach(cli => {
+      const v = markup[cli]?.[m];
+      if (v === undefined) {
+        html += `<td style="text-align:center;color:#a0aec0;">—</td>`;
+      } else {
+        const t     = (v - gMin) / gSpan;
+        const alpha = 0.12 + t * 0.78;
+        const cor   = t > 0.55 ? '#fff' : '#2d3748';
+        html += `<td style="text-align:center;background:rgba(43,108,176,${alpha.toFixed(2)});color:${cor};font-size:.75rem;">${v.toFixed(1)}%</td>`;
+      }
+    });
+    html += '</tr>';
+  });
+
+  // Linha de média
+  html += `<tr style="border-top:2px solid #cbd5e0;font-weight:700;"><td style="font-size:.75rem;">Média</td>`;
+  clientesOrd.forEach(cli => {
+    const med = mediaMarkup(cli);
+    const t   = (med - gMin) / gSpan;
+    const alpha = 0.12 + t * 0.78;
+    const cor   = t > 0.55 ? '#fff' : '#2d3748';
+    html += `<td style="text-align:center;background:rgba(43,108,176,${alpha.toFixed(2)});color:${cor};font-size:.75rem;">${med.toFixed(1)}%</td>`;
+  });
+  html += '</tr></tbody></table>';
+
+  document.getElementById('heatmap-markup-container').innerHTML = html;
+}
+
+// ─── Heatmap de preços SKU × Cliente ─────────────────────────────────────────
+
+function renderizarHeatmapPreco() {
+  const dados = filtrarDados();
+  const porSKUCli = {}, fatSKU = {};
+
+  dados.forEach(r => {
+    const sku = r['SKU'], cli = r['Cliente'];
+    const p = num(r['Preço Sell Out']), q = num(r['Quantidade Sell Out']);
+    if (!sku || !cli || p <= 0 || q <= 0) return;
+    if (!porSKUCli[sku]) porSKUCli[sku] = {};
+    if (!porSKUCli[sku][cli]) porSKUCli[sku][cli] = { pSoma: 0, qSoma: 0 };
+    porSKUCli[sku][cli].pSoma += p * q;
+    porSKUCli[sku][cli].qSoma += q;
+    fatSKU[sku] = (fatSKU[sku] || 0) + num(r['Valor (R$) Sell Out']);
+  });
+
+  const topSKUs  = Object.keys(fatSKU).sort((a, b) => fatSKU[b] - fatSKU[a]).slice(0, 15);
+  const clientes = [...new Set(dados.map(r => r['Cliente']).filter(Boolean))].sort();
+
+  let html = `<table class="heatmap-preco"><thead><tr><th>SKU</th>${clientes.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>`;
+
+  topSKUs.forEach(sku => {
+    const precos = clientes.map(cli => {
+      const d = porSKUCli[sku]?.[cli];
+      return d && d.qSoma > 0 ? d.pSoma / d.qSoma : null;
+    });
+    const vals  = precos.filter(v => v !== null);
+    const min   = vals.length ? Math.min(...vals) : 0;
+    const max   = vals.length ? Math.max(...vals) : 0;
+    const span  = max - min || 1;
+    const label = sku.length > 38 ? sku.slice(0, 38) + '…' : sku;
+
+    html += `<tr><td style="font-size:.75rem;" title="${sku}">${label}</td>`;
+    precos.forEach(v => {
+      if (v === null) {
+        html += `<td style="text-align:center;color:#a0aec0;">—</td>`;
+      } else {
+        const t     = (v - min) / span;
+        const alpha = 0.12 + t * 0.78;
+        const cor   = t > 0.55 ? '#fff' : '#2d3748';
+        html += `<td style="text-align:center;background:rgba(43,108,176,${alpha.toFixed(2)});color:${cor};">${BRL(v)}</td>`;
+      }
+    });
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  document.getElementById('heatmap-preco-container').innerHTML = html;
+}
+
+// ─── Scatter Preço × Margem Bravir por SKU ───────────────────────────────────
+
+function renderizarScatterPrecoMargemBravir() {
+  const dados = filtrarDados().filter(r => r['Bravir / Terceiros'] === 'Bravir');
+  const porSKU = {};
+
+  dados.forEach(r => {
+    const sku = r['SKU'], cat = r['Categoria'];
+    if (!sku) return;
+    const p = num(r['Preço Sell Out']), q = num(r['Quantidade Sell Out']);
+    const mb = r['Margem Contribuição Bravir (R$)'], vIn = num(r['Valor (R$) Sell in']);
+    if (!porSKU[sku]) porSKU[sku] = { cat, pSoma: 0, qSoma: 0, mbSoma: 0, vInSoma: 0 };
+    if (p > 0 && q > 0) { porSKU[sku].pSoma += p * q; porSKU[sku].qSoma += q; }
+    if (!vazio(mb)) porSKU[sku].mbSoma += num(mb);
+    porSKU[sku].vInSoma += vIn;
+  });
+
+  const CORES_CAT6 = ['#2b6cb0','#276749','#744210','#702459','#2c7a7b','#c05621'];
+  const porCat = {};
+  Object.entries(porSKU).forEach(([sku, d]) => {
+    if (d.qSoma === 0 || d.vInSoma === 0) return;
+    if (!porCat[d.cat]) porCat[d.cat] = [];
+    porCat[d.cat].push({ x: d.pSoma / d.qSoma, y: d.mbSoma / d.vInSoma * 100, sku });
+  });
+
+  const cats = Object.keys(porCat).sort();
+  const datasets = cats.map((cat, i) => ({
+    label: cat,
+    data: porCat[cat].map(d => ({ x: d.x, y: d.y, sku: d.sku })),
+    backgroundColor: CORES_CAT6[i % CORES_CAT6.length] + 'bb',
+    borderColor: CORES_CAT6[i % CORES_CAT6.length],
+    pointRadius: 6, pointHoverRadius: 8,
+  }));
+
+  if (graficoPrecoMargemBravir) graficoPrecoMargemBravir.destroy();
+  graficoPrecoMargemBravir = new Chart(document.getElementById('grafico-preco-margem-bravir'), {
+    type: 'scatter',
+    data: { datasets },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: true, position: 'top' },
+        tooltip: { callbacks: { label: ctx => `  ${ctx.raw.sku} — Preço: ${BRL(ctx.parsed.x)}, Margem Bravir: ${ctx.parsed.y.toFixed(1)}%` } }
+      },
+      scales: {
+        x: { beginAtZero: true, title: { display: true, text: 'Preço sell-out médio (R$)' }, ticks: { callback: v => BRL(v) } },
+        y: { title: { display: true, text: 'Margem Bravir (%)' }, ticks: { callback: v => v + '%' } }
+      }
+    }
+  });
+}
+
+// ─── Ranking variação de preço por SKU ───────────────────────────────────────
+
+function renderizarRankingVariacaoPreco() {
+  const dados = filtrarDados();
+  const porSKUMes = {};
+
+  dados.forEach(r => {
+    const sku = r['SKU'];
+    const p = num(r['Preço Sell Out']), q = num(r['Quantidade Sell Out']);
+    if (!sku || p <= 0 || q <= 0) return;
+    const ch = `${r['Ano']}|${r['Mês']}`;
+    if (!porSKUMes[sku]) porSKUMes[sku] = {};
+    if (!porSKUMes[sku][ch]) porSKUMes[sku][ch] = { pSoma: 0, qSoma: 0 };
+    porSKUMes[sku][ch].pSoma += p * q;
+    porSKUMes[sku][ch].qSoma += q;
+  });
+
+  const todosOsMeses = new Set();
+  Object.values(porSKUMes).forEach(m => Object.keys(m).forEach(ch => todosOsMeses.add(ch)));
+  const mesesOrd = [...todosOsMeses].sort((a, b) => {
+    const [aA, mA] = a.split('|'), [aB, mB] = b.split('|');
+    return (parseInt(aA)*100+(MESES_ORDEM[mA]||0)) - (parseInt(aB)*100+(MESES_ORDEM[mB]||0));
+  });
+  if (mesesOrd.length < 2) return;
+  const primeiro = mesesOrd[0], ultimo = mesesOrd[mesesOrd.length - 1];
+
+  const variacoes = [];
+  Object.entries(porSKUMes).forEach(([sku, meses]) => {
+    const d1 = meses[primeiro], d2 = meses[ultimo];
+    if (!d1 || !d2 || d1.qSoma === 0 || d2.qSoma === 0) return;
+    const p1 = d1.pSoma / d1.qSoma, p2 = d2.pSoma / d2.qSoma;
+    variacoes.push({ sku, pct: (p2 - p1) / p1 * 100, p1, p2 });
+  });
+
+  variacoes.sort((a, b) => b.pct - a.pct);
+  const top10 = variacoes.slice(0, 10);
+  const bot10 = variacoes.slice(-10).reverse();
+  const selecionados = [...top10, ...bot10.filter(d => !top10.includes(d))].sort((a, b) => b.pct - a.pct);
+
+  const [ms1Ano, ms1Mes] = primeiro.split('|');
+  const [msUAno, msUMes] = ultimo.split('|');
+  const labelPeriodo = `${ms1Mes.slice(0,3)}/${ms1Ano} → ${msUMes.slice(0,3)}/${msUAno}`;
+
+  const labels  = selecionados.map(d => d.sku.length > 38 ? d.sku.slice(0,38)+'…' : d.sku);
+  const valores = selecionados.map(d => parseFloat(d.pct.toFixed(2)));
+
+  if (graficoRankingVariacaoPreco) graficoRankingVariacaoPreco.destroy();
+  graficoRankingVariacaoPreco = new Chart(document.getElementById('grafico-ranking-variacao-preco'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: valores,
+        backgroundColor: valores.map(v => v >= 0 ? '#276749bb' : '#c53030bb'),
+        borderColor:     valores.map(v => v >= 0 ? '#276749'   : '#c53030'),
+        borderWidth: 1, borderRadius: 3,
+      }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const d = selecionados[ctx.dataIndex];
+              return [`  Variação: ${ctx.parsed.x >= 0 ? '+' : ''}${ctx.parsed.x.toFixed(1)}%`, `  De: ${BRL(d.p1)} → Para: ${BRL(d.p2)}`];
+            }
+          }
+        }
+      },
+      scales: {
+        x: { title: { display: true, text: `Variação % do preço sell-out · ${labelPeriodo}` }, ticks: { callback: v => v + '%' } },
+        y: { ticks: { font: { size: 10 } } }
+      }
+    }
+  });
+}
+
+// ─── Scatter Preço × Qtd/PDV por Cliente (por SKU ou Marca) ─────────────────
+
+function popularScatterPrecoPDV() {
+  const dados = filtrarDados();
+  const tipo  = document.getElementById('tipo-scatter-preco-pdv').value;
+  const sel   = document.getElementById('sel-scatter-preco-pdv');
+  const anterior = sel.value;
+
+  const fat = {};
+  dados.forEach(r => {
+    const chave = tipo === 'sku' ? r['SKU'] : r['Marca'];
+    if (!chave) return;
+    fat[chave] = (fat[chave] || 0) + num(r['Valor (R$) Sell Out']);
+  });
+  const items = Object.keys(fat).sort((a, b) => fat[b] - fat[a]).slice(0, 50);
+
+  sel.innerHTML = '';
+  items.forEach(item => {
+    const opt = document.createElement('option');
+    opt.value = item;
+    opt.textContent = item.length > 60 ? item.slice(0, 60) + '…' : item;
+    sel.appendChild(opt);
+  });
+  if (anterior && [...sel.options].some(o => o.value === anterior)) sel.value = anterior;
+}
+
+function renderizarScatterPrecoPDV() {
+  const tipo       = document.getElementById('tipo-scatter-preco-pdv').value;
+  const selecionado = document.getElementById('sel-scatter-preco-pdv').value;
+  if (!selecionado) return;
+
+  const dados = filtrarDados().filter(r =>
+    tipo === 'sku' ? r['SKU'] === selecionado : r['Marca'] === selecionado
+  );
+
+  const porCli = {};
+  dados.forEach(r => {
+    const cli = r['Cliente'];
+    const p = num(r['Preço Sell Out']), q = num(r['Quantidade Sell Out']), pdv = num(r['# PDVs Cliente']);
+    if (!cli || p <= 0 || q <= 0 || pdv <= 0) return;
+    const ch = `${r['Ano']}|${r['Mês']}`;
+    if (!porCli[cli]) porCli[cli] = { pSoma: 0, qSoma: 0, meses: {} };
+    porCli[cli].pSoma += p * q;
+    porCli[cli].qSoma += q;
+    if (!porCli[cli].meses[ch]) porCli[cli].meses[ch] = { qtd: 0, pdvSoma: 0, pdvCnt: 0 };
+    porCli[cli].meses[ch].qtd     += q;
+    porCli[cli].meses[ch].pdvSoma += pdv;
+    porCli[cli].meses[ch].pdvCnt++;
+  });
+
+  const datasets = Object.entries(porCli).map(([cli, d], i) => {
+    if (d.qSoma === 0) return null;
+    const precoMedio = d.pSoma / d.qSoma;
+    const mensais    = Object.values(d.meses)
+      .filter(m => m.pdvCnt > 0)
+      .map(m => m.qtd / (m.pdvSoma / m.pdvCnt));
+    const qtdPDV = mensais.length ? mensais.reduce((s, v) => s + v, 0) / mensais.length : 0;
+    return {
+      label: cli,
+      data: [{ x: precoMedio, y: qtdPDV }],
+      backgroundColor: CORES[i % CORES.length] + 'cc',
+      borderColor: CORES[i % CORES.length],
+      pointRadius: 8, pointHoverRadius: 10,
+    };
+  }).filter(Boolean);
+
+  if (graficoScatterPrecoPDV) graficoScatterPrecoPDV.destroy();
+  graficoScatterPrecoPDV = new Chart(document.getElementById('grafico-scatter-preco-pdv'), {
+    type: 'scatter',
+    data: { datasets },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: true, position: 'top' },
+        tooltip: {
+          callbacks: {
+            label: ctx => [
+              `  ${ctx.dataset.label}`,
+              `  Preço médio: ${BRL(ctx.parsed.x)}`,
+              `  Qtd/PDV/mês: ${ctx.parsed.y.toFixed(1)} un./loja`,
+            ]
+          }
+        }
+      },
+      scales: {
+        x: { beginAtZero: true, title: { display: true, text: 'Preço sell-out médio (R$)' }, ticks: { callback: v => BRL(v) } },
+        y: { beginAtZero: true, title: { display: true, text: 'Qtd/PDV/mês (un./loja)' } }
+      }
+    }
+  });
 }
 
 // ─── Seção 7: Preços ──────────────────────────────────────────────────────────
