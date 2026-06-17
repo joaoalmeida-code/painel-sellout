@@ -480,6 +480,13 @@
     <canvas id="grafico-sell-in-out" style="max-height:380px;"></canvas>
   </div>
 
+  <!-- Evolução Sell-in vs Sell-out Quantidade -->
+  <div class="card" id="area-evolucao-qtd" style="display:none;">
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Evolução Sell-out vs Sell-in — Quantidade</div>
+    <div class="subtitulo">Unidades vendidas por mês · Azul = sell-out (consumidor) · Verde = sell-in (Bravir → varejista)</div>
+    <canvas id="grafico-evolucao-qtd" style="max-height:320px;"></canvas>
+  </div>
+
   <!-- Venda por PDV -->
   <div class="card" id="area-venda-pdv" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.4rem;">Venda por PDV por Cliente — Média Mensal</div>
@@ -714,6 +721,7 @@ let graficoDonutCat    = null;
 let graficoEvolucaoCat = null;
 let graficoTopSKUs     = null;
 let graficoSellInOut   = null;
+let graficoEvolucaoQtd = null;
 let graficoMargem      = null;
 let graficoVendaPDV    = null;
 let graficoMatriz      = null;
@@ -794,6 +802,7 @@ document.getElementById('input-arquivo').addEventListener('change', function (e)
       // Seção 3 — Clientes
       document.getElementById('sec-clientes').style.display             = 'block';
       document.getElementById('area-sell-in-out').style.display         = 'block';
+      document.getElementById('area-evolucao-qtd').style.display        = 'block';
       document.getElementById('area-venda-pdv').style.display           = 'block';
       document.getElementById('area-margem-comp').style.display         = 'block';
       document.getElementById('area-margem').style.display              = 'block';
@@ -1124,6 +1133,7 @@ function atualizarGrafico() {
   renderizarTopSKUs(dados);
   renderizarTop5SKUsEvolucao(dados);
   renderizarSellInVsSellOut(dados);
+  renderizarEvolucaoQtd();
   renderizarMargem(dados);
   renderizarMargemComparativa(dados);
   renderizarMargemBravirPorCategoria(dados);
@@ -1577,20 +1587,29 @@ function renderizarEvolucaoPorCategoria() {
 // ─── Venda por PDV por cliente ───────────────────────────────────────────────
 
 function renderizarVendaPorPDV(dados) {
-  const agrupado = {};
+  const valor = {};       // valor total sell-out por cliente
+  const pdvMes = {};      // pdvMes[cli][mes] = PDVs daquele mês (único por cli×mês)
+
   dados.forEach(r => {
     const cli = r['Cliente'];
     if (!cli) return;
-    if (!agrupado[cli]) agrupado[cli] = { valor: 0, pdvSoma: 0, pdvContagem: 0 };
-    agrupado[cli].valor += num(r['Valor (R$) Sell Out']);
+    valor[cli] = (valor[cli] || 0) + num(r['Valor (R$) Sell Out']);
     const pdvs = num(r['# PDVs Cliente']);
-    if (pdvs > 0) { agrupado[cli].pdvSoma += pdvs; agrupado[cli].pdvContagem++; }
+    if (pdvs > 0) {
+      const ch = `${r['Ano']}|${r['Mês']}`;
+      if (!pdvMes[cli]) pdvMes[cli] = {};
+      // Mesmo cliente×mês pode ter várias linhas (um por SKU) — pega o maior valor
+      pdvMes[cli][ch] = Math.max(pdvMes[cli][ch] || 0, pdvs);
+    }
   });
 
-  // vpdv mensal = valor total / Σ(PDVs × meses) = média de R$/PDV em cada mês do período
-  const clientes = Object.keys(agrupado)
-    .filter(c => agrupado[c].pdvSoma > 0)
-    .map(c => ({ nome: c, vpdv: agrupado[c].valor / agrupado[c].pdvSoma }))
+  // vpdv mensal = valor total ÷ Σ PDVs por mês (sem duplicar por SKU)
+  const clientes = Object.keys(valor)
+    .filter(c => pdvMes[c])
+    .map(c => {
+      const totalPDVMeses = Object.values(pdvMes[c]).reduce((s, v) => s + v, 0);
+      return { nome: c, vpdv: totalPDVMeses > 0 ? valor[c] / totalPDVMeses : 0 };
+    })
     .sort((a, b) => b.vpdv - a.vpdv);
 
   if (graficoVendaPDV) graficoVendaPDV.destroy();
@@ -2050,6 +2069,86 @@ function renderizarTop5SKUsEvolucao(dados) {
           ticks: {
             callback: v => v >= 1e6 ? 'R$'+(v/1e6).toFixed(1)+'M' : v >= 1e3 ? 'R$'+(v/1e3).toFixed(0)+'k' : 'R$'+v
           }
+        }
+      }
+    }
+  });
+}
+
+// ─── Evolução Sell-out vs Sell-in — Quantidade mensal ────────────────────────
+
+function renderizarEvolucaoQtd() {
+  const dados = filtrarDados();
+  const porMes = {};
+
+  dados.forEach(r => {
+    if (!r['Ano'] || !r['Mês']) return;
+    const ch = `${r['Ano']}|${r['Mês']}`;
+    if (!porMes[ch]) porMes[ch] = { out: 0, in: 0 };
+    porMes[ch].out += num(r['Quantidade Sell Out']);
+    porMes[ch].in  += num(r['Quantidade Sell in']);
+  });
+
+  const meses = Object.keys(porMes).sort((a, b) => {
+    const [aA, mA] = a.split('|'), [aB, mB] = b.split('|');
+    return (parseInt(aA)*100+(MESES_ORDEM[mA]||0)) - (parseInt(aB)*100+(MESES_ORDEM[mB]||0));
+  });
+  const rotulos = meses.map(m => { const [a,ms]=m.split('|'); return `${ms.slice(0,3)}/${a}`; });
+  const N = v => v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'k' : String(v);
+
+  if (graficoEvolucaoQtd) graficoEvolucaoQtd.destroy();
+  graficoEvolucaoQtd = new Chart(document.getElementById('grafico-evolucao-qtd'), {
+    type: 'line',
+    data: {
+      labels: rotulos,
+      datasets: [
+        {
+          label: 'Sell Out (un.)',
+          data: meses.map(m => porMes[m].out),
+          borderColor: '#2b6cb0',
+          backgroundColor: '#2b6cb022',
+          borderWidth: 2.5,
+          pointRadius: 3, pointHoverRadius: 5,
+          fill: false, tension: 0.3,
+        },
+        {
+          label: 'Sell In (un.)',
+          data: meses.map(m => porMes[m].in),
+          borderColor: '#276749',
+          backgroundColor: '#27674922',
+          borderWidth: 2,
+          borderDash: [5, 3],
+          pointRadius: 3, pointHoverRadius: 5,
+          fill: false, tension: 0.3,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: true, position: 'top' },
+        tooltip: {
+          callbacks: {
+            label: ctx => `  ${ctx.dataset.label}: ${N(ctx.parsed.y)} un.`,
+            afterBody: ctx => {
+              const out = ctx.find(c => c.datasetIndex === 0)?.parsed.y;
+              const inn = ctx.find(c => c.datasetIndex === 1)?.parsed.y;
+              if (out != null && inn != null && inn > 0) {
+                const diff = out - inn;
+                const sinal = diff >= 0 ? '+' : '';
+                return [`  ──────────────────────`, `  Diferença: ${sinal}${N(diff)} un.`];
+              }
+              return [];
+            }
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { font: { size: 11 } } },
+        y: {
+          beginAtZero: true,
+          ticks: { callback: v => N(v) + ' un.' }
         }
       }
     }
@@ -2858,7 +2957,7 @@ function renderizarScatterMargemBravir(dados) {
     if (!sku) return;
     const mb = r['Margem Contribuição Bravir (R$)'];
     if (vazio(mb)) return;
-    if (!agr[sku]) agr[sku] = { fat: 0, fatIn: 0, mb: 0 };
+    if (!agr[sku]) agr[sku] = { fat: 0, fatIn: 0, mb: 0, marca: r['Marca'] || '(sem marca)' };
     agr[sku].fat   += num(r['Valor (R$) Sell Out']);
     agr[sku].fatIn += num(r['Valor (R$) Sell in']);
     agr[sku].mb    += num(mb);
@@ -2871,15 +2970,29 @@ function renderizarScatterMargemBravir(dados) {
 
   if (!skus.length) return;
 
-  // x = faturamento sell-out (volume), y = margem % sobre sell-in
-  const pontos = skus.map(s => ({ nome: s, x: agr[s].fat, y: agr[s].mb / agr[s].fatIn * 100 }));
+  const pontos = skus.map(s => ({
+    nome: s, marca: agr[s].marca,
+    x: agr[s].fat, y: agr[s].mb / agr[s].fatIn * 100,
+  }));
 
-  const xs = pontos.map(p => p.x).sort((a, b) => a - b);
-  const ys = pontos.map(p => p.y).sort((a, b) => a - b);
+  // Linhas de mediana
+  const xs   = pontos.map(p => p.x).sort((a, b) => a - b);
+  const ys   = pontos.map(p => p.y).sort((a, b) => a - b);
   const medX = xs[Math.floor(xs.length / 2)];
   const medY = ys[Math.floor(ys.length / 2)];
   const maxX = Math.max(...xs) * 1.1;
   const maxY = Math.max(...ys) * 1.15;
+
+  // Um dataset por marca
+  const CORES_MARCA = ['#2b6cb0','#276749','#744210','#702459','#2c7a7b','#c05621','#553c9a','#97266d','#2d3748'];
+  const marcas = [...new Set(pontos.map(p => p.marca))].sort();
+  const dsMarcas = marcas.map((marca, i) => ({
+    label: marca,
+    data: pontos.filter(p => p.marca === marca).map(p => ({ x: p.x, y: p.y, nome: p.nome })),
+    backgroundColor: CORES_MARCA[i % CORES_MARCA.length] + 'aa',
+    borderColor:     CORES_MARCA[i % CORES_MARCA.length],
+    pointRadius: 6, pointHoverRadius: 8,
+  }));
 
   if (graficoScatterMargemBravir) graficoScatterMargemBravir.destroy();
   graficoScatterMargemBravir = new Chart(document.getElementById('grafico-scatter-margem-bravir'), {
@@ -2896,27 +3009,24 @@ function renderizarScatterMargemBravir(dados) {
           data: [{ x: medX, y: 0 }, { x: medX, y: maxY }],
           borderColor: '#cbd5e0', borderDash: [5, 4], borderWidth: 1.5,
         },
-        {
-          label: 'SKUs',
-          data: pontos.map(p => ({ x: p.x, y: p.y })),
-          backgroundColor: '#2b6cb0aa',
-          borderColor: '#2b6cb0',
-          pointRadius: 6,
-          pointHoverRadius: 8,
-        }
+        ...dsMarcas,
       ]
     },
     options: {
       responsive: true,
       plugins: {
-        legend: { display: false },
+        legend: {
+          display: true, position: 'top',
+          labels: { filter: item => !item.text.startsWith('_') }
+        },
         tooltip: {
           callbacks: {
             label: ctx => {
-              if (ctx.dataset.label !== 'SKUs') return null;
-              const p = pontos[ctx.dataIndex];
+              if (ctx.dataset.label.startsWith('_')) return null;
+              const p = ctx.raw;
+              const nome = p.nome.length > 50 ? p.nome.slice(0, 50) + '…' : p.nome;
               return [
-                `  ${p.nome.length > 50 ? p.nome.slice(0, 50) + '…' : p.nome}`,
+                `  ${nome}`,
                 `  Faturamento: ${BRL(p.x)}`,
                 `  Margem Bravir: ${p.y.toFixed(1)}%`,
               ];
