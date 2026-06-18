@@ -348,6 +348,19 @@
     .heatmap-preco th:first-child { text-align: left; min-width: 140px; }
     .heatmap-preco td { padding: .3rem .5rem; border: 1px solid #e2e8f0; white-space: nowrap; }
     .tabela-ranking tr:hover td { background: #f7fafc; }
+
+    /* ---- Dica de análise nos gráficos ---- */
+    .como-analisar {
+      font-size: .775rem;
+      color: #4a5568;
+      line-height: 1.65;
+      background: #ebf8ff;
+      border-left: 3px solid #90cdf4;
+      padding: .4rem .8rem;
+      border-radius: 0 4px 4px 0;
+      margin-top: .35rem;
+      margin-bottom: 1rem;
+    }
   </style>
 </head>
 <body>
@@ -437,6 +450,8 @@
   <!-- Faturamento por cliente + tabela -->
   <div class="card" id="area-grafico">
     <div id="titulo-grafico"></div>
+    <div class="subtitulo">Faturamento sell-out total · Barras ordenadas do maior para o menor · A tabela abaixo detalha volume, margem e preços por linha</div>
+    <div class="como-analisar">Este gráfico mostra quanto cada rede varejista faturou em sell-out no período selecionado. Identifique quais clientes sustentam o negócio e se há concentração excessiva — quando um único cliente representa mais de 40% do faturamento, qualquer problema comercial com ele impacta fortemente o resultado. A tabela abaixo permite comparar preço médio, volume e margem lado a lado.</div>
     <canvas id="grafico"></canvas>
     <div id="total-mes"></div>
     <div id="tabela-container"></div>
@@ -446,6 +461,7 @@
   <div class="card" id="area-evolucao" style="display:none;">
     <div id="titulo-evolucao" style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;"></div>
     <div class="subtitulo">Colunas empilhadas · Verde = Margem Bravir · Cinza = Custo Bravir (Sell-in − Margem) · Azul = Markup varejista (Sell-out − Sell-in) · Altura total = Faturamento Sell-out</div>
+    <div class="como-analisar">Acompanhe mês a mês como o faturamento evolui e como ele se divide entre os três "bolsos": a margem que fica com a Bravir (verde), o custo de produção/operação da Bravir repassado ao varejista (cinza) e o ganho do varejista (azul). Se a fatia azul crescer proporcionalmente ao longo do tempo, os varejistas estão aumentando o markup sobre os produtos da Bravir. Se o verde diminuir, a rentabilidade da Bravir está sendo pressionada — sinal de atenção para revisão de preço de sell-in ou estrutura de custos.</div>
     <canvas id="grafico-evolucao" style="max-height:340px;"></canvas>
   </div>
 
@@ -454,13 +470,17 @@
 
   <!-- Mix de categorias (donut) -->
   <div class="card" id="area-donut-cat" style="display:none;">
-    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:1rem;">Mix de Categorias — Participação no Faturamento</div>
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Mix de Categorias — Participação no Faturamento</div>
+    <div class="subtitulo">Cada fatia = uma categoria · Tamanho proporcional ao faturamento sell-out · Passe o mouse para ver o valor exato</div>
+    <div class="como-analisar">Mostra quanto cada categoria representa no faturamento total do período. Identifique se o negócio está concentrado em uma única categoria — o que aumenta o risco caso haja queda de demanda, perda de espaço em gôndola ou entrada de concorrentes. Um portfólio equilibrado entre categorias é mais resiliente a variações sazonais e mudanças de mercado.</div>
     <canvas id="grafico-donut-cat" style="max-height:340px;"></canvas>
   </div>
 
   <!-- Evolução por categoria -->
   <div class="card" id="area-evolucao-cat" style="display:none;">
-    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:1rem;">Evolução do Sell-out por Categoria</div>
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Evolução do Sell-out por Categoria</div>
+    <div class="subtitulo">Faturamento sell-out mensal (R$) · Uma linha por categoria · Passe o mouse para comparar todas as categorias no mesmo mês</div>
+    <div class="como-analisar">Acompanhe o crescimento ou queda de cada categoria ao longo do tempo. Uma categoria em queda consistente pode indicar perda de competitividade, mudança no comportamento do consumidor ou problema de disponibilidade em loja. Uma categoria em crescimento acelerado pode justificar maior investimento em trade marketing e ampliação de portfólio. Picos isolados geralmente indicam ações promocionais.</div>
     <canvas id="grafico-evolucao-cat" style="max-height:340px;"></canvas>
   </div>
 
@@ -468,6 +488,7 @@
   <div class="card" id="area-margem-cat" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.4rem;">Margem Bravir % por Categoria</div>
     <div class="subtitulo">Margem de Contribuição Bravir % ponderada pelo faturamento sell-out de cada categoria</div>
+    <div class="como-analisar">Compare a rentabilidade entre categorias para identificar onde a Bravir é mais eficiente. Categorias com alta margem e alto volume são o núcleo estratégico do negócio — merecem proteção e crescimento. Categorias com margem baixa merecem análise: o preço de sell-in está abaixo do adequado, ou o custo de produção é elevado? Categorias com margem muito abaixo das demais podem ser candidatas a revisão de tabela ou descontinuação de SKUs menos eficientes.</div>
     <canvas id="grafico-margem-cat" style="max-height:320px;"></canvas>
   </div>
 
@@ -476,7 +497,9 @@
 
   <!-- Sell In vs. Sell Out por Cliente -->
   <div class="card" id="area-sell-in-out" style="display:none;">
-    <div id="titulo-sell-in-out" style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:1rem;">Sell In vs. Sell Out por Cliente (unidades)</div>
+    <div id="titulo-sell-in-out" style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Sell In vs. Sell Out por Cliente (unidades)</div>
+    <div class="subtitulo">Barras agrupadas por cliente · Azul = sell-in (pedidos ao fabricante) · Verde = sell-out (vendas ao consumidor) · Comparação em unidades</div>
+    <div class="como-analisar">Compara quanto cada cliente comprou da Bravir (sell-in) com quanto vendeu ao consumidor final (sell-out) em unidades, no período filtrado. Se o sell-in for muito maior que o sell-out, o varejista pode estar acumulando estoque — risco de pedidos menores no futuro ou pressão por descontos. Se o sell-out superar o sell-in, o estoque do varejista está diminuindo — uma reposição pode ser necessária em breve para evitar ruptura na gôndola.</div>
     <canvas id="grafico-sell-in-out" style="max-height:380px;"></canvas>
   </div>
 
@@ -484,6 +507,7 @@
   <div class="card" id="area-evolucao-qtd" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Evolução Sell-out vs Sell-in — Quantidade</div>
     <div class="subtitulo">Unidades vendidas por mês · Azul = sell-out (consumidor) · Verde = sell-in (Bravir → varejista)</div>
+    <div class="como-analisar">Quando as duas linhas se afastam, é sinal de desequilíbrio na cadeia: sell-in muito acima do sell-out indica que o varejista está acumulando estoque — o que pode levar a pressão por descontos ou redução de pedidos futuros. Sell-out acima do sell-in por vários meses indica risco de ruptura — o produto pode desaparecer da gôndola. O ideal é que as duas linhas caminhem juntas, com o sell-in ligeiramente à frente para garantir cobertura mínima.</div>
     <canvas id="grafico-evolucao-qtd" style="max-height:320px;"></canvas>
   </div>
 
@@ -491,6 +515,7 @@
   <div class="card" id="area-evolucao-sellin-cliente" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Evolução do Sell In por Cliente</div>
     <div class="subtitulo">Faturamento sell-in mensal (R$) · Barras empilhadas — participação de cada cliente</div>
+    <div class="como-analisar">Acompanhe a evolução dos pedidos de cada rede ao longo do tempo. Clientes com participação crescente são parceiros em expansão — sinal positivo de relacionamento comercial. Clientes com participação caindo podem estar migrando para concorrentes, reduzindo o mix da Bravir ou passando por dificuldades financeiras. Meses com queda geral no total da barra podem indicar sazonalidade do setor ou problema comercial sistêmico.</div>
     <canvas id="grafico-evolucao-sellin-cliente" style="max-height:340px;"></canvas>
   </div>
 
@@ -498,13 +523,15 @@
   <div class="card" id="area-evolucao-sellin-marca" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Evolução do Sell In por Marca</div>
     <div class="subtitulo">Faturamento sell-in mensal (R$) · Barras empilhadas — participação de cada marca · Marcas Bravir primeiro</div>
+    <div class="como-analisar">Mostra como cada marca contribui para o sell-in ao longo do tempo. Útil para avaliar se as marcas próprias da Bravir (Bendita Cânfora, Bravir Tradicional, Laby) estão crescendo ou cedendo espaço para o white label. Uma marca própria com participação crescente indica maior poder de marca e menor dependência de contratos de terceiros. Uma marca em queda pode necessitar de reposicionamento ou ações de trade marketing.</div>
     <canvas id="grafico-evolucao-sellin-marca" style="max-height:340px;"></canvas>
   </div>
 
   <!-- Venda por PDV -->
   <div class="card" id="area-venda-pdv" style="display:none;">
-    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.4rem;">Venda por PDV por Cliente — Média Mensal</div>
-    <div style="font-size:.78rem;color:#718096;margin-bottom:1rem;">Faturamento sell-out médio por loja por mês · R$ / PDV / mês no período filtrado</div>
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Venda por PDV por Cliente — Média Mensal</div>
+    <div class="subtitulo">Faturamento sell-out médio por loja por mês · R$ / PDV / mês no período filtrado</div>
+    <div class="como-analisar">Normaliza o faturamento pelo número de lojas de cada rede, permitindo comparar clientes de tamanhos muito diferentes em igualdade de condições. Um cliente com muitas lojas mas baixa venda por PDV pode indicar presença fraca na gôndola, sortimento limitado ou produto com baixo giro naquele perfil de shopper. É uma métrica mais justa do que o faturamento absoluto para avaliar a eficiência comercial em cada ponto de venda.</div>
     <canvas id="grafico-venda-pdv" style="max-height:340px;"></canvas>
   </div>
 
@@ -512,27 +539,16 @@
   <div class="card" id="area-margem-comp" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.4rem;">Margem Bravir × Margem Cliente por Cliente</div>
     <div class="subtitulo">Comparação das margens % ponderadas pelo faturamento sell-out · Verde = Bravir · Azul = Cliente</div>
+    <div class="como-analisar">Compara o que cada "lado" ganha na transação. Se a margem do varejista for sistematicamente maior que a da Bravir, o canal está extraindo mais valor da cadeia do que o fabricante — pode indicar que o preço de sell-in está abaixo do adequado ou que o consumidor aceita pagar mais pelo produto do que a Bravir está cobrando do varejista. O equilíbrio ideal depende da estratégia de canal, mas uma inversão acentuada merece revisão comercial.</div>
     <canvas id="grafico-margem-comp" style="max-height:360px;"></canvas>
   </div>
 
   <!-- Margem Cliente % por Cliente -->
   <div class="card" id="area-margem" style="display:none;">
-    <div id="titulo-margem" style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:1rem;">Margem Cliente % por Cliente</div>
+    <div id="titulo-margem" style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Margem Cliente % por Cliente</div>
+    <div class="subtitulo">Margem % que o varejista pratica sobre os produtos da Bravir · (Preço sell-out − Preço sell-in) ÷ Preço sell-in</div>
+    <div class="como-analisar">Mostra o quanto cada varejista ganha ao revender os produtos da Bravir. Margens muito altas podem indicar que o produto está precificado acima do ideal ao consumidor, reduzindo competitividade frente a concorrentes. Margens muito baixas podem sinalizar pressão promocional excessiva — o varejista pode estar vendendo com desconto frequente, o que pode deteriorar a percepção de valor da marca a longo prazo.</div>
     <canvas id="grafico-margem" style="max-height:340px;"></canvas>
-  </div>
-
-  <!-- Matriz Volume × Margem Cliente -->
-  <div class="card" id="area-matriz" style="display:none;">
-    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.4rem;">Matriz Volume × Margem Cliente</div>
-    <div style="font-size:.78rem;color:#718096;margin-bottom:1rem;">Eixo X = faturamento total · Eixo Y = margem cliente % · Passe o mouse para ver detalhes</div>
-    <canvas id="grafico-matriz" style="max-height:380px;"></canvas>
-  </div>
-
-  <!-- Scatter Sell In × Sell Out por cliente -->
-  <div class="card" id="area-scatter-sellin" style="display:none;">
-    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.4rem;">Scatter: Sell In × Sell Out por Cliente</div>
-    <div class="subtitulo">Comparação em unidades (não em R$) · Acima da diagonal = sell-out &gt; sell-in (consumindo estoque) · Abaixo = sell-in &gt; sell-out (acumulando estoque)</div>
-    <canvas id="grafico-scatter-sellin" style="max-height:420px;"></canvas>
   </div>
 
   <!-- ═══ SEÇÃO 4 — SKUs / PRODUTOS ═══ -->
@@ -540,7 +556,9 @@
 
   <!-- Top 10 SKUs por Faturamento -->
   <div class="card" id="area-top-skus" style="display:none;">
-    <div id="titulo-top-skus" style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:1rem;">Top 10 SKUs por Faturamento</div>
+    <div id="titulo-top-skus" style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Top 10 SKUs por Faturamento</div>
+    <div class="subtitulo">Faturamento sell-out total no período filtrado · Barras ordenadas do maior para o menor</div>
+    <div class="como-analisar">Lista os produtos que mais geram receita no período. Identifique se há dependência excessiva de um único produto — se os 2 ou 3 primeiros SKUs representam mais de 60% do faturamento, qualquer problema de disponibilidade, preço ou concorrência neles tem impacto crítico no resultado. Os produtos no topo merecem atenção especial em termos de estoque, presença garantida na gôndola e preço competitivo.</div>
     <canvas id="grafico-top-skus" style="max-height:400px;"></canvas>
   </div>
 
@@ -548,6 +566,7 @@
   <div class="card" id="area-top5-evolucao" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.4rem;">Evolução Mensal — Top 5 SKUs por Faturamento</div>
     <div class="subtitulo">Sell Out em R$ mês a mês · Top 5 determinados pelo faturamento total no período filtrado</div>
+    <div class="como-analisar">Acompanhe a trajetória dos 5 produtos mais vendidos ao longo do tempo. Um produto em queda consistente pode estar perdendo espaço para concorrentes ou sofrendo com rupturas recorrentes. Picos pontuais geralmente indicam ações promocionais ou sazonalidade. Use este gráfico para identificar padrões sazonais por produto e planejar com antecedência o calendário de produção, sell-in e ações de trade.</div>
     <canvas id="grafico-top5-evolucao" style="max-height:360px;"></canvas>
   </div>
 
@@ -555,6 +574,7 @@
   <div class="card" id="area-ranking-margem-skus" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.4rem;">Ranking de Margem Bravir % por SKU</div>
     <div class="subtitulo">Margem de Contribuição Bravir % = Margem R$ ÷ Faturamento Sell-in · Apenas SKUs com sell-in disponível no período filtrado</div>
+    <div class="como-analisar">Os produtos no topo (maiores margens) são os mais rentáveis para a Bravir — merecem prioridade em negociações de espaço e volume com os varejistas. Os produtos no final da lista merecem análise criteriosa: o preço de sell-in está abaixo do adequado, ou o custo de produção é elevado? Produtos com margem muito baixa ou negativa são candidatos a revisão de tabela de preços, reformulação de produto ou descontinuação. Compare este ranking com o de faturamento para identificar produtos que vendem muito mas geram pouca rentabilidade.</div>
     <div class="ranking-grid">
       <div>
         <div class="ranking-titulo top">▲ Top 5 — maiores margens</div>
@@ -571,6 +591,7 @@
   <div class="card" id="area-scatter-margem-bravir" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.4rem;">Faturamento × Margem Bravir % por SKU</div>
     <div class="subtitulo">Top 40 SKUs por faturamento · Eixo X = faturamento sell-out · Eixo Y = Margem Bravir % · Quadrante superior direito = SKUs mais estratégicos</div>
+    <div class="como-analisar">Divide o portfólio em quatro perfis estratégicos: canto superior direito = produtos estrela (alto volume e boa margem — proteger e expandir); canto inferior direito = produtos de alto volume mas baixa margem (geram caixa mas com rentabilidade limitada — revisar precificação); canto superior esquerdo = produtos de nicho com boa margem (potencial de crescimento de volume); canto inferior esquerdo = candidatos a revisão profunda ou descontinuação. Cada ponto representa um SKU — passe o mouse para ver o nome.</div>
     <canvas id="grafico-scatter-margem-bravir" style="max-height:420px;"></canvas>
   </div>
 
@@ -580,7 +601,8 @@
   <!-- Evolução de Estoque por Cliente -->
   <div class="card" id="area-estoque" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Evolução de Estoque por Cliente</div>
-    <div style="font-size:.78rem;color:#718096;margin-bottom:.6rem;">Estoque CD + Loja no último dia do mês · Pontos ausentes = dado não disponível</div>
+    <div class="subtitulo">Estoque CD + Loja no último dia do mês · Pontos ausentes = dado não disponível para aquele período</div>
+    <div class="como-analisar">Acompanhe o nível de estoque de cada varejista mês a mês. Quedas abruptas podem indicar alta demanda não atendida (risco de ruptura na gôndola) ou redução intencional de pedidos. Crescimentos contínuos podem indicar acúmulo de estoque — sinal de que as vendas estão abaixo do esperado, o que pode gerar pressão do varejista por descontos ou promoções para girar o estoque. Pontos ausentes no gráfico indicam que este dado não foi informado pelo varejista naquele mês.</div>
     <div style="margin:.0rem 0 1rem;">
       <div style="font-size:.78rem;color:#718096;margin-bottom:.4rem;">
         Clientes exibidos —
@@ -596,6 +618,7 @@
   <div class="card" id="area-estoque-pdv" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Estoque por PDV</div>
     <div class="subtitulo">Unidades em estoque (CD + Loja) ÷ número de PDVs do cliente · Seleção de clientes também controla o gráfico de Cobertura abaixo</div>
+    <div class="como-analisar">Normaliza o estoque pelo número de lojas do varejista, permitindo comparar clientes de tamanhos muito diferentes em igualdade de condições. Um varejista com 500 lojas e 10.000 unidades em estoque tem apenas 20 unidades por PDV — pode ser insuficiente dependendo do giro. Use esta métrica para identificar quais clientes precisam de reposição prioritária, independentemente do tamanho da rede.</div>
     <div style="margin:.6rem 0 1rem;">
       <div style="font-size:.78rem;color:#718096;margin-bottom:.4rem;">
         Clientes exibidos —
@@ -610,7 +633,8 @@
   <!-- Cobertura de Estoque -->
   <div class="card" id="area-cobertura" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Cobertura de Estoque (dias)</div>
-    <div class="subtitulo">Estoque ÷ (média móvel 3 meses de sell-out ÷ 30) · Quantos dias de venda o estoque cobre</div>
+    <div class="subtitulo">Estoque ÷ (média móvel 3 meses de sell-out ÷ 30) · Quantos dias de venda o estoque atual cobre sem nova reposição</div>
+    <div class="como-analisar">Indica por quantos dias o estoque atual consegue abastecer as vendas sem nova entrega. Menos de 15 dias é sinal de alerta vermelho — o produto pode sumir da gôndola antes da próxima entrega, gerando ruptura. Acima de 60 dias indica excesso de estoque, que pode gerar pressão do varejista por descontos ou devoluções. Para o varejo farmacêutico, o intervalo saudável costuma ser entre 20 e 45 dias, considerando o lead time de reposição.</div>
     <div style="margin:.6rem 0 1rem;">
       <div style="font-size:.78rem;color:#718096;margin-bottom:.4rem;">
         Clientes exibidos —
@@ -628,7 +652,8 @@
   <!-- Elasticidade Preço × Demanda -->
   <div class="card" id="area-elasticidade" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.4rem;">Elasticidade Preço × Demanda</div>
-    <div class="subtitulo">Eixo X = preço médio mensal · Eixo Y = sell-out por PDV (un./loja) — normalizado pelo nº de lojas do cliente · Linha tracejada = regressão log-log · Usa todos os meses disponíveis</div>
+    <div class="subtitulo">Eixo X = preço médio mensal · Eixo Y = sell-out por PDV (un./loja) · Linha tracejada = regressão log-log · Usa todos os meses disponíveis</div>
+    <div class="como-analisar">Mostra como a demanda reage a variações de preço para cada SKU selecionado. A linha tracejada é uma tendência estatística (regressão): se ela cai da esquerda para a direita, o produto é elástico — preço mais alto reduz o volume vendido. Se a linha for praticamente horizontal, o produto é inelástico — os consumidores compram independente do preço. Produtos inelásticos têm mais espaço para reajuste de preço sem perda significativa de volume. Selecione múltiplos SKUs para comparar o comportamento entre produtos.</div>
     <div class="linha-filtro" style="margin-bottom:1.25rem;align-items:flex-start;">
       <label for="sel-skus-elast" style="padding-top:.4rem;">SKUs:</label>
       <div>
@@ -644,6 +669,7 @@
   <div class="card" id="area-temperatura" style="display:none;">
     <div id="titulo-temperatura" style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.4rem;">Sell Out × Temperatura Média</div>
     <div class="subtitulo">Barras = quantidade sell-out (eixo esquerdo) · Linha sólida = temperatura média mensal · Linha tracejada = média das mínimas diárias · Dados reais Open-Meteo (eixo direito)</div>
+    <div class="como-analisar">Cruza as vendas com a temperatura para identificar sazonalidade climática. Produtos como cânfora, manteiga de cacau e protetor labial tendem a vender mais no inverno (temperaturas baixas). Protetor solar responde ao calor e à radiação. Se as barras de venda subirem quando a temperatura cai, confirma sazonalidade fria — use isso para planejar o sell-in com antecedência (2 a 3 meses antes do inverno) e evitar rupturas no pico de demanda. Selecione o cliente mais relevante para uma leitura mais precisa.</div>
     <div class="linha-filtro" style="margin-bottom:1.25rem;">
       <label for="sel-cliente-temp">Cliente:</label>
       <select id="sel-cliente-temp"></select>
@@ -658,6 +684,7 @@
   <div class="card" id="area-preco-categoria" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Evolução do Preço Médio por Categoria</div>
     <div class="subtitulo">Preço sell-out médio ponderado por quantidade vendida · Uma linha por categoria</div>
+    <div class="como-analisar">Acompanhe se os varejistas estão repassando os reajustes de preço da Bravir ao consumidor final ao longo do tempo. Uma categoria com preço estagnado enquanto o sell-in sobe indica que o varejista está absorvendo o aumento — o que pressiona a margem do canal e pode gerar conflitos comerciais. Categorias com preço crescente podem indicar maior poder de marca e que o consumidor aceita pagar mais pelo produto.</div>
     <canvas id="grafico-preco-categoria" style="max-height:340px;"></canvas>
   </div>
 
@@ -665,6 +692,7 @@
   <div class="card" id="area-preco-cliente" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Preço Sell-out por Cliente</div>
     <div class="subtitulo">Preço médio ponderado que cada cliente cobra do consumidor para o SKU selecionado</div>
+    <div class="como-analisar">Selecione um SKU para ver quanto cada rede cobra do consumidor pelo mesmo produto. Diferenças grandes de preço entre redes podem criar conflito de canal — o consumidor busca o varejista mais barato, prejudicando quem cobra mais. Identifique se há algum cliente praticando preços muito abaixo dos demais (possível dumping ou promoção permanente), o que pode deteriorar a percepção de valor da marca.</div>
     <div class="linha-filtro" style="margin-bottom:1.25rem;">
       <label for="sel-sku-preco">SKU:</label>
       <select id="sel-sku-preco" style="max-width:340px;"></select>
@@ -676,6 +704,7 @@
   <div class="card" id="area-evolucao-preco" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Evolução do Preço Sell-out vs Sell-in</div>
     <div class="subtitulo">Preço médio ponderado por quantidade · Azul = preço ao consumidor (sell-out) · Cinza = preço Bravir ao varejista (sell-in) · Área entre as linhas = markup do varejista</div>
+    <div class="como-analisar">A área sombreada entre as duas linhas representa o markup do varejista — quanto ele ganha por unidade vendida. Se essa área crescer ao longo do tempo, o varejista está aumentando a margem sobre os produtos da Bravir (o preço ao consumidor sobe mais rápido que o sell-in). Se a área diminuir, os varejistas estão comprimindo a própria margem — o que pode indicar pressão competitiva e menor interesse em promover o produto ativamente.</div>
     <canvas id="grafico-evolucao-preco" style="max-height:320px;"></canvas>
   </div>
 
@@ -683,6 +712,7 @@
   <div class="card" id="area-markup-cliente" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Markup Varejista por Cliente</div>
     <div class="subtitulo">(Preço sell-out − Preço sell-in) ÷ Preço sell-in · Linhas = meses · Colunas = clientes ordenados por markup médio · Azul mais escuro = markup maior</div>
+    <div class="como-analisar">Este mapa de calor mostra o quanto cada varejista cobra a mais do consumidor em relação ao preço que paga à Bravir, mês a mês. Clientes com markup alto cobram mais do consumidor — o produto pode estar menos competitivo na gôndola desse varejista em relação a concorrentes. Variações ao longo do tempo (células mais claras ou escuras em meses específicos) indicam promoções pontuais ou reajustes de tabela do varejista. Clientes com markup consistentemente alto podem ser abordados para negociações de pricing.</div>
     <div id="heatmap-markup-container" style="overflow-x:auto;margin-top:.75rem;"></div>
   </div>
 
@@ -690,27 +720,23 @@
   <div class="card" id="area-heatmap-preco" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Mapa de Preços — Top SKUs × Clientes</div>
     <div class="subtitulo">Preço sell-out médio ponderado · Azul mais escuro = preço mais alto · Cores relativas por linha (SKU) · Top 15 SKUs por faturamento</div>
+    <div class="como-analisar">Este mapa mostra como cada varejista precifica cada produto. As cores são relativas dentro de cada linha (produto): um azul escuro significa que aquele varejista cobra mais do que os demais pelo mesmo SKU. Use para identificar inconsistências de canal — um cliente que vende muito mais barato pode estar atraindo volume às custas de outros canais, o que pode gerar conflito entre redes. Também ajuda a identificar onde há espaço para reajuste de preço ao consumidor sem perda de competitividade.</div>
     <div id="heatmap-preco-container" style="margin-top:.75rem;overflow-x:auto;"></div>
-  </div>
-
-  <!-- Preço × Margem Bravir por SKU -->
-  <div class="card" id="area-preco-margem-bravir" style="display:none;">
-    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Preço Sell-out × Margem Bravir % — por SKU</div>
-    <div class="subtitulo">Apenas produtos Bravir · Cada ponto = um SKU · Cor = categoria · Produtos mais caros entregam margem melhor?</div>
-    <canvas id="grafico-preco-margem-bravir" style="max-height:360px;"></canvas>
   </div>
 
   <!-- Ranking variação de preço -->
   <div class="card" id="area-ranking-variacao-preco" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Ranking de Variação de Preço por SKU</div>
     <div class="subtitulo">Variação % do preço sell-out médio entre o primeiro e o último mês do período filtrado · Verde = alta · Vermelho = queda</div>
+    <div class="como-analisar">Mostra quais produtos tiveram maior variação de preço ao consumidor no período selecionado. Quedas de preço podem indicar promoções recorrentes que comprometem o posicionamento, ou perda de poder de negociação com o varejista. Altas de preço acima da inflação são positivas se mantiverem o volume, mas merecem acompanhamento — produtos elásticos podem perder volume com reajustes muito agressivos. Filtre por cliente ou categoria para identificar onde as variações são mais intensas.</div>
     <canvas id="grafico-ranking-variacao-preco" style="max-height:420px;"></canvas>
   </div>
 
   <!-- Preço × Qtd/PDV por Cliente (por SKU ou Marca) -->
   <div class="card" id="area-scatter-preco-pdv" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Preço Sell-out × Quantidade por PDV — por Cliente</div>
-    <div class="subtitulo">Um ponto por cliente · Selecione um SKU ou Marca · Clientes com preço menor tendem a vender mais unidades por loja?</div>
+    <div class="subtitulo">Um ponto por cliente · Selecione um SKU ou Marca · Eixo X = preço ao consumidor · Eixo Y = unidades vendidas por loja</div>
+    <div class="como-analisar">Investiga se clientes que cobram menos do consumidor vendem mais unidades por loja. Uma relação negativa clara (pontos mais à esquerda = mais volume) confirma elasticidade de preço naquele produto — o preço impacta diretamente o volume. Se os pontos estiverem dispersos sem padrão definido, o preço não é o fator principal de volume: outros elementos como localização das lojas, perfil do consumidor da rede ou espaço em gôndola podem ser mais determinantes.</div>
     <div class="linha-filtro" style="margin-bottom:1rem;">
       <label>Ver por:</label>
       <select id="tipo-scatter-preco-pdv" onchange="popularScatterPrecoPDV(); renderizarScatterPrecoPDV();">
@@ -729,20 +755,23 @@
   <div class="card" id="area-heatmap-marcas" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Faturamento por Marca × Cliente</div>
     <div class="subtitulo">Faturamento sell-out · Linhas = marcas ordenadas por total · Colunas = clientes ordenados por total · Azul mais escuro = maior faturamento</div>
+    <div class="como-analisar">Cruza todas as marcas com todos os clientes para mostrar onde cada marca tem mais penetração. Células muito claras (ou vazias) indicam que a marca tem pouca ou nenhuma presença naquele varejista — uma oportunidade de desenvolvimento de canal. Células escuras concentradas em poucos clientes indicam dependência de canal para aquela marca, o que representa risco caso haja perda de espaço nesse varejista específico.</div>
     <div id="heatmap-marcas-container" style="overflow-x:auto;margin-top:.75rem;"></div>
   </div>
 
   <!-- B: Mix de marcas por cliente — barras 100% empilhadas -->
   <div class="card" id="area-mix-marca-cliente" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Mix de Marcas por Cliente</div>
-    <div class="subtitulo">Participação % de cada marca no faturamento sell-out de cada cliente · Barras 100% empilhadas</div>
+    <div class="subtitulo">Participação % de cada marca no faturamento sell-out de cada cliente · Barras 100% empilhadas — todas as barras chegam a 100%</div>
+    <div class="como-analisar">Mostra como cada varejista distribui suas compras entre as marcas da Bravir. Um varejista que compra quase exclusivamente white label (marcas terceiras) pode não estar priorizando o desenvolvimento das marcas próprias, que têm maior margem e fidelização de consumidor. Identifique oportunidades de aumentar a participação das marcas próprias (Bendita Cânfora, Bravir Tradicional, Laby) em clientes onde elas ainda têm pouca presença.</div>
     <canvas id="grafico-mix-marca-cliente" style="max-height:380px;"></canvas>
   </div>
 
   <!-- C: Evolução de faturamento por marca -->
   <div class="card" id="area-evolucao-marca" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Evolução do Faturamento por Marca</div>
-    <div class="subtitulo">Faturamento sell-out mensal · Uma linha por marca · Selecione as marcas abaixo</div>
+    <div class="subtitulo">Faturamento sell-out mensal (R$) · Uma linha por marca · Selecione as marcas que deseja visualizar abaixo</div>
+    <div class="como-analisar">Acompanhe o crescimento ou queda de cada marca ao longo do tempo. Marcas com tendência de queda precisam de atenção: pode ser necessária ação de trade marketing, revisão de portfólio ou reposicionamento de preço. Marcas em crescimento acelerado merecem mais investimento e garantia de suprimento. Compare marcas próprias com white label para avaliar se o portfólio Bravir está ganhando relevância relativa no negócio.</div>
     <div style="margin:.6rem 0 1rem;">
       <div style="font-size:.78rem;color:#718096;margin-bottom:.4rem;">
         Marcas exibidas —
@@ -757,14 +786,16 @@
   <!-- D: Margem Bravir % por marca — só produtos próprios -->
   <div class="card" id="area-margem-marca" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Margem Bravir % por Marca — Produtos Próprios</div>
-    <div class="subtitulo">Apenas marcas próprias Bravir · Margem contribuição Bravir ÷ Sell in · Barras horizontais ordenadas do maior para o menor</div>
+    <div class="subtitulo">Apenas marcas próprias Bravir · Margem Contribuição Bravir ÷ Sell-in · Barras horizontais ordenadas do maior para o menor</div>
+    <div class="como-analisar">Compara a rentabilidade das marcas próprias da Bravir entre si. A marca com maior margem % é a mais eficiente em termos de retorno sobre o faturamento sell-in — merece prioridade comercial. Uma marca com margem baixa pode ter custo de produção elevado, preço de sell-in comprimido em negociações ou um mix de SKUs desfavorável. Use este gráfico para priorizar onde concentrar esforços de crescimento e negociação com varejistas.</div>
     <canvas id="grafico-margem-marca" style="max-height:260px;"></canvas>
   </div>
 
   <!-- E: Ranking de marcas — barras empilhadas decompostas -->
   <div class="card" id="area-ranking-marcas" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Ranking de Marcas — Decomposição do Faturamento Sell-out</div>
-    <div class="subtitulo">Altura total da barra = Faturamento Sell-out · Verde = Margem Bravir · Cinza = Sell In excl. Margem · Azul = Markup Varejista (Sell Out − Sell In)</div>
+    <div class="subtitulo">Altura total da barra = Faturamento Sell-out · Verde = Margem Bravir · Cinza = Custo Bravir (Sell-in − Margem) · Azul = Markup Varejista (Sell-out − Sell-in)</div>
+    <div class="como-analisar">Para cada marca, decompõe o faturamento sell-out em três partes: o que fica com a Bravir (margem, em verde), o custo da Bravir repassado ao varejista (cinza) e o que o varejista ganha por vender o produto (markup, em azul). Marcas onde o azul domina indicam que o varejista ganha proporcionalmente mais do que a Bravir na cadeia — avalie se o preço de sell-in está adequado. Marcas com verde maior são as mais rentáveis para a Bravir. Passe o mouse em cada segmento para ver os valores detalhados.</div>
     <canvas id="grafico-ranking-marcas" style="max-height:380px;"></canvas>
   </div>
 
@@ -809,10 +840,8 @@ let graficoSellInOut   = null;
 let graficoEvolucaoQtd = null;
 let graficoMargem      = null;
 let graficoVendaPDV    = null;
-let graficoMatriz      = null;
 let graficoEstoque        = null;
 let graficoTop5Evolucao   = null;
-let graficoScatterSellin  = null;
 let graficoElasticidade   = null;
 let graficoTemperatura    = null;
 let filtroMarca = ''; // controlado pelos botões Bravir / Terceiros
@@ -824,7 +853,6 @@ let graficoPrecoCliente        = null;
 let graficoEvolucaoPreco       = null;
 let graficoScatterPrecoPDV       = null;
 let graficoMarkupCliente         = null;
-let graficoPrecoMargemBravir     = null;
 let graficoRankingVariacaoPreco  = null;
 let graficoMargemComp          = null;
 let graficoMargemCat           = null;
@@ -899,8 +927,6 @@ document.getElementById('input-arquivo').addEventListener('change', function (e)
       document.getElementById('area-venda-pdv').style.display                = 'block';
       document.getElementById('area-margem-comp').style.display         = 'block';
       document.getElementById('area-margem').style.display              = 'block';
-      document.getElementById('area-matriz').style.display              = 'block';
-      document.getElementById('area-scatter-sellin').style.display      = 'block';
 
       // Seção 4 — SKUs / Produtos
       document.getElementById('sec-skus').style.display                 = 'block';
@@ -927,7 +953,6 @@ document.getElementById('input-arquivo').addEventListener('change', function (e)
       document.getElementById('area-evolucao-preco').style.display           = 'block';
       document.getElementById('area-markup-cliente').style.display           = 'block';
       document.getElementById('area-heatmap-preco').style.display            = 'block';
-      document.getElementById('area-preco-margem-bravir').style.display      = 'block';
       document.getElementById('area-ranking-variacao-preco').style.display   = 'block';
       document.getElementById('area-scatter-preco-pdv').style.display        = 'block';
 
@@ -1244,12 +1269,10 @@ function atualizarGrafico() {
   renderizarMargemBravirPorCategoria(dados);
   renderizarTabelasMargemBravir(dados);
   renderizarVendaPorPDV(dados);
-  renderizarMatriz(dados);
   renderizarScatterMargemBravir(dados);
   renderizarEstoque();
   renderizarEstoquePDV();
   renderizarCobertura();
-  renderizarScatterSellin(dados);
   popularSKUs();
   renderizarElasticidade();
   renderizarTemperatura();
@@ -1259,7 +1282,6 @@ function atualizarGrafico() {
   renderizarEvolucaoPreco();
   renderizarMarkupCliente();
   renderizarHeatmapPreco();
-  renderizarScatterPrecoMargemBravir();
   renderizarRankingVariacaoPreco();
   popularScatterPrecoPDV();
   renderizarScatterPrecoPDV();
@@ -1804,61 +1826,6 @@ function renderizarVendaPorPDV(dados) {
 }
 
 // ─── Matriz Volume × Margem ───────────────────────────────────────────────────
-
-function renderizarMatriz(dados) {
-  const agrupado = {};
-  dados.forEach(r => {
-    const cli = r['Cliente'];
-    if (!cli) return;
-    if (!agrupado[cli]) agrupado[cli] = { valor: 0, margemRS: 0, temMargem: false };
-    agrupado[cli].valor += num(r['Valor (R$) Sell Out']);
-    const m = r['Margem Cliente (R$)'];
-    if (!vazio(m)) { agrupado[cli].margemRS += num(m); agrupado[cli].temMargem = true; }
-  });
-
-  const pontos = Object.keys(agrupado)
-    .filter(c => agrupado[c].temMargem && agrupado[c].valor > 0)
-    .map(c => ({ nome: c, x: agrupado[c].valor, y: agrupado[c].margemRS / agrupado[c].valor * 100 }));
-
-  const datasets = pontos.map((p, i) => ({
-    label: p.nome,
-    data: [{ x: p.x, y: p.y }],
-    backgroundColor: CORES[i % CORES.length] + 'cc',
-    borderColor:     CORES[i % CORES.length],
-    pointRadius: 9, pointHoverRadius: 11,
-  }));
-
-  if (graficoMatriz) graficoMatriz.destroy();
-  graficoMatriz = new Chart(document.getElementById('grafico-matriz'), {
-    type: 'scatter',
-    data: { datasets },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { display: true, position: 'right' },
-        tooltip: {
-          callbacks: {
-            label: ctx => [
-              `  ${ctx.dataset.label}`,
-              `  Faturamento: ${BRL(ctx.parsed.x)}`,
-              `  Margem: ${ctx.parsed.y.toFixed(1)}%`
-            ]
-          }
-        }
-      },
-      scales: {
-        x: {
-          title: { display: true, text: 'Faturamento (R$)' },
-          ticks: { callback: v => v >= 1e6 ? 'R$ '+(v/1e6).toFixed(1)+'M' : v >= 1e3 ? 'R$ '+(v/1e3).toFixed(0)+'k' : 'R$ '+v }
-        },
-        y: {
-          title: { display: true, text: 'Margem (%)' },
-          ticks: { callback: v => v + '%' }
-        }
-      }
-    }
-  });
-}
 
 // ─── Evolução de estoque por cliente ─────────────────────────────────────────
 
@@ -2571,81 +2538,6 @@ function renderizarCobertura() {
 }
 
 // ─── Scatter: Sell In × Sell Out por cliente ─────────────────────────────────
-
-function renderizarScatterSellin(dados) {
-  const agrupado = {};
-  dados.forEach(r => {
-    const cli = r['Cliente'];
-    if (!cli) return;
-    if (!agrupado[cli]) agrupado[cli] = { out: 0, in: 0 };
-    agrupado[cli].out += num(r['Quantidade Sell Out']);
-    agrupado[cli].in  += num(r['Quantidade Sell in']);
-  });
-
-  const pontos = Object.keys(agrupado).map(c => ({ nome: c, x: agrupado[c].in, y: agrupado[c].out }));
-  if (!pontos.length) return;
-
-  const maxVal = Math.max(...pontos.flatMap(p => [p.x, p.y])) * 1.1 || 1;
-  const N = v => v >= 1e6 ? (v/1e6).toFixed(1)+'M un.' : v >= 1e3 ? (v/1e3).toFixed(0)+'k un.' : v+' un.';
-
-  const datasets = [
-    {
-      type: 'line',
-      label: 'Equilíbrio (Sell In = Sell Out)',
-      data: [{ x: 0, y: 0 }, { x: maxVal, y: maxVal }],
-      borderColor: '#cbd5e0',
-      borderDash: [6, 4],
-      borderWidth: 1.5,
-      pointRadius: 0,
-      fill: false,
-    },
-    ...pontos.map((p, i) => ({
-      label: p.nome,
-      data: [{ x: p.x, y: p.y }],
-      backgroundColor: CORES[i % CORES.length] + 'cc',
-      borderColor:     CORES[i % CORES.length],
-      pointRadius: 9,
-      pointHoverRadius: 11,
-    }))
-  ];
-
-  if (graficoScatterSellin) graficoScatterSellin.destroy();
-  graficoScatterSellin = new Chart(document.getElementById('grafico-scatter-sellin'), {
-    type: 'scatter',
-    data: { datasets },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { display: true, position: 'right' },
-        tooltip: {
-          callbacks: {
-            label: ctx => {
-              if (ctx.dataset.type === 'line') return null;
-              const diff = ctx.parsed.y - ctx.parsed.x;
-              const sinal = diff >= 0 ? '▲ sell-out > sell-in (consumindo estoque)' : '▼ sell-in > sell-out (acumulando estoque)';
-              return [
-                `  ${ctx.dataset.label}`,
-                `  Sell In:  ${ctx.parsed.x.toLocaleString('pt-BR')} un.`,
-                `  Sell Out: ${ctx.parsed.y.toLocaleString('pt-BR')} un.`,
-                `  ${sinal}`,
-              ];
-            }
-          }
-        }
-      },
-      scales: {
-        x: {
-          title: { display: true, text: 'Quantidade Sell In (un.)' },
-          ticks: { callback: v => N(v) }
-        },
-        y: {
-          title: { display: true, text: 'Quantidade Sell Out (un.)' },
-          ticks: { callback: v => N(v) }
-        }
-      }
-    }
-  });
-}
 
 // ─── Elasticidade preço × demanda ────────────────────────────────────────────
 
@@ -3502,58 +3394,6 @@ function renderizarHeatmapPreco() {
 
   html += '</tbody></table>';
   document.getElementById('heatmap-preco-container').innerHTML = html;
-}
-
-// ─── Scatter Preço × Margem Bravir por SKU ───────────────────────────────────
-
-function renderizarScatterPrecoMargemBravir() {
-  const dados = filtrarDados().filter(r => r['Bravir / Terceiros'] === 'Bravir');
-  const porSKU = {};
-
-  dados.forEach(r => {
-    const sku = r['SKU'], cat = r['Categoria'];
-    if (!sku) return;
-    const p = num(r['Preço Sell Out']), q = num(r['Quantidade Sell Out']);
-    const mb = r['Margem Contribuição Bravir (R$)'], vIn = num(r['Valor (R$) Sell in']);
-    if (!porSKU[sku]) porSKU[sku] = { cat, pSoma: 0, qSoma: 0, mbSoma: 0, vInSoma: 0 };
-    if (p > 0 && q > 0) { porSKU[sku].pSoma += p * q; porSKU[sku].qSoma += q; }
-    if (!vazio(mb)) porSKU[sku].mbSoma += num(mb);
-    porSKU[sku].vInSoma += vIn;
-  });
-
-  const CORES_CAT6 = ['#2b6cb0','#276749','#744210','#702459','#2c7a7b','#c05621'];
-  const porCat = {};
-  Object.entries(porSKU).forEach(([sku, d]) => {
-    if (d.qSoma === 0 || d.vInSoma === 0) return;
-    if (!porCat[d.cat]) porCat[d.cat] = [];
-    porCat[d.cat].push({ x: d.pSoma / d.qSoma, y: d.mbSoma / d.vInSoma * 100, sku });
-  });
-
-  const cats = Object.keys(porCat).sort();
-  const datasets = cats.map((cat, i) => ({
-    label: cat,
-    data: porCat[cat].map(d => ({ x: d.x, y: d.y, sku: d.sku })),
-    backgroundColor: CORES_CAT6[i % CORES_CAT6.length] + 'bb',
-    borderColor: CORES_CAT6[i % CORES_CAT6.length],
-    pointRadius: 6, pointHoverRadius: 8,
-  }));
-
-  if (graficoPrecoMargemBravir) graficoPrecoMargemBravir.destroy();
-  graficoPrecoMargemBravir = new Chart(document.getElementById('grafico-preco-margem-bravir'), {
-    type: 'scatter',
-    data: { datasets },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { display: true, position: 'top' },
-        tooltip: { callbacks: { label: ctx => `  ${ctx.raw.sku} — Preço: ${BRL(ctx.parsed.x)}, Margem Bravir: ${ctx.parsed.y.toFixed(1)}%` } }
-      },
-      scales: {
-        x: { beginAtZero: true, title: { display: true, text: 'Preço sell-out médio (R$)' }, ticks: { callback: v => BRL(v) } },
-        y: { title: { display: true, text: 'Margem Bravir (%)' }, ticks: { callback: v => v + '%' } }
-      }
-    }
-  });
 }
 
 // ─── Ranking variação de preço por SKU ───────────────────────────────────────
