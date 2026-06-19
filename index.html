@@ -361,6 +361,86 @@
       margin-top: .35rem;
       margin-bottom: 1rem;
     }
+
+  /* ─── Chat IA ──────────────────────────────────────────────────────────── */
+  #btn-ia {
+    position:fixed; bottom:1.75rem; right:1.75rem; background:#2b6cb0; color:#fff;
+    border:none; border-radius:50px; padding:.7rem 1.2rem; font-size:.9rem;
+    font-weight:600; cursor:pointer; box-shadow:0 4px 16px rgba(43,108,176,.45);
+    z-index:500; display:none; align-items:center; gap:.4rem;
+  }
+  #btn-ia:hover { background:#2c5282; }
+  #sidebar-ia {
+    position:fixed; top:0; right:-440px; width:420px; height:100%;
+    background:#fff; box-shadow:-3px 0 24px rgba(0,0,0,.16);
+    z-index:1000; display:flex; flex-direction:column; transition:right .3s ease;
+  }
+  #sidebar-ia.aberto { right:0; }
+  #sidebar-ia-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:1rem 1.2rem; border-bottom:1px solid #e2e8f0; background:#f7fafc;
+  }
+  #sidebar-ia-header h2 { margin:0; font-size:1rem; color:#2d3748; }
+  #sidebar-ia-header button {
+    background:none; border:1px solid #cbd5e0; border-radius:6px;
+    padding:.25rem .6rem; font-size:.8rem; cursor:pointer; color:#4a5568;
+  }
+  #sidebar-ia-header button:hover { background:#edf2f7; }
+  #chat-msgs {
+    flex:1; overflow-y:auto; padding:1rem;
+    display:flex; flex-direction:column; gap:.75rem;
+  }
+  .msg-chat {
+    max-width:88%; padding:.55rem .8rem; border-radius:10px;
+    font-size:.85rem; line-height:1.55; white-space:pre-wrap;
+  }
+  .msg-ia { background:#f7fafc; color:#2d3748; border:1px solid #e2e8f0; border-bottom-left-radius:3px; align-self:flex-start; }
+  .msg-usuario { background:#ebf4ff; color:#1a365d; align-self:flex-end; border-bottom-right-radius:3px; }
+  #chat-input-area {
+    display:flex; gap:.5rem; padding:.8rem 1rem;
+    border-top:1px solid #e2e8f0; background:#f7fafc;
+  }
+  #chat-input {
+    flex:1; border:1px solid #cbd5e0; border-radius:6px;
+    padding:.45rem .7rem; font-size:.85rem; resize:none; font-family:inherit;
+  }
+  #chat-input:focus { outline:none; border-color:#2b6cb0; }
+  #btn-enviar-msg {
+    background:#2b6cb0; color:#fff; border:none; border-radius:6px;
+    padding:.45rem .9rem; font-size:.85rem; font-weight:600; cursor:pointer; align-self:flex-end;
+  }
+  #btn-enviar-msg:hover { background:#2c5282; }
+  #btn-enviar-msg:disabled { background:#a0aec0; cursor:default; }
+  #modal-chave {
+    position:fixed; inset:0; background:rgba(0,0,0,.45);
+    z-index:2000; align-items:center; justify-content:center;
+  }
+  .modal-caixa {
+    background:#fff; border-radius:12px; padding:1.5rem 2rem;
+    max-width:420px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,.2);
+  }
+  .modal-caixa h3 { margin:0 0 .75rem; color:#2d3748; }
+  .modal-caixa p { font-size:.85rem; color:#4a5568; margin-bottom:1rem; }
+  .modal-caixa input {
+    width:100%; box-sizing:border-box; border:1px solid #cbd5e0;
+    border-radius:6px; padding:.5rem .75rem; font-size:.9rem; margin-bottom:1rem;
+  }
+  .modal-botoes { display:flex; justify-content:flex-end; gap:.6rem; }
+  .btn-cancelar-chave {
+    background:none; border:1px solid #cbd5e0; border-radius:6px;
+    padding:.4rem .9rem; cursor:pointer; color:#4a5568;
+  }
+  .btn-salvar-chave {
+    background:#2b6cb0; color:#fff; border:none; border-radius:6px;
+    padding:.4rem .9rem; cursor:pointer; font-weight:600;
+  }
+  .btn-analisar-ia {
+    display:inline-flex; align-items:center; gap:.3rem;
+    background:none; border:1px solid #90cdf4; border-radius:20px;
+    padding:.28rem .75rem; font-size:.78rem; color:#2b6cb0;
+    cursor:pointer; margin-bottom:.75rem; transition:background .15s;
+  }
+  .btn-analisar-ia:hover { background:#ebf8ff; }
   </style>
 </head>
 <body>
@@ -479,8 +559,16 @@
   <!-- Evolução por categoria -->
   <div class="card" id="area-evolucao-cat" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Evolução do Sell-out por Categoria</div>
-    <div class="subtitulo">Faturamento sell-out mensal (R$) · Uma linha por categoria · Passe o mouse para comparar todas as categorias no mesmo mês</div>
+    <div class="subtitulo">Faturamento sell-out mensal (R$) · Uma linha por categoria · Passe o mouse para comparar categorias no mesmo mês</div>
     <div class="como-analisar">Acompanhe o crescimento ou queda de cada categoria ao longo do tempo. Uma categoria em queda consistente pode indicar perda de competitividade, mudança no comportamento do consumidor ou problema de disponibilidade em loja. Uma categoria em crescimento acelerado pode justificar maior investimento em trade marketing e ampliação de portfólio. Picos isolados geralmente indicam ações promocionais.</div>
+    <div style="margin:.5rem 0 .8rem;">
+      <div style="font-size:.78rem;color:#718096;margin-bottom:.4rem;">
+        Categorias exibidas —
+        <a href="#" style="color:#2b6cb0;text-decoration:none;" onclick="event.preventDefault();selecionarTodasCatEvolucao(true)">todas</a> ·
+        <a href="#" style="color:#2b6cb0;text-decoration:none;" onclick="event.preventDefault();selecionarTodasCatEvolucao(false)">nenhuma</a>
+      </div>
+      <div id="container-cat-evolucao" style="display:flex;flex-wrap:wrap;gap:.4rem .9rem;"></div>
+    </div>
     <canvas id="grafico-evolucao-cat" style="max-height:340px;"></canvas>
   </div>
 
@@ -685,6 +773,14 @@
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Evolução do Preço Médio por Categoria</div>
     <div class="subtitulo">Preço sell-out médio ponderado por quantidade vendida · Uma linha por categoria</div>
     <div class="como-analisar">Acompanhe se os varejistas estão repassando os reajustes de preço da Bravir ao consumidor final ao longo do tempo. Uma categoria com preço estagnado enquanto o sell-in sobe indica que o varejista está absorvendo o aumento — o que pressiona a margem do canal e pode gerar conflitos comerciais. Categorias com preço crescente podem indicar maior poder de marca e que o consumidor aceita pagar mais pelo produto.</div>
+    <div style="margin:.5rem 0 .8rem;">
+      <div style="font-size:.78rem;color:#718096;margin-bottom:.4rem;">
+        Categorias exibidas —
+        <a href="#" style="color:#2b6cb0;text-decoration:none;" onclick="event.preventDefault();selecionarTodasCatPreco(true)">todas</a> ·
+        <a href="#" style="color:#2b6cb0;text-decoration:none;" onclick="event.preventDefault();selecionarTodasCatPreco(false)">nenhuma</a>
+      </div>
+      <div id="container-cat-preco" style="display:flex;flex-wrap:wrap;gap:.4rem .9rem;"></div>
+    </div>
     <canvas id="grafico-preco-categoria" style="max-height:340px;"></canvas>
   </div>
 
@@ -800,6 +896,36 @@
   </div>
 
 </main>
+
+<!-- Chat IA -->
+<button id="btn-ia" onclick="abrirSidebarIA()">💬 IA</button>
+
+<div id="sidebar-ia">
+  <div id="sidebar-ia-header">
+    <h2>💬 Análise com IA</h2>
+    <div style="display:flex;gap:.5rem;">
+      <button onclick="abrirModalChave(false)">🔑 Chave</button>
+      <button onclick="fecharSidebarIA()">✕</button>
+    </div>
+  </div>
+  <div id="chat-msgs"></div>
+  <div id="chat-input-area">
+    <textarea id="chat-input" rows="2" placeholder="Pergunte sobre os dados do painel…"></textarea>
+    <button id="btn-enviar-msg" onclick="enviarMensagemIA()">Enviar</button>
+  </div>
+</div>
+
+<div id="modal-chave" style="display:none;">
+  <div class="modal-caixa">
+    <h3>🔑 Chave da API Anthropic</h3>
+    <p>Configure sua chave para usar a análise por IA. A chave fica salva apenas no seu navegador (localStorage) e nunca é enviada para servidores da Bravir.</p>
+    <input type="password" id="input-chave-api" placeholder="sk-ant-…" autocomplete="off" />
+    <div class="modal-botoes">
+      <button class="btn-cancelar-chave" onclick="fecharModalChave()">Cancelar</button>
+      <button class="btn-salvar-chave" onclick="salvarChaveAPI()">Salvar</button>
+    </div>
+  </div>
+</div>
 
 <script>
 // ─── Constantes ───────────────────────────────────────────────────────────────
@@ -971,6 +1097,8 @@ document.getElementById('input-arquivo').addEventListener('change', function (e)
       atualizarGrafico();
       renderizarElasticidade();
       renderizarTemperatura();
+      injetarBotoesAnalise();
+      document.getElementById('btn-ia').style.display = 'flex';
 
     } catch (err) {
       setStatus('Erro: ' + err.message, true);
@@ -1701,44 +1829,85 @@ function renderizarDonutCategorias(dados) {
 
 // ─── Evolução por categoria (linhas múltiplas) ────────────────────────────────
 
+function popularCheckboxesEvolucaoCat(categoriasOrdenadas) {
+  const container = document.getElementById('container-cat-evolucao');
+  const listaAtual = categoriasOrdenadas.join('|');
+  if (container.dataset.lista === listaAtual) return;
+  container.dataset.lista = listaAtual;
+
+  const marcadosAntes = new Set(
+    [...container.querySelectorAll('input[type=checkbox]:checked')].map(c => c.value)
+  );
+  const primeiraVez = marcadosAntes.size === 0 && container.children.length === 0;
+
+  container.innerHTML = '';
+  categoriasOrdenadas.forEach((cat, i) => {
+    const cor = CORES_CAT[i % CORES_CAT.length];
+    const marcado = primeiraVez ? i < 4 : marcadosAntes.has(cat);
+    const label = document.createElement('label');
+    label.style.cssText = 'display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:#2d3748;cursor:pointer;white-space:nowrap;';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.value = cat; cb.checked = marcado;
+    cb.style.accentColor = cor;
+    const dot = document.createElement('span');
+    dot.style.cssText = `width:9px;height:9px;border-radius:50%;background:${cor};flex-shrink:0;`;
+    cb.addEventListener('change', renderizarEvolucaoPorCategoria);
+    label.append(cb, dot, document.createTextNode(cat));
+    container.appendChild(label);
+  });
+}
+
+function selecionarTodasCatEvolucao(todos) {
+  document.querySelectorAll('#container-cat-evolucao input[type=checkbox]')
+    .forEach(cb => { cb.checked = todos; });
+  renderizarEvolucaoPorCategoria();
+}
+
 function renderizarEvolucaoPorCategoria() {
   const dados = filtrarDados();
 
+  const totCat    = {};
   const porMesCat = {};
   const mesesSet  = new Set();
-  const catsSet   = new Set();
 
   dados.forEach(r => {
-    const ano = r['Ano'], mes = r['Mês'];
-    if (!ano || !mes) return;
-    const cat = r['Categoria'];
-    if (!cat) return;
+    const ano = r['Ano'], mes = r['Mês'], cat = r['Categoria'];
+    if (!ano || !mes || !cat) return;
     const chave = `${ano}|${mes}`;
     if (!porMesCat[chave]) porMesCat[chave] = {};
-    porMesCat[chave][cat] = (porMesCat[chave][cat] || 0) + num(r['Valor (R$) Sell Out']);
+    const v = num(r['Valor (R$) Sell Out']);
+    porMesCat[chave][cat] = (porMesCat[chave][cat] || 0) + v;
+    totCat[cat] = (totCat[cat] || 0) + v;
     mesesSet.add(chave);
-    catsSet.add(cat);
   });
+
+  const categoriasOrdenadas = Object.keys(totCat).sort((a, b) => totCat[b] - totCat[a]);
+  popularCheckboxesEvolucaoCat(categoriasOrdenadas);
+
+  const selecionadas = new Set(
+    [...document.querySelectorAll('#container-cat-evolucao input[type=checkbox]:checked')]
+      .map(c => c.value)
+  );
+  const categorias = categoriasOrdenadas.filter(c => selecionadas.has(c));
 
   const mesesOrdenados = [...mesesSet].sort((a, b) => {
     const [anoA, mesA] = a.split('|'), [anoB, mesB] = b.split('|');
     return (parseInt(anoA) * 100 + (MESES_ORDEM[mesA] || 0))
          - (parseInt(anoB) * 100 + (MESES_ORDEM[mesB] || 0));
   });
-  const rotulos   = mesesOrdenados.map(m => { const [a,ms]=m.split('|'); return `${ms.slice(0,3)}/${a}`; });
-  const categorias = [...catsSet].sort();
+  const rotulos = mesesOrdenados.map(m => { const [a, ms] = m.split('|'); return `${ms.slice(0,3)}/${a}`; });
 
-  const datasets = categorias.map((cat, i) => ({
-    label: cat,
-    data: mesesOrdenados.map(m => porMesCat[m]?.[cat] || 0),
-    borderColor: CORES_CAT[i % CORES_CAT.length],
-    backgroundColor: CORES_CAT[i % CORES_CAT.length] + '22',
-    borderWidth: 2,
-    pointRadius: 3,
-    pointHoverRadius: 5,
-    fill: false,
-    tension: 0.3,
-  }));
+  const datasets = categorias.map(cat => {
+    const i = categoriasOrdenadas.indexOf(cat);
+    return {
+      label: cat,
+      data: mesesOrdenados.map(m => porMesCat[m]?.[cat] || 0),
+      borderColor: CORES_CAT[i % CORES_CAT.length],
+      backgroundColor: CORES_CAT[i % CORES_CAT.length] + '22',
+      borderWidth: 2, pointRadius: 3, pointHoverRadius: 5,
+      fill: false, tension: 0.3,
+    };
+  });
 
   if (graficoEvolucaoCat) graficoEvolucaoCat.destroy();
   graficoEvolucaoCat = new Chart(document.getElementById('grafico-evolucao-cat'), {
@@ -1746,13 +1915,10 @@ function renderizarEvolucaoPorCategoria() {
     data: { labels: rotulos, datasets },
     options: {
       responsive: true,
+      interaction: { mode: 'nearest', intersect: true },
       plugins: {
-        legend: { display: true, position: 'top' },
-        tooltip: {
-          callbacks: {
-            label: ctx => `  ${ctx.dataset.label}: ${BRL(ctx.parsed.y)}`
-          }
-        }
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => `  ${ctx.dataset.label}: ${BRL(ctx.parsed.y)}` } }
       },
       scales: {
         x: { ticks: { font: { size: 11 } } },
@@ -2442,10 +2608,30 @@ function selecionarTodosCobertura(todos) {
 
 function renderizarCobertura() {
   const CAMPO_EST = 'Estoque CD + Loja (último dia do mês)';
-  const dadosTodos   = dadosFiltradosSemPeriodo();
-  const dadosPeriodo = filtrarDados();
 
-  // Estoque por cliente × mês (período filtrado)
+  // Estoque é total do cliente repetido em cada linha de SKU — ignorar filtro de SKU
+  // para não distorcer a cobertura (total estoque / velocidade total de venda)
+  const chaveDE  = document.getElementById('sel-periodo-de').value;
+  const chaveATE = document.getElementById('sel-periodo-ate').value;
+  const keyDe  = chaveDE  ? parseInt(chaveDE.split('|')[0])  * 100 + (MESES_ORDEM[chaveDE.split('|')[1]]  || 0) : 0;
+  const keyAte = chaveATE ? parseInt(chaveATE.split('|')[0]) * 100 + (MESES_ORDEM[chaveATE.split('|')[1]] || 0) : 999999;
+  const catsSel     = obterSelecionados('fdrop-categoria');
+  const marcasSel   = obterSelecionados('fdrop-marca');
+  const clientesSel = obterSelecionados('fdrop-cliente');
+
+  const dadosTodos = dadosGlobais.filter(r => {
+    if (catsSel.length     && !catsSel.includes(r['Categoria']))        return false;
+    if (marcasSel.length   && !marcasSel.includes(r['Marca']))          return false;
+    if (filtroMarca        && r['Bravir / Terceiros'] !== filtroMarca)  return false;
+    if (clientesSel.length && !clientesSel.includes(r['Cliente']))      return false;
+    return true;
+  });
+  const dadosPeriodo = dadosTodos.filter(r => {
+    const keyMes = parseInt(r['Ano']) * 100 + (MESES_ORDEM[r['Mês']] || 0);
+    return keyMes >= keyDe && keyMes <= keyAte;
+  });
+
+  // Estoque por cliente × mês (soma de todos os SKUs)
   const est = {}, totCli = {};
   dadosPeriodo.forEach(r => {
     const cli = r['Cliente'], v = r[CAMPO_EST];
@@ -3560,7 +3746,7 @@ function renderizarScatterPrecoPDV() {
         }
       },
       scales: {
-        x: { beginAtZero: true, title: { display: true, text: 'Preço sell-out médio (R$)' }, ticks: { callback: v => BRL(v) } },
+        x: { beginAtZero: false, title: { display: true, text: 'Preço sell-out médio (R$)' }, ticks: { callback: v => BRL(v) } },
         y: { beginAtZero: true, title: { display: true, text: 'Qtd/PDV/mês (un./loja)' } }
       }
     }
@@ -3591,10 +3777,43 @@ function popularSKUPreco() {
   sel.addEventListener('change', renderizarPrecoCliente);
 }
 
+function popularCheckboxesPrecoCat(categoriasOrdenadas) {
+  const container = document.getElementById('container-cat-preco');
+  const listaAtual = categoriasOrdenadas.join('|');
+  if (container.dataset.lista === listaAtual) return;
+  container.dataset.lista = listaAtual;
+
+  const marcadosAntes = new Set(
+    [...container.querySelectorAll('input[type=checkbox]:checked')].map(c => c.value)
+  );
+  const primeiraVez = marcadosAntes.size === 0 && container.children.length === 0;
+
+  container.innerHTML = '';
+  categoriasOrdenadas.forEach((cat, i) => {
+    const cor = CORES_CAT[i % CORES_CAT.length];
+    const marcado = primeiraVez ? i < 4 : marcadosAntes.has(cat);
+    const label = document.createElement('label');
+    label.style.cssText = 'display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:#2d3748;cursor:pointer;white-space:nowrap;';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.value = cat; cb.checked = marcado;
+    cb.style.accentColor = cor;
+    const dot = document.createElement('span');
+    dot.style.cssText = `width:9px;height:9px;border-radius:50%;background:${cor};flex-shrink:0;`;
+    cb.addEventListener('change', renderizarPrecoCategoria);
+    label.append(cb, dot, document.createTextNode(cat));
+    container.appendChild(label);
+  });
+}
+
+function selecionarTodasCatPreco(todos) {
+  document.querySelectorAll('#container-cat-preco input[type=checkbox]')
+    .forEach(cb => { cb.checked = todos; });
+  renderizarPrecoCategoria();
+}
+
 function renderizarPrecoCategoria() {
   const dados = filtrarDados();
-  const porCatMes = {};
-  const catSet = new Set(), mesSet = new Set();
+  const porCatMes = {}, totCat = {}, mesSet = new Set();
 
   dados.forEach(r => {
     const cat = r['Categoria'];
@@ -3606,29 +3825,39 @@ function renderizarPrecoCategoria() {
     if (!porCatMes[cat][ch]) porCatMes[cat][ch] = { somaValor: 0, somaQtd: 0 };
     porCatMes[cat][ch].somaValor += p * q;
     porCatMes[cat][ch].somaQtd  += q;
-    catSet.add(cat); mesSet.add(ch);
+    totCat[cat] = (totCat[cat] || 0) + p * q;
+    mesSet.add(ch);
   });
+
+  const categoriasOrdenadas = Object.keys(totCat).sort((a, b) => totCat[b] - totCat[a]);
+  popularCheckboxesPrecoCat(categoriasOrdenadas);
+
+  const selecionadas = new Set(
+    [...document.querySelectorAll('#container-cat-preco input[type=checkbox]:checked')]
+      .map(c => c.value)
+  );
+  const categorias = categoriasOrdenadas.filter(c => selecionadas.has(c));
 
   const meses = [...mesSet].sort((a, b) => {
     const [aA, mA] = a.split('|'), [aB, mB] = b.split('|');
     return (parseInt(aA)*100+(MESES_ORDEM[mA]||0)) - (parseInt(aB)*100+(MESES_ORDEM[mB]||0));
   });
-  const rotulos   = meses.map(m => { const [a,ms]=m.split('|'); return `${ms.slice(0,3)}/${a}`; });
-  const categorias = [...catSet].sort();
+  const rotulos = meses.map(m => { const [a, ms] = m.split('|'); return `${ms.slice(0,3)}/${a}`; });
 
-  const CORES_CAT = ['#2b6cb0','#276749','#744210','#702459','#2c7a7b','#c05621'];
-  const datasets = categorias.map((cat, i) => ({
-    label: cat,
-    data: meses.map(m => {
-      const d = porCatMes[cat]?.[m];
-      return d && d.somaQtd > 0 ? parseFloat((d.somaValor / d.somaQtd).toFixed(2)) : null;
-    }),
-    borderColor: CORES_CAT[i % CORES_CAT.length],
-    backgroundColor: CORES_CAT[i % CORES_CAT.length] + '22',
-    borderWidth: 2,
-    pointRadius: 3, pointHoverRadius: 5,
-    fill: false, tension: 0.3, spanGaps: false,
-  }));
+  const datasets = categorias.map(cat => {
+    const i = categoriasOrdenadas.indexOf(cat);
+    return {
+      label: cat,
+      data: meses.map(m => {
+        const d = porCatMes[cat]?.[m];
+        return d && d.somaQtd > 0 ? parseFloat((d.somaValor / d.somaQtd).toFixed(2)) : null;
+      }),
+      borderColor: CORES_CAT[i % CORES_CAT.length],
+      backgroundColor: CORES_CAT[i % CORES_CAT.length] + '22',
+      borderWidth: 2, pointRadius: 3, pointHoverRadius: 5,
+      fill: false, tension: 0.3, spanGaps: false,
+    };
+  });
 
   if (graficoPrecoCategoria) graficoPrecoCategoria.destroy();
   graficoPrecoCategoria = new Chart(document.getElementById('grafico-preco-categoria'), {
@@ -3638,12 +3867,10 @@ function renderizarPrecoCategoria() {
       responsive: true,
       interaction: { mode: 'nearest', intersect: true },
       plugins: {
-        legend: { display: true, position: 'top' },
+        legend: { display: false },
         tooltip: {
           callbacks: {
-            label: ctx => ctx.parsed.y !== null
-              ? `  ${ctx.dataset.label}: ${BRL(ctx.parsed.y)}`
-              : null
+            label: ctx => ctx.parsed.y !== null ? `  ${ctx.dataset.label}: ${BRL(ctx.parsed.y)}` : null
           }
         }
       },
@@ -4038,7 +4265,7 @@ function renderizarEvolucaoMarcas() {
     data: { labels: rotulos, datasets },
     options: {
       responsive: true,
-      interaction: { mode: 'index', intersect: false },
+      interaction: { mode: 'nearest', intersect: true },
       plugins: {
         legend: { display: true, position: 'top', labels: { font: { size: 11 } } },
         tooltip: { callbacks: { label: ctx => `  ${ctx.dataset.label}: ${BRL(ctx.parsed.y)}` } }
@@ -4339,6 +4566,200 @@ function renderizarEvolucaoSellInMarca() {
     }
   });
 }
+
+// ─── Chat IA ─────────────────────────────────────────────────────────────────
+
+let _historicoIA = [];
+
+function _obterContexto() {
+  const dados = filtrarDados();
+  if (!dados.length) return null;
+  const BRLc = v => v.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+  const soma  = campo => dados.reduce((s, r) => s + (Number(r[campo]) || 0), 0);
+
+  const filtros = [];
+  const cats  = obterSelecionados('fdrop-categoria');
+  const marcas = obterSelecionados('fdrop-marca');
+  const clis  = obterSelecionados('fdrop-cliente');
+  const skus  = obterSelecionados('fdrop-sku');
+  if (cats.length)   filtros.push('Categoria: '  + cats.join(', '));
+  if (marcas.length) filtros.push('Marca: '      + marcas.join(', '));
+  if (clis.length)   filtros.push('Cliente: '    + clis.join(', '));
+  if (skus.length)   filtros.push('SKU: '        + skus.join(', '));
+  if (filtroMarca)   filtros.push('Tipo: '       + filtroMarca);
+  const dDe  = document.getElementById('sel-periodo-de').value.replace('|', '/');
+  const dAte = document.getElementById('sel-periodo-ate').value.replace('|', '/');
+  if (dDe || dAte) filtros.push(`Período: ${dDe || 'início'} → ${dAte || 'fim'}`);
+
+  const so = soma('Valor (R$) Sell Out'), si = soma('Valor (R$) Sell in');
+  const qtd = soma('Quantidade Sell Out'), mg = soma('Margem Cliente (R$)');
+
+  const agregar = (campo, acc) => {
+    dados.forEach(r => {
+      const k = r[campo]; if (!k) return;
+      if (!acc[k]) acc[k] = { so:0, si:0, mg:0, qtd:0 };
+      acc[k].so  += Number(r['Valor (R$) Sell Out'])  || 0;
+      acc[k].si  += Number(r['Valor (R$) Sell in'])   || 0;
+      acc[k].mg  += Number(r['Margem Cliente (R$)'])   || 0;
+      acc[k].qtd += Number(r['Quantidade Sell Out'])   || 0;
+    });
+    return acc;
+  };
+
+  const linhas = (obj, max = 99) => Object.entries(obj)
+    .sort((a, b) => b[1].so - a[1].so).slice(0, max)
+    .map(([k, d]) => `  ${k}: SO=${BRLc(d.so)}, SI=${BRLc(d.si)}, Margem=${BRLc(d.mg)}, Qtd=${d.qtd.toLocaleString('pt-BR')} un.`)
+    .join('\n');
+
+  const porMes = {};
+  dados.forEach(r => {
+    const ch = `${r['Ano']}|${r['Mês']}`; if (!ch) return;
+    if (!porMes[ch]) porMes[ch] = { so:0, si:0, mg:0, qtd:0 };
+    porMes[ch].so  += Number(r['Valor (R$) Sell Out'])  || 0;
+    porMes[ch].si  += Number(r['Valor (R$) Sell in'])   || 0;
+    porMes[ch].mg  += Number(r['Margem Cliente (R$)'])   || 0;
+    porMes[ch].qtd += Number(r['Quantidade Sell Out'])   || 0;
+  });
+  const linhasMes = Object.entries(porMes)
+    .sort((a, b) => {
+      const [aA, mA] = a[0].split('|'), [bA, mB] = b[0].split('|');
+      return (parseInt(aA)*100+(MESES_ORDEM[mA]||0)) - (parseInt(bA)*100+(MESES_ORDEM[mB]||0));
+    })
+    .map(([ch, d]) => { const [a, m] = ch.split('|'); return `  ${m}/${a}: SO=${BRLc(d.so)}, SI=${BRLc(d.si)}, Qtd=${d.qtd.toLocaleString('pt-BR')} un., Margem=${BRLc(d.mg)}`; })
+    .join('\n');
+
+  return `=== PAINEL BRAVIR — ${new Date().toLocaleDateString('pt-BR')} ===
+FILTROS: ${filtros.length ? filtros.join(' | ') : 'nenhum (dados completos)'}
+LINHAS: ${dados.length}
+
+KPIs:
+  Sell-out: ${BRLc(so)} · Sell-in: ${BRLc(si)} · Margem cliente: ${BRLc(mg)}
+  Quantidade: ${qtd.toLocaleString('pt-BR')} un. · Preço médio: ${qtd > 0 ? BRLc(so/qtd) : '—'}
+
+POR CLIENTE:
+${linhas(agregar('Cliente', {}))}
+
+POR CATEGORIA:
+${linhas(agregar('Categoria', {}))}
+
+POR MARCA:
+${linhas(agregar('Marca', {}))}
+
+TOP 15 SKUs:
+${linhas(agregar('SKU', {}), 15)}
+
+EVOLUÇÃO MENSAL:
+${linhasMes}`;
+}
+
+function _adicionarMsg(texto, tipo) {
+  const div = document.createElement('div');
+  div.className = 'msg-chat ' + (tipo === 'ia' ? 'msg-ia' : 'msg-usuario');
+  div.textContent = texto;
+  const msgs = document.getElementById('chat-msgs');
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+async function enviarMensagemIA() {
+  const chave = localStorage.getItem('bravir-api-key');
+  if (!chave) { abrirModalChave(true); return; }
+  const inputEl = document.getElementById('chat-input');
+  const texto = inputEl.value.trim();
+  if (!texto) return;
+
+  _adicionarMsg(texto, 'usuario');
+  inputEl.value = '';
+  inputEl.disabled = true;
+  document.getElementById('btn-enviar-msg').disabled = true;
+  _historicoIA.push({ role:'user', content: texto });
+
+  const placeholder = _adicionarMsg('Analisando…', 'ia');
+
+  const ctx = _obterContexto();
+  const sistema = `Você é um assistente analítico da Bravir com acesso direto aos dados do painel de sell-out.
+Os dados abaixo refletem exatamente o que está filtrado no painel agora. Use esses números para responder.
+Não invente dados nem peça ao usuário para fornecê-los.
+
+${ctx || '(dados não carregados)'}
+
+Responda em português, de forma direta e objetiva. Foque nos insights mais relevantes.`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{
+        'content-type':'application/json',
+        'x-api-key': chave,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true',
+      },
+      body: JSON.stringify({ model:'claude-sonnet-4-6', max_tokens:1024, system:sistema, messages:_historicoIA }),
+    });
+    if (!resp.ok) { const e = await resp.json().catch(()=>({})); throw new Error(e.error?.message || `HTTP ${resp.status}`); }
+    const data = await resp.json();
+    const resposta = data.content?.[0]?.text || '(sem resposta)';
+    placeholder.textContent = resposta;
+    _historicoIA.push({ role:'assistant', content: resposta });
+  } catch(e) {
+    placeholder.textContent = '⚠️ Erro: ' + e.message;
+    _historicoIA.pop();
+  } finally {
+    inputEl.disabled = false;
+    document.getElementById('btn-enviar-msg').disabled = false;
+    inputEl.focus();
+  }
+}
+
+function abrirSidebarIA()  { document.getElementById('sidebar-ia').classList.add('aberto'); }
+function fecharSidebarIA() { document.getElementById('sidebar-ia').classList.remove('aberto'); }
+
+function abrirModalChave(irEnviar = false) {
+  const modal = document.getElementById('modal-chave');
+  modal.style.display = 'flex';
+  modal._irEnviar = irEnviar;
+  document.getElementById('input-chave-api').value = localStorage.getItem('bravir-api-key') || '';
+}
+function fecharModalChave() { document.getElementById('modal-chave').style.display = 'none'; }
+function salvarChaveAPI() {
+  const val = document.getElementById('input-chave-api').value.trim();
+  if (!val) return;
+  localStorage.setItem('bravir-api-key', val);
+  const irEnviar = document.getElementById('modal-chave')._irEnviar;
+  fecharModalChave();
+  if (irEnviar) enviarMensagemIA();
+}
+
+function analisarGrafico(nomeGrafico) {
+  abrirSidebarIA();
+  if (!localStorage.getItem('bravir-api-key')) { abrirModalChave(false); return; }
+  const inputEl = document.getElementById('chat-input');
+  inputEl.value = `Analise o gráfico "${nomeGrafico}" com base nos dados e filtros atuais. Destaque os principais insights, tendências relevantes e pontos de atenção.`;
+  enviarMensagemIA();
+}
+
+function injetarBotoesAnalise() {
+  document.querySelectorAll('.card').forEach(card => {
+    if (card.querySelector('.btn-analisar-ia')) return;
+    const tituloEl = card.querySelector('div');
+    if (!tituloEl) return;
+    const nome = tituloEl.textContent.trim();
+    if (!nome) return;
+    const btn = document.createElement('button');
+    btn.className = 'btn-analisar-ia';
+    btn.textContent = '💬 Analisar com IA';
+    btn.onclick = () => analisarGrafico(nome);
+    const dica = card.querySelector('.como-analisar');
+    (dica || tituloEl).insertAdjacentElement('afterend', btn);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('chat-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarMensagemIA(); }
+  });
+});
 </script>
 
 </body>
