@@ -765,7 +765,7 @@
   <!-- Scatter Faturamento × Margem Bravir % por SKU -->
   <div class="card" id="area-scatter-margem-bravir" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.4rem;">Faturamento × Margem Bravir % por SKU</div>
-    <div class="subtitulo">Top 40 SKUs por faturamento · Eixo X = faturamento sell-out · Eixo Y = Margem Bravir % · Quadrante superior direito = SKUs mais estratégicos</div>
+    <div class="subtitulo">Top 40 SKUs por faturamento sell-in · Eixo X = faturamento sell-in · Eixo Y = Margem Bravir % · Quadrante superior direito = SKUs mais estratégicos</div>
     <div class="como-analisar">Divide o portfólio em quatro perfis estratégicos: canto superior direito = produtos estrela (alto volume e boa margem — proteger e expandir); canto inferior direito = produtos de alto volume mas baixa margem (geram caixa mas com rentabilidade limitada — revisar precificação); canto superior esquerdo = produtos de nicho com boa margem (potencial de crescimento de volume); canto inferior esquerdo = candidatos a revisão profunda ou descontinuação. Cada ponto representa um SKU — passe o mouse para ver o nome.</div>
     <canvas id="grafico-scatter-margem-bravir" style="max-height:420px;"></canvas>
   </div>
@@ -3980,15 +3980,15 @@ function renderizarScatterMargemBravir(dados) {
   });
 
   const skus = Object.keys(agr)
-    .filter(s => agr[s].fat > 0 && agr[s].fatIn > 0)
-    .sort((a, b) => agr[b].fat - agr[a].fat)
+    .filter(s => agr[s].fatIn > 0)
+    .sort((a, b) => agr[b].fatIn - agr[a].fatIn)
     .slice(0, 40);
 
   if (!skus.length) return;
 
   const pontos = skus.map(s => ({
     nome: s, marca: agr[s].marca,
-    x: agr[s].fat, y: agr[s].mb / agr[s].fatIn * 100,
+    x: agr[s].fatIn, y: agr[s].mb / agr[s].fatIn * 100,
   }));
 
   // Linhas de mediana
@@ -4043,7 +4043,7 @@ function renderizarScatterMargemBravir(dados) {
               const nome = p.nome.length > 50 ? p.nome.slice(0, 50) + '…' : p.nome;
               return [
                 `  ${nome}`,
-                `  Faturamento: ${BRL(p.x)}`,
+                `  Fat. Sell-in: ${BRL(p.x)}`,
                 `  Margem Bravir: ${p.y.toFixed(1)}%`,
               ];
             }
@@ -4052,7 +4052,7 @@ function renderizarScatterMargemBravir(dados) {
       },
       scales: {
         x: {
-          title: { display: true, text: 'Faturamento Sell-out (R$)' },
+          title: { display: true, text: 'Faturamento Sell-in (R$)' },
           ticks: { callback: v => v >= 1e6 ? 'R$'+(v/1e6).toFixed(1)+'M' : v >= 1e3 ? 'R$'+(v/1e3).toFixed(0)+'k' : 'R$'+v }
         },
         y: {
