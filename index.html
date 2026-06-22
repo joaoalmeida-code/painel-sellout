@@ -902,6 +902,22 @@
     <canvas id="grafico-scatter-preco-pdv" style="max-height:360px;"></canvas>
   </div>
 
+  <!-- Elasticidade Preço × Demanda -->
+  <div class="card" id="area-elasticidade" style="display:none;">
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.4rem;">Elasticidade Preço × Demanda</div>
+    <div class="subtitulo">Eixo X = preço médio mensal · Eixo Y = sell-out por PDV (un./loja) · Linha tracejada = regressão log-log · Usa todos os meses disponíveis</div>
+    <div class="como-analisar">Mostra como a demanda reage a variações de preço para cada SKU selecionado. A linha tracejada é uma tendência estatística (regressão): se ela cai da esquerda para a direita, o produto é elástico — preço mais alto reduz o volume vendido. Se a linha for praticamente horizontal, o produto é inelástico — os consumidores compram independente do preço. Produtos inelásticos têm mais espaço para reajuste de preço sem perda significativa de volume. Selecione múltiplos SKUs para comparar o comportamento entre produtos.</div>
+    <div class="linha-filtro" style="margin-bottom:1.25rem;align-items:flex-start;">
+      <label for="sel-skus-elast" style="padding-top:.4rem;">SKUs:</label>
+      <div>
+        <select id="sel-skus-elast" multiple size="6" style="min-width:340px;"></select>
+        <div style="font-size:.75rem;color:#a0aec0;margin-top:.25rem;">Ctrl + clique para selecionar múltiplos</div>
+      </div>
+    </div>
+    <canvas id="grafico-elasticidade" style="max-height:380px;"></canvas>
+    <div id="tabela-elasticidade"></div>
+  </div>
+
   <!-- ═══ SEÇÃO 7 — ESTOQUE ═══ -->
   <div class="secao-header" id="sec-estoque" style="display:none;">7 — Estoque</div>
 
@@ -975,22 +991,6 @@
 
   <!-- ═══ SEÇÃO 8 — ANÁLISES ESPECÍFICAS ═══ -->
   <div class="secao-header" id="sec-avancado" style="display:none;">8 — Análises Específicas</div>
-
-  <!-- Elasticidade Preço × Demanda -->
-  <div class="card" id="area-elasticidade" style="display:none;">
-    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.4rem;">Elasticidade Preço × Demanda</div>
-    <div class="subtitulo">Eixo X = preço médio mensal · Eixo Y = sell-out por PDV (un./loja) · Linha tracejada = regressão log-log · Usa todos os meses disponíveis</div>
-    <div class="como-analisar">Mostra como a demanda reage a variações de preço para cada SKU selecionado. A linha tracejada é uma tendência estatística (regressão): se ela cai da esquerda para a direita, o produto é elástico — preço mais alto reduz o volume vendido. Se a linha for praticamente horizontal, o produto é inelástico — os consumidores compram independente do preço. Produtos inelásticos têm mais espaço para reajuste de preço sem perda significativa de volume. Selecione múltiplos SKUs para comparar o comportamento entre produtos.</div>
-    <div class="linha-filtro" style="margin-bottom:1.25rem;align-items:flex-start;">
-      <label for="sel-skus-elast" style="padding-top:.4rem;">SKUs:</label>
-      <div>
-        <select id="sel-skus-elast" multiple size="6" style="min-width:340px;"></select>
-        <div style="font-size:.75rem;color:#a0aec0;margin-top:.25rem;">Ctrl + clique para selecionar múltiplos</div>
-      </div>
-    </div>
-    <canvas id="grafico-elasticidade" style="max-height:380px;"></canvas>
-    <div id="tabela-elasticidade"></div>
-  </div>
 
   <!-- Sell Out × Temperatura -->
   <div class="card" id="area-temperatura" style="display:none;">
@@ -1189,6 +1189,7 @@ document.getElementById('input-arquivo').addEventListener('change', function (e)
       document.getElementById('area-heatmap-preco').style.display            = 'block';
       document.getElementById('area-ranking-variacao-preco').style.display   = 'block';
       document.getElementById('area-scatter-preco-pdv').style.display        = 'block';
+      document.getElementById('area-elasticidade').style.display             = 'block';
 
       // Seção 7 — Estoque
       document.getElementById('sec-estoque').style.display              = 'block';
@@ -1198,7 +1199,6 @@ document.getElementById('input-arquivo').addEventListener('change', function (e)
 
       // Seção 8 — Análises Específicas
       document.getElementById('sec-avancado').style.display             = 'block';
-      document.getElementById('area-elasticidade').style.display        = 'block';
       document.getElementById('area-temperatura').style.display         = 'block';
 
       popularSKUs();
