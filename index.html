@@ -192,10 +192,13 @@
     .subtitulo { font-size: .78rem; color: #718096; margin-bottom: 1rem; }
 
     /* ---- Barra de filtros fixa ---- */
-    #painel-filtros {
+    #cabecalho-fixo {
       position: sticky;
       top: 0;
-      z-index: 200;
+      z-index: 300;
+      background: #fff;
+    }
+    #painel-filtros {
       background: #fff;
       border-bottom: 2px solid #e2e8f0;
       padding: .55rem 1.5rem;
@@ -472,7 +475,8 @@
   <span>Selecione o arquivo para começar</span>
 </header>
 
-<!-- Barra de filtros fixa (oculta até carregar o arquivo) -->
+<!-- Cabeçalho fixo: filtros + nav de seções (wrapper único sticky) -->
+<div id="cabecalho-fixo">
 <div id="painel-filtros" style="display:none;">
   <div class="filtros-linha">
     <span class="f-label">Período:</span>
@@ -512,7 +516,7 @@
   </div>
 </div>
 
-<nav id="nav-secoes" style="display:none;position:sticky;top:0;z-index:400;background:#fff;border-bottom:1px solid #e2e8f0;padding:.4rem 1.5rem;gap:1rem;flex-wrap:wrap;">
+<nav id="nav-secoes" style="display:none;background:#fff;border-bottom:1px solid #e2e8f0;padding:.4rem 1.5rem;gap:1rem;flex-wrap:wrap;">
   <a href="#sec-visao-geral" class="nav-link">Visão Geral</a>
   <a href="#sec-clientes" class="nav-link">Clientes</a>
   <a href="#sec-marcas" class="nav-link">Marcas</a>
@@ -522,6 +526,7 @@
   <a href="#sec-estoque" class="nav-link">Estoque</a>
   <a href="#sec-avancado" class="nav-link">Análises Específicas</a>
 </nav>
+</div><!-- /cabecalho-fixo -->
 
 <main>
 
@@ -606,28 +611,12 @@
     <canvas id="grafico-sell-in-out" style="max-height:380px;"></canvas>
   </div>
 
-  <!-- Evolução Sell-in vs Sell-out Quantidade -->
-  <div class="card" id="area-evolucao-qtd" style="display:none;">
-    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Evolução Sell-out vs Sell-in — Quantidade</div>
-    <div class="subtitulo">Unidades vendidas por mês · Azul = sell-out (consumidor) · Verde = sell-in (Bravir → varejista)</div>
-    <div class="como-analisar">Quando as duas linhas se afastam, é sinal de desequilíbrio na cadeia: sell-in muito acima do sell-out indica que o varejista está acumulando estoque — o que pode levar a pressão por descontos ou redução de pedidos futuros. Sell-out acima do sell-in por vários meses indica risco de ruptura — o produto pode desaparecer da gôndola. O ideal é que as duas linhas caminhem juntas, com o sell-in ligeiramente à frente para garantir cobertura mínima.</div>
-    <canvas id="grafico-evolucao-qtd" style="max-height:320px;"></canvas>
-  </div>
-
   <!-- Evolução Sell In por Cliente (empilhado) -->
   <div class="card" id="area-evolucao-sellin-cliente" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Evolução do Sell In por Cliente</div>
     <div class="subtitulo">Faturamento sell-in mensal (R$) · Barras empilhadas — participação de cada cliente</div>
     <div class="como-analisar">Acompanhe a evolução dos pedidos de cada rede ao longo do tempo. Clientes com participação crescente são parceiros em expansão — sinal positivo de relacionamento comercial. Clientes com participação caindo podem estar migrando para concorrentes, reduzindo o mix da Bravir ou passando por dificuldades financeiras. Meses com queda geral no total da barra podem indicar sazonalidade do setor ou problema comercial sistêmico.</div>
     <canvas id="grafico-evolucao-sellin-cliente" style="max-height:340px;"></canvas>
-  </div>
-
-  <!-- Evolução Sell In por Marca (empilhado) -->
-  <div class="card" id="area-evolucao-sellin-marca" style="display:none;">
-    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Evolução do Sell In por Marca</div>
-    <div class="subtitulo">Faturamento sell-in mensal (R$) · Barras empilhadas — participação de cada marca · Marcas Bravir primeiro</div>
-    <div class="como-analisar">Mostra como cada marca contribui para o sell-in ao longo do tempo. Útil para avaliar se as marcas próprias da Bravir (Bendita Cânfora, Bravir Tradicional, Laby) estão crescendo ou cedendo espaço para o white label. Uma marca própria com participação crescente indica maior poder de marca e menor dependência de contratos de terceiros. Uma marca em queda pode necessitar de reposicionamento ou ações de trade marketing.</div>
-    <canvas id="grafico-evolucao-sellin-marca" style="max-height:340px;"></canvas>
   </div>
 
   <!-- Venda por PDV -->
@@ -703,6 +692,14 @@
     <div class="subtitulo">Altura total da barra = Faturamento Sell-out · Verde = Margem Bravir · Cinza = Custo Bravir (Sell-in − Margem) · Azul = Markup Varejista (Sell-out − Sell-in)</div>
     <div class="como-analisar">Para cada marca, decompõe o faturamento sell-out em três partes: o que fica com a Bravir (margem, em verde), o custo da Bravir repassado ao varejista (cinza) e o que o varejista ganha por vender o produto (markup, em azul). Marcas onde o azul domina indicam que o varejista ganha proporcionalmente mais do que a Bravir na cadeia — avalie se o preço de sell-in está adequado. Marcas com verde maior são as mais rentáveis para a Bravir. Passe o mouse em cada segmento para ver os valores detalhados.</div>
     <canvas id="grafico-ranking-marcas" style="max-height:380px;"></canvas>
+  </div>
+
+  <!-- Evolução Sell In por Marca (empilhado) -->
+  <div class="card" id="area-evolucao-sellin-marca" style="display:none;">
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Evolução do Sell In por Marca</div>
+    <div class="subtitulo">Faturamento sell-in mensal (R$) · Barras empilhadas — participação de cada marca · Marcas Bravir primeiro</div>
+    <div class="como-analisar">Mostra como cada marca contribui para o sell-in ao longo do tempo. Útil para avaliar se as marcas próprias da Bravir (Bendita Cânfora, Bravir Tradicional, Laby) estão crescendo ou cedendo espaço para o white label. Uma marca própria com participação crescente indica maior poder de marca e menor dependência de contratos de terceiros. Uma marca em queda pode necessitar de reposicionamento ou ações de trade marketing.</div>
+    <canvas id="grafico-evolucao-sellin-marca" style="max-height:340px;"></canvas>
   </div>
 
   <!-- ═══ SEÇÃO 4 — SKUs / PRODUTOS ═══ -->
@@ -871,6 +868,14 @@
 
   <!-- ═══ SEÇÃO 7 — ESTOQUE ═══ -->
   <div class="secao-header" id="sec-estoque" style="display:none;">7 — Estoque</div>
+
+  <!-- Evolução Sell-out vs Sell-in — Quantidade -->
+  <div class="card" id="area-evolucao-qtd" style="display:none;">
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Evolução Sell-out vs Sell-in — Quantidade</div>
+    <div class="subtitulo">Unidades vendidas por mês · Azul = sell-out (consumidor) · Verde = sell-in (Bravir → varejista)</div>
+    <div class="como-analisar">Quando as duas linhas se afastam, é sinal de desequilíbrio na cadeia: sell-in muito acima do sell-out indica que o varejista está acumulando estoque — o que pode levar a pressão por descontos ou redução de pedidos futuros. Sell-out acima do sell-in por vários meses indica risco de ruptura — o produto pode desaparecer da gôndola. O ideal é que as duas linhas caminhem juntas, com o sell-in ligeiramente à frente para garantir cobertura mínima.</div>
+    <canvas id="grafico-evolucao-qtd" style="max-height:320px;"></canvas>
+  </div>
 
   <!-- Evolução de Estoque por Cliente -->
   <div class="card" id="area-estoque" style="display:none;">
@@ -1917,6 +1922,31 @@ function renderizarDonutCategorias(dados) {
   if (graficoDonutCat) graficoDonutCat.destroy();
   graficoDonutCat = new Chart(document.getElementById('grafico-donut-cat'), {
     type: 'doughnut',
+    plugins: [{
+      id: 'rotulosFatia',
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        const meta = chart.getDatasetMeta(0);
+        const tot  = chart.data.datasets[0].data.reduce((s, v) => s + v, 0);
+        meta.data.forEach((arc, j) => {
+          const value = chart.data.datasets[0].data[j];
+          if (!value || tot === 0) return;
+          const pct = value / tot * 100;
+          if (pct < 5) return;
+          const midAngle = (arc.startAngle + arc.endAngle) / 2;
+          const r = (arc.innerRadius + arc.outerRadius) / 2;
+          const x = arc.x + r * Math.cos(midAngle);
+          const y = arc.y + r * Math.sin(midAngle);
+          ctx.save();
+          ctx.fillStyle = '#fff';
+          ctx.font = 'bold 12px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(pct.toFixed(1) + '%', x, y);
+          ctx.restore();
+        });
+      }
+    }],
     data: {
       labels: cats,
       datasets: [{
@@ -2137,6 +2167,28 @@ function renderizarVendaPorPDV(dados) {
   if (graficoVendaPDV) graficoVendaPDV.destroy();
   graficoVendaPDV = new Chart(document.getElementById('grafico-venda-pdv'), {
     type: 'bar',
+    plugins: [{
+      id: 'rotulosFinal',
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        const dataset = chart.data.datasets[0];
+        const meta = chart.getDatasetMeta(0);
+        meta.data.forEach((bar, j) => {
+          const value = dataset.data[j];
+          if (value === null || value === undefined) return;
+          const label = value >= 1e6
+            ? 'R$ ' + (value / 1e6).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'M'
+            : 'R$ ' + (value / 1e3).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + 'k';
+          ctx.save();
+          ctx.fillStyle = '#2d3748';
+          ctx.font = 'bold 11px sans-serif';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(label, bar.x + 5, bar.y);
+          ctx.restore();
+        });
+      }
+    }],
     data: {
       labels: clientes.map(c => c.nome),
       datasets: [{
@@ -2148,6 +2200,7 @@ function renderizarVendaPorPDV(dados) {
     },
     options: {
       indexAxis: 'y', responsive: true,
+      layout: { padding: { right: 70 } },
       plugins: {
         legend: { display: false },
         tooltip: { callbacks: { label: ctx => '  ' + BRL(ctx.parsed.x) + ' / PDV / mês' } }
@@ -2428,6 +2481,28 @@ function renderizarTopSKUs(dados) {
   if (graficoTopSKUs) graficoTopSKUs.destroy();
   graficoTopSKUs = new Chart(document.getElementById('grafico-top-skus'), {
     type: 'bar',
+    plugins: [{
+      id: 'rotulosFinal',
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        const dataset = chart.data.datasets[0];
+        const meta = chart.getDatasetMeta(0);
+        meta.data.forEach((bar, j) => {
+          const value = dataset.data[j];
+          if (value === null || value === undefined) return;
+          const label = value >= 1_000_000
+            ? 'R$ ' + (value / 1_000_000).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'M'
+            : 'R$ ' + (value / 1_000).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + 'k';
+          ctx.save();
+          ctx.fillStyle = '#2d3748';
+          ctx.font = 'bold 11px sans-serif';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(label, bar.x + 5, bar.y);
+          ctx.restore();
+        });
+      }
+    }],
     data: {
       labels,
       datasets: [{
@@ -2441,6 +2516,7 @@ function renderizarTopSKUs(dados) {
     options: {
       indexAxis: 'y',
       responsive: true,
+      layout: { padding: { right: 70 } },
       plugins: {
         legend: { display: false },
         tooltip: {
@@ -2708,6 +2784,25 @@ function renderizarMargem(dados) {
   if (graficoMargem) graficoMargem.destroy();
   graficoMargem = new Chart(document.getElementById('grafico-margem'), {
     type: 'bar',
+    plugins: [{
+      id: 'rotulosFinal',
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        const dataset = chart.data.datasets[0];
+        const meta = chart.getDatasetMeta(0);
+        meta.data.forEach((bar, j) => {
+          const value = dataset.data[j];
+          if (value === null || value === undefined) return;
+          ctx.save();
+          ctx.fillStyle = '#2d3748';
+          ctx.font = 'bold 11px sans-serif';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(value.toFixed(1) + '%', bar.x + 5, bar.y);
+          ctx.restore();
+        });
+      }
+    }],
     data: {
       labels,
       datasets: [{
@@ -2721,6 +2816,7 @@ function renderizarMargem(dados) {
     options: {
       indexAxis: 'y',
       responsive: true,
+      layout: { padding: { right: 45 } },
       plugins: {
         legend: { display: false },
         tooltip: {
@@ -3255,14 +3351,13 @@ function renderizarTabelaResumoClientes() {
     return (parseInt(anoA)*100+(MESES_ORDEM[mesA]||0)) - (parseInt(anoB)*100+(MESES_ORDEM[mesB]||0));
   });
 
-  // Chave mais recente presente nos dados filtrados
+  // Meses do período filtrado → período de comparação = mesmos meses deslocados -1 na sequência global
   const chavesNoDados = new Set(dados.map(r => r['Ano'] && r['Mês'] ? `${r['Ano']}|${r['Mês']}` : null).filter(Boolean));
-  let chAtual = null;
-  for (let i = todasChaves.length - 1; i >= 0; i--) {
-    if (chavesNoDados.has(todasChaves[i])) { chAtual = todasChaves[i]; break; }
-  }
-  const idxAtual   = chAtual ? todasChaves.indexOf(chAtual) : -1;
-  const chAnterior = idxAtual > 0 ? todasChaves[idxAtual - 1] : null;
+  const chavesComparacao = new Set();
+  chavesNoDados.forEach(ch => {
+    const idx = todasChaves.indexOf(ch);
+    if (idx > 0) chavesComparacao.add(todasChaves[idx - 1]);
+  });
 
   // Agrega por cliente no período filtrado
   const mapa = {};
@@ -3275,16 +3370,16 @@ function renderizarTabelaResumoClientes() {
     mapa[cli].qtd += num(r['Quantidade Sell Out']);
   });
 
-  // Agrega mês anterior (mesmo filtro de clientes/categorias/marcas)
+  // Agrega período de comparação (mesmo nº de meses, deslocado -1) com mesmos filtros não-temporais
   const clisSel  = obterSelecionados('fdrop-cliente');
   const catsSel  = obterSelecionados('fdrop-categoria');
   const marcsSel = obterSelecionados('fdrop-marca');
   const skusSel  = obterSelecionados('fdrop-sku');
   const mapaAnt  = {};
-  if (chAnterior) {
+  if (chavesComparacao.size > 0) {
     dadosGlobais.forEach(r => {
       if (!r['Ano'] || !r['Mês']) return;
-      if (`${r['Ano']}|${r['Mês']}` !== chAnterior) return;
+      if (!chavesComparacao.has(`${r['Ano']}|${r['Mês']}`)) return;
       if (catsSel.length  && !catsSel.includes(r['Categoria']))       return;
       if (marcsSel.length && !marcsSel.includes(r['Marca']))          return;
       if (filtroMarca     && r['Bravir / Terceiros'] !== filtroMarca) return;
@@ -3306,7 +3401,7 @@ function renderizarTabelaResumoClientes() {
       <th>Cliente</th>
       <th>Sell-out (R$)</th>
       <th>Part. %</th>
-      <th>Var. MoM</th>
+      <th title="Compara o período selecionado com o mesmo número de meses imediatamente anterior">Var. período ant.</th>
       <th>Sell-in (R$)</th>
       <th>Margem Bravir (R$)</th>
       <th>Qtd. (un.)</th>
@@ -3355,7 +3450,7 @@ function renderizarKPIs(dados) {
   document.getElementById('kpi-margem-pct').textContent     =
     pct.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
 
-  // Variação MoM — compara mês mais recente nos dados filtrados com o anterior em dadosGlobais
+  // Variação vs período anterior — mesmo nº de meses deslocado -1 na sequência global
   function setVar(elId, atual, anterior) {
     const el = document.getElementById(elId);
     if (!el) return;
@@ -3366,7 +3461,7 @@ function renderizarKPIs(dados) {
     }
     const delta = (atual - anterior) / Math.abs(anterior) * 100;
     const sinal = delta > 0 ? '+' : '';
-    el.textContent = sinal + delta.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '% vs mês ant.';
+    el.textContent = sinal + delta.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '% vs per. ant.';
     el.className = 'kpi-var ' + (delta > 0 ? 'positivo' : delta < 0 ? 'negativo' : 'neutro');
   }
 
@@ -3378,14 +3473,15 @@ function renderizarKPIs(dados) {
     return (parseInt(anoA)*100+(MESES_ORDEM[mesA]||0)) - (parseInt(anoB)*100+(MESES_ORDEM[mesB]||0));
   });
 
-  // Acha a chave mais recente presente nos dados filtrados
+  // Período de comparação = cada mês do filtro deslocado -1 na sequência global
   const chavesNoDados = new Set(dados.map(r => r['Ano'] && r['Mês'] ? `${r['Ano']}|${r['Mês']}` : null).filter(Boolean));
-  let chAtual = null;
-  for (let i = todasChaves.length - 1; i >= 0; i--) {
-    if (chavesNoDados.has(todasChaves[i])) { chAtual = todasChaves[i]; break; }
-  }
+  const chavesComparacao = new Set();
+  chavesNoDados.forEach(ch => {
+    const idx = todasChaves.indexOf(ch);
+    if (idx > 0) chavesComparacao.add(todasChaves[idx - 1]);
+  });
 
-  if (!chAtual) {
+  if (chavesNoDados.size === 0 || chavesComparacao.size === 0) {
     ['kpi-var-fat','kpi-var-fat-in','kpi-var-margem-rs','kpi-var-margem-pct'].forEach(id => {
       const el = document.getElementById(id);
       if (el) { el.textContent = '—'; el.className = 'kpi-var neutro'; }
@@ -3393,32 +3489,20 @@ function renderizarKPIs(dados) {
     return;
   }
 
-  const idxAtual = todasChaves.indexOf(chAtual);
-  const chAnterior = idxAtual > 0 ? todasChaves[idxAtual - 1] : null;
-
-  // Agrega mês atual nos dados filtrados
-  const linhasAtual = dados.filter(r => r['Ano'] && r['Mês'] && `${r['Ano']}|${r['Mês']}` === chAtual);
-  const fatAtual    = linhasAtual.reduce((s, r) => s + num(r['Valor (R$) Sell Out']), 0);
-  const fatInAtual  = linhasAtual.reduce((s, r) => s + num(r['Valor (R$) Sell in']), 0);
-  const mbAtual     = linhasAtual.reduce((s, r) => s + (vazio(r['Margem Contribuição Bravir (R$)']) ? 0 : num(r['Margem Contribuição Bravir (R$)'])), 0);
+  // Totais do período filtrado (já em `dados`)
+  const fatAtual      = dados.reduce((s, r) => s + num(r['Valor (R$) Sell Out']), 0);
+  const fatInAtual    = dados.reduce((s, r) => s + num(r['Valor (R$) Sell in']), 0);
+  const mbAtual       = dados.reduce((s, r) => s + (vazio(r['Margem Contribuição Bravir (R$)']) ? 0 : num(r['Margem Contribuição Bravir (R$)'])), 0);
   const fatInAtualPct = fatInAtual > 0 ? mbAtual / fatInAtual * 100 : 0;
 
-  if (!chAnterior) {
-    ['kpi-var-fat','kpi-var-fat-in','kpi-var-margem-rs','kpi-var-margem-pct'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) { el.textContent = '—'; el.className = 'kpi-var neutro'; }
-    });
-    return;
-  }
-
-  // Agrega mês anterior em dadosGlobais aplicando os mesmos filtros de cliente/categoria/marca
+  // Totais do período de comparação com os mesmos filtros não-temporais
   const clisSel  = obterSelecionados('fdrop-cliente');
   const catsSel2 = obterSelecionados('fdrop-categoria');
   const marcsSel = obterSelecionados('fdrop-marca');
   const skusSel2 = obterSelecionados('fdrop-sku');
   const linhasAnt = dadosGlobais.filter(r => {
     if (!r['Ano'] || !r['Mês']) return false;
-    if (`${r['Ano']}|${r['Mês']}` !== chAnterior) return false;
+    if (!chavesComparacao.has(`${r['Ano']}|${r['Mês']}`)) return false;
     if (catsSel2.length  && !catsSel2.includes(r['Categoria']))       return false;
     if (marcsSel.length  && !marcsSel.includes(r['Marca']))           return false;
     if (filtroMarca      && r['Bravir / Terceiros'] !== filtroMarca)  return false;
@@ -3427,9 +3511,9 @@ function renderizarKPIs(dados) {
     return true;
   });
 
-  const fatAnt    = linhasAnt.reduce((s, r) => s + num(r['Valor (R$) Sell Out']), 0);
-  const fatInAnt  = linhasAnt.reduce((s, r) => s + num(r['Valor (R$) Sell in']), 0);
-  const mbAnt     = linhasAnt.reduce((s, r) => s + (vazio(r['Margem Contribuição Bravir (R$)']) ? 0 : num(r['Margem Contribuição Bravir (R$)'])), 0);
+  const fatAnt      = linhasAnt.reduce((s, r) => s + num(r['Valor (R$) Sell Out']), 0);
+  const fatInAnt    = linhasAnt.reduce((s, r) => s + num(r['Valor (R$) Sell in']), 0);
+  const mbAnt       = linhasAnt.reduce((s, r) => s + (vazio(r['Margem Contribuição Bravir (R$)']) ? 0 : num(r['Margem Contribuição Bravir (R$)'])), 0);
   const fatInAntPct = fatInAnt > 0 ? mbAnt / fatInAnt * 100 : 0;
 
   setVar('kpi-var-fat',        fatAtual,       fatAnt);
@@ -3523,6 +3607,27 @@ function renderizarMargemComparativa(dados) {
   if (graficoMargemComp) graficoMargemComp.destroy();
   graficoMargemComp = new Chart(document.getElementById('grafico-margem-comp'), {
     type: 'bar',
+    plugins: [{
+      id: 'rotulosTopo',
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        chart.data.datasets.forEach((dataset, i) => {
+          const meta = chart.getDatasetMeta(i);
+          if (meta.hidden) return;
+          meta.data.forEach((bar, j) => {
+            const value = dataset.data[j];
+            if (value === null || value === undefined) return;
+            ctx.save();
+            ctx.fillStyle = '#2d3748';
+            ctx.font = 'bold 11px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText(value.toFixed(1) + '%', bar.x, bar.y - 3);
+            ctx.restore();
+          });
+        });
+      }
+    }],
     data: {
       labels: clientes,
       datasets: [
@@ -3546,6 +3651,7 @@ function renderizarMargemComparativa(dados) {
     },
     options: {
       responsive: true,
+      layout: { padding: { top: 18 } },
       plugins: {
         legend: { display: true, position: 'top' },
         tooltip: {
@@ -3593,6 +3699,25 @@ function renderizarMargemBravirPorCategoria(dados) {
   if (graficoMargemCat) graficoMargemCat.destroy();
   graficoMargemCat = new Chart(document.getElementById('grafico-margem-cat'), {
     type: 'bar',
+    plugins: [{
+      id: 'rotulosFinal',
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        const dataset = chart.data.datasets[0];
+        const meta = chart.getDatasetMeta(0);
+        meta.data.forEach((bar, j) => {
+          const value = dataset.data[j];
+          if (value === null || value === undefined) return;
+          ctx.save();
+          ctx.fillStyle = '#2d3748';
+          ctx.font = 'bold 11px sans-serif';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(value.toFixed(1) + '%', bar.x + 5, bar.y);
+          ctx.restore();
+        });
+      }
+    }],
     data: {
       labels: cats,
       datasets: [{
@@ -3606,6 +3731,7 @@ function renderizarMargemBravirPorCategoria(dados) {
     options: {
       indexAxis: 'y',
       responsive: true,
+      layout: { padding: { right: 45 } },
       plugins: {
         legend: { display: false },
         tooltip: { callbacks: { label: ctx => `  ${ctx.parsed.x.toFixed(1)}%` } }
@@ -3980,6 +4106,27 @@ function renderizarRankingVariacaoPreco() {
   if (graficoRankingVariacaoPreco) graficoRankingVariacaoPreco.destroy();
   graficoRankingVariacaoPreco = new Chart(document.getElementById('grafico-ranking-variacao-preco'), {
     type: 'bar',
+    plugins: [{
+      id: 'rotulosFinal',
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        const dataset = chart.data.datasets[0];
+        const meta = chart.getDatasetMeta(0);
+        meta.data.forEach((bar, j) => {
+          const value = dataset.data[j];
+          if (value === null || value === undefined) return;
+          const positivo = value >= 0;
+          const label = (positivo ? '+' : '') + value.toFixed(1) + '%';
+          ctx.save();
+          ctx.fillStyle = '#2d3748';
+          ctx.font = 'bold 11px sans-serif';
+          ctx.textAlign = positivo ? 'left' : 'right';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(label, bar.x + (positivo ? 5 : -5), bar.y);
+          ctx.restore();
+        });
+      }
+    }],
     data: {
       labels,
       datasets: [{
@@ -3991,6 +4138,7 @@ function renderizarRankingVariacaoPreco() {
     },
     options: {
       indexAxis: 'y', responsive: true,
+      layout: { padding: { right: 50, left: 10 } },
       plugins: {
         legend: { display: false },
         tooltip: {
@@ -4262,6 +4410,25 @@ function renderizarPrecoCliente() {
   if (graficoPrecoCliente) graficoPrecoCliente.destroy();
   graficoPrecoCliente = new Chart(document.getElementById('grafico-preco-cliente'), {
     type: 'bar',
+    plugins: [{
+      id: 'rotulosFinal',
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        const dataset = chart.data.datasets[0];
+        const meta = chart.getDatasetMeta(0);
+        meta.data.forEach((bar, j) => {
+          const value = dataset.data[j];
+          if (value === null || value === undefined) return;
+          ctx.save();
+          ctx.fillStyle = '#2d3748';
+          ctx.font = 'bold 11px sans-serif';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(BRL(value), bar.x + 5, bar.y);
+          ctx.restore();
+        });
+      }
+    }],
     data: {
       labels: clientes,
       datasets: [
@@ -4278,6 +4445,7 @@ function renderizarPrecoCliente() {
     options: {
       indexAxis: 'y',
       responsive: true,
+      layout: { padding: { right: 80 } },
       plugins: {
         legend: { display: false },
         tooltip: {
@@ -4657,6 +4825,25 @@ function renderizarMargemMarca() {
   if (graficoMargemMarca) graficoMargemMarca.destroy();
   graficoMargemMarca = new Chart(document.getElementById('grafico-margem-marca'), {
     type: 'bar',
+    plugins: [{
+      id: 'rotulosFinal',
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        const dataset = chart.data.datasets[0];
+        const meta = chart.getDatasetMeta(0);
+        meta.data.forEach((bar, j) => {
+          const value = dataset.data[j];
+          if (value === null || value === undefined) return;
+          ctx.save();
+          ctx.fillStyle = '#2d3748';
+          ctx.font = 'bold 11px sans-serif';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(value.toFixed(1) + '%', bar.x + 5, bar.y);
+          ctx.restore();
+        });
+      }
+    }],
     data: {
       labels: marcas,
       datasets: [{
@@ -4669,6 +4856,7 @@ function renderizarMargemMarca() {
     },
     options: {
       indexAxis: 'y', responsive: true,
+      layout: { padding: { right: 45 } },
       plugins: {
         legend: { display: false },
         tooltip: { callbacks: { label: ctx => `  Margem Bravir: ${ctx.parsed.x.toFixed(1)}%` } }
