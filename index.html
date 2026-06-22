@@ -616,6 +616,12 @@
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Evolução do Sell In por Cliente</div>
     <div class="subtitulo">Faturamento sell-in mensal (R$) · Barras empilhadas — participação de cada cliente</div>
     <div class="como-analisar">Acompanhe a evolução dos pedidos de cada rede ao longo do tempo. Clientes com participação crescente são parceiros em expansão — sinal positivo de relacionamento comercial. Clientes com participação caindo podem estar migrando para concorrentes, reduzindo o mix da Bravir ou passando por dificuldades financeiras. Meses com queda geral no total da barra podem indicar sazonalidade do setor ou problema comercial sistêmico.</div>
+    <div style="margin-bottom:.6rem;">
+      <label style="font-size:.8rem;color:#4a5568;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;">
+        <input type="checkbox" id="chk-yoy-sellin-cliente" onchange="renderizarEvolucaoSellInCliente()">
+        Comparar com ano anterior
+      </label>
+    </div>
     <canvas id="grafico-evolucao-sellin-cliente" style="max-height:340px;"></canvas>
   </div>
 
@@ -667,6 +673,12 @@
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Evolução do Faturamento por Marca</div>
     <div class="subtitulo">Faturamento sell-out mensal (R$) · Uma linha por marca · Selecione as marcas que deseja visualizar abaixo</div>
     <div class="como-analisar">Acompanhe o crescimento ou queda de cada marca ao longo do tempo. Marcas com tendência de queda precisam de atenção: pode ser necessária ação de trade marketing, revisão de portfólio ou reposicionamento de preço. Marcas em crescimento acelerado merecem mais investimento e garantia de suprimento. Compare marcas próprias com white label para avaliar se o portfólio Bravir está ganhando relevância relativa no negócio.</div>
+    <div style="margin:.4rem 0 .6rem;">
+      <label style="font-size:.8rem;color:#4a5568;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;">
+        <input type="checkbox" id="chk-yoy-evolucao-marca" onchange="renderizarEvolucaoMarcas()">
+        Comparar com ano anterior
+      </label>
+    </div>
     <div style="margin:.6rem 0 1rem;">
       <div style="font-size:.78rem;color:#718096;margin-bottom:.4rem;">
         Marcas exibidas —
@@ -699,6 +711,12 @@
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Evolução do Sell In por Marca</div>
     <div class="subtitulo">Faturamento sell-in mensal (R$) · Barras empilhadas — participação de cada marca · Marcas Bravir primeiro</div>
     <div class="como-analisar">Mostra como cada marca contribui para o sell-in ao longo do tempo. Útil para avaliar se as marcas próprias da Bravir (Bendita Cânfora, Bravir Tradicional, Laby) estão crescendo ou cedendo espaço para o white label. Uma marca própria com participação crescente indica maior poder de marca e menor dependência de contratos de terceiros. Uma marca em queda pode necessitar de reposicionamento ou ações de trade marketing.</div>
+    <div style="margin-bottom:.6rem;">
+      <label style="font-size:.8rem;color:#4a5568;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;">
+        <input type="checkbox" id="chk-yoy-sellin-marca" onchange="renderizarEvolucaoSellInMarca()">
+        Comparar com ano anterior
+      </label>
+    </div>
     <canvas id="grafico-evolucao-sellin-marca" style="max-height:340px;"></canvas>
   </div>
 
@@ -718,6 +736,12 @@
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.4rem;">Evolução Mensal — Top 5 SKUs por Faturamento</div>
     <div class="subtitulo">Sell Out em R$ mês a mês · Top 5 determinados pelo faturamento total no período filtrado</div>
     <div class="como-analisar">Acompanhe a trajetória dos 5 produtos mais vendidos ao longo do tempo. Um produto em queda consistente pode estar perdendo espaço para concorrentes ou sofrendo com rupturas recorrentes. Picos pontuais geralmente indicam ações promocionais ou sazonalidade. Use este gráfico para identificar padrões sazonais por produto e planejar com antecedência o calendário de produção, sell-in e ações de trade.</div>
+    <div style="margin-bottom:.6rem;">
+      <label style="font-size:.8rem;color:#4a5568;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;">
+        <input type="checkbox" id="chk-yoy-top5" onchange="renderizarTop5SKUsEvolucao(filtrarDados())">
+        Comparar com ano anterior
+      </label>
+    </div>
     <canvas id="grafico-top5-evolucao" style="max-height:360px;"></canvas>
   </div>
 
@@ -803,6 +827,12 @@
       </div>
       <div id="container-cat-preco" style="display:flex;flex-wrap:wrap;gap:.4rem .9rem;"></div>
     </div>
+    <div style="margin-bottom:.6rem;">
+      <label style="font-size:.8rem;color:#4a5568;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;">
+        <input type="checkbox" id="chk-yoy-preco-cat" onchange="renderizarPrecoCategoria()">
+        Comparar com ano anterior
+      </label>
+    </div>
     <canvas id="grafico-preco-categoria" style="max-height:340px;"></canvas>
   </div>
 
@@ -823,6 +853,12 @@
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Evolução do Preço Sell-out vs Sell-in</div>
     <div class="subtitulo">Preço médio ponderado por quantidade · Azul = preço ao consumidor (sell-out) · Cinza = preço Bravir ao varejista (sell-in) · Área entre as linhas = markup do varejista</div>
     <div class="como-analisar">A área sombreada entre as duas linhas representa o markup do varejista — quanto ele ganha por unidade vendida. Se essa área crescer ao longo do tempo, o varejista está aumentando a margem sobre os produtos da Bravir (o preço ao consumidor sobe mais rápido que o sell-in). Se a área diminuir, os varejistas estão comprimindo a própria margem — o que pode indicar pressão competitiva e menor interesse em promover o produto ativamente.</div>
+    <div style="margin-bottom:.6rem;">
+      <label style="font-size:.8rem;color:#4a5568;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;">
+        <input type="checkbox" id="chk-yoy-evolucao-preco" onchange="renderizarEvolucaoPreco()">
+        Comparar com ano anterior
+      </label>
+    </div>
     <canvas id="grafico-evolucao-preco" style="max-height:320px;"></canvas>
   </div>
 
@@ -874,6 +910,12 @@
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Evolução Sell-out vs Sell-in — Quantidade</div>
     <div class="subtitulo">Unidades vendidas por mês · Azul = sell-out (consumidor) · Verde = sell-in (Bravir → varejista)</div>
     <div class="como-analisar">Quando as duas linhas se afastam, é sinal de desequilíbrio na cadeia: sell-in muito acima do sell-out indica que o varejista está acumulando estoque — o que pode levar a pressão por descontos ou redução de pedidos futuros. Sell-out acima do sell-in por vários meses indica risco de ruptura — o produto pode desaparecer da gôndola. O ideal é que as duas linhas caminhem juntas, com o sell-in ligeiramente à frente para garantir cobertura mínima.</div>
+    <div style="margin-bottom:.6rem;">
+      <label style="font-size:.8rem;color:#4a5568;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;">
+        <input type="checkbox" id="chk-yoy-evolucao-qtd" onchange="renderizarEvolucaoQtd()">
+        Comparar com ano anterior
+      </label>
+    </div>
     <canvas id="grafico-evolucao-qtd" style="max-height:320px;"></canvas>
   </div>
 
@@ -921,6 +963,12 @@
         <a href="#" style="color:#2b6cb0;text-decoration:none;" onclick="event.preventDefault();selecionarTodosCobertura(false)">nenhum</a>
       </div>
       <div id="container-cli-cobertura" style="display:flex;flex-wrap:wrap;gap:.4rem .9rem;"></div>
+    </div>
+    <div style="margin-bottom:.6rem;">
+      <label style="font-size:.8rem;color:#4a5568;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;">
+        <input type="checkbox" id="chk-yoy-cobertura" onchange="renderizarCobertura()">
+        Comparar com ano anterior
+      </label>
     </div>
     <canvas id="grafico-cobertura" style="max-height:340px;"></canvas>
   </div>
@@ -1573,6 +1621,65 @@ function popularPeriodo(dados) {
   document.getElementById('sel-periodo-ate').value = ordenados[ordenados.length - 1];
 }
 
+// ─── Auxiliares YoY ──────────────────────────────────────────────────────────
+
+function _todasChavesGlobais() {
+  const s = new Set();
+  dadosGlobais.forEach(r => { if (r['Ano'] && r['Mês']) s.add(`${r['Ano']}|${r['Mês']}`); });
+  return [...s].sort((a, b) => {
+    const [anoA, mesA] = a.split('|'), [anoB, mesB] = b.split('|');
+    return (parseInt(anoA)*100+(MESES_ORDEM[mesA]||0)) - (parseInt(anoB)*100+(MESES_ORDEM[mesB]||0));
+  });
+}
+
+// Agrega um campo numérico de dadosGlobais por chave mês, aplicando filtros não-temporais
+function _soGlobalPorMes(campo, extra) {
+  const clisSel  = obterSelecionados('fdrop-cliente');
+  const catsSel  = obterSelecionados('fdrop-categoria');
+  const marcsSel = obterSelecionados('fdrop-marca');
+  const skusSel  = obterSelecionados('fdrop-sku');
+  const out = {};
+  dadosGlobais.forEach(r => {
+    if (!r['Ano'] || !r['Mês']) return;
+    if (catsSel.length  && !catsSel.includes(r['Categoria']))       return;
+    if (marcsSel.length && !marcsSel.includes(r['Marca']))          return;
+    if (filtroMarca     && r['Bravir / Terceiros'] !== filtroMarca) return;
+    if (clisSel.length  && !clisSel.includes(r['Cliente']))         return;
+    if (skusSel.length  && !skusSel.includes(r['SKU']))             return;
+    if (extra && !extra(r)) return;
+    const ch = `${r['Ano']}|${r['Mês']}`;
+    out[ch] = (out[ch] || 0) + num(r[campo]);
+  });
+  return out;
+}
+
+// Dado um array de chaves atuais, retorna array de valores do ano anterior (12 posições atrás)
+function _valoresYoY(mesesOrdenados, todasChaves, soGlobal) {
+  return mesesOrdenados.map(ch => {
+    const idx = todasChaves.indexOf(ch);
+    if (idx < 12) return null;
+    return soGlobal[todasChaves[idx - 12]] ?? null;
+  });
+}
+
+// Dataset padrão para linha YoY
+function _dsYoYLine(label, valores, cor) {
+  if (!valores.some(v => v !== null)) return null;
+  return {
+    label,
+    type: 'line',
+    data: valores,
+    borderColor: cor || '#a0aec0',
+    backgroundColor: 'transparent',
+    borderDash: [5, 3],
+    borderWidth: 2,
+    pointRadius: 2,
+    fill: false,
+    tension: 0.3,
+    order: 0,
+  };
+}
+
 // ─── Gráfico de evolução mensal (sell-out + margem Bravir empilhados) ─────────
 
 function renderizarEvolucao() {
@@ -1645,7 +1752,7 @@ function renderizarEvolucao() {
       const primeiraChave = mesesOrdenados[0];
       const anoRef = primeiraChave ? parseInt(primeiraChave.split('|')[0]) - 1 : '';
       dsYoY = {
-        label: `Sell-out ${anoRef}`,
+        label: 'Sell-out (ano ant.)',
         type: 'line',
         data: valoresYoY,
         borderColor: '#a0aec0',
@@ -2094,7 +2201,7 @@ function renderizarEvolucaoPorCategoria() {
       if (valoresYoY.some(v => v !== null)) {
         const anoRef = mesesOrdenados[0] ? parseInt(mesesOrdenados[0].split('|')[0]) - 1 : '';
         datasets.push({
-          label: `${cat} (${anoRef})`,
+          label: `${cat} (ano ant.)`,
           data: valoresYoY,
           borderColor: CORES_CAT[i % CORES_CAT.length],
           backgroundColor: 'transparent',
@@ -2176,15 +2283,12 @@ function renderizarVendaPorPDV(dados) {
         meta.data.forEach((bar, j) => {
           const value = dataset.data[j];
           if (value === null || value === undefined) return;
-          const label = value >= 1e6
-            ? 'R$ ' + (value / 1e6).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'M'
-            : 'R$ ' + (value / 1e3).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + 'k';
           ctx.save();
           ctx.fillStyle = '#2d3748';
           ctx.font = 'bold 11px sans-serif';
           ctx.textAlign = 'left';
           ctx.textBaseline = 'middle';
-          ctx.fillText(label, bar.x + 5, bar.y);
+          ctx.fillText(BRL(value), bar.x + 5, bar.y);
           ctx.restore();
         });
       }
@@ -2587,6 +2691,19 @@ function renderizarTop5SKUsEvolucao(dados) {
     spanGaps: false,
   }));
 
+  if (document.getElementById('chk-yoy-top5')?.checked && meses.length) {
+    const todasCh = _todasChavesGlobais();
+    top5.forEach((sku, i) => {
+      const soG = _soGlobalPorMes('Valor (R$) Sell Out', r => r['SKU'] === sku);
+      const ds = _dsYoYLine(
+        (sku.length > 25 ? sku.slice(0, 25) + '…' : sku) + ' (ano ant.)',
+        _valoresYoY(meses, todasCh, soG),
+        CORES_5[i] + '77'
+      );
+      if (ds) datasets.push(ds);
+    });
+  }
+
   if (graficoTop5Evolucao) graficoTop5Evolucao.destroy();
   graficoTop5Evolucao = new Chart(document.getElementById('grafico-top5-evolucao'), {
     type: 'line',
@@ -2637,6 +2754,16 @@ function renderizarEvolucaoQtd() {
   const rotulos = meses.map(m => { const [a,ms]=m.split('|'); return `${ms.slice(0,3)}/${a}`; });
   const N = v => v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'k' : String(v);
 
+  const yoyQtd = document.getElementById('chk-yoy-evolucao-qtd')?.checked;
+  let dsYoYOut = null, dsYoYIn = null;
+  if (yoyQtd && meses.length) {
+    const todasCh = _todasChavesGlobais();
+    const soOut = _soGlobalPorMes('Quantidade Sell Out');
+    const soIn  = _soGlobalPorMes('Quantidade Sell in');
+    dsYoYOut = _dsYoYLine('Sell Out (ano ant.)', _valoresYoY(meses, todasCh, soOut), '#2b6cb066');
+    dsYoYIn  = _dsYoYLine('Sell In (ano ant.)',  _valoresYoY(meses, todasCh, soIn),  '#27674966');
+  }
+
   if (graficoEvolucaoQtd) graficoEvolucaoQtd.destroy();
   graficoEvolucaoQtd = new Chart(document.getElementById('grafico-evolucao-qtd'), {
     type: 'line',
@@ -2661,7 +2788,9 @@ function renderizarEvolucaoQtd() {
           borderDash: [5, 3],
           pointRadius: 3, pointHoverRadius: 5,
           fill: false, tension: 0.3,
-        }
+        },
+        ...(dsYoYOut ? [dsYoYOut] : []),
+        ...(dsYoYIn  ? [dsYoYIn]  : []),
       ]
     },
     options: {
@@ -2959,6 +3088,45 @@ function renderizarCobertura() {
     borderWidth: 2, pointRadius: 3, pointHoverRadius: 5,
     fill: false, tension: 0.3, spanGaps: false,
   }));
+
+  if (document.getElementById('chk-yoy-cobertura')?.checked && meses.length) {
+    const todasCh = _todasChavesGlobais();
+    // Pré-agrega estoque e sell-out de todo dadosGlobais para calcular cobertura do ano anterior
+    const estG = {}, soG = {};
+    dadosTodos.forEach(r => {
+      const cli = r['Cliente'], v = r[CAMPO_EST], q = num(r['Quantidade Sell Out']);
+      if (!cli) return;
+      const ch = `${r['Ano']}|${r['Mês']}`;
+      if (!vazio(v)) { if (!estG[ch]) estG[ch] = {}; estG[ch][cli] = (estG[ch][cli] || 0) + num(v); }
+      if (!soG[cli]) soG[cli] = {};
+      soG[cli][ch] = (soG[cli][ch] || 0) + q;
+    });
+    function ma3G(cli, ch) {
+      const todos = Object.keys(soG[cli] || {}).sort((a, b) => {
+        const [aA,mA]=a.split('|'),[aB,mB]=b.split('|');
+        return (parseInt(aA)*100+(MESES_ORDEM[mA]||0))-(parseInt(aB)*100+(MESES_ORDEM[mB]||0));
+      });
+      const idx = todos.indexOf(ch);
+      if (idx < 0) return null;
+      const janela = todos.slice(Math.max(0,idx-2),idx+1);
+      return janela.reduce((s,m) => s+(soG[cli][m]||0),0) / janela.length;
+    }
+    clientes.forEach((cli, i) => {
+      const cor = CORES[i % CORES.length];
+      const vals = meses.map(ch => {
+        const idx = todasCh.indexOf(ch);
+        if (idx < 12) return null;
+        const chAnt = todasCh[idx - 12];
+        const estoq = estG[chAnt]?.[cli];
+        if (estoq === undefined) return null;
+        const media = ma3G(cli, chAnt);
+        if (!media || media === 0) return null;
+        return parseFloat((estoq / (media / 30)).toFixed(1));
+      });
+      const ds = _dsYoYLine(`${cli} (ano ant.)`, vals, cor + '77');
+      if (ds) datasets.push(ds);
+    });
+  }
 
   if (graficoCobertura) graficoCobertura.destroy();
   graficoCobertura = new Chart(document.getElementById('grafico-cobertura'), {
@@ -4356,6 +4524,35 @@ function renderizarPrecoCategoria() {
     };
   });
 
+  if (document.getElementById('chk-yoy-preco-cat')?.checked && meses.length) {
+    const todasCh = _todasChavesGlobais();
+    const clisSel = obterSelecionados('fdrop-cliente'), marcsSel = obterSelecionados('fdrop-marca'), skusSel = obterSelecionados('fdrop-sku');
+    // Agrega preço médio ponderado por categoria/mês em dadosGlobais
+    const gCat = {};
+    dadosGlobais.forEach(r => {
+      const cat = r['Categoria'], p = num(r['Preço Sell Out']), q = num(r['Quantidade Sell Out']);
+      if (!cat || p <= 0 || q <= 0) return;
+      if (marcsSel.length && !marcsSel.includes(r['Marca']))          return;
+      if (filtroMarca     && r['Bravir / Terceiros'] !== filtroMarca) return;
+      if (clisSel.length  && !clisSel.includes(r['Cliente']))         return;
+      if (skusSel.length  && !skusSel.includes(r['SKU']))             return;
+      const ch = `${r['Ano']}|${r['Mês']}`;
+      if (!gCat[cat]) gCat[cat] = {};
+      if (!gCat[cat][ch]) gCat[cat][ch] = { sv: 0, sq: 0 };
+      gCat[cat][ch].sv += p * q;
+      gCat[cat][ch].sq += q;
+    });
+    categorias.forEach(cat => {
+      const i = categoriasOrdenadas.indexOf(cat);
+      const cor = CORES_CAT[i % CORES_CAT.length];
+      const soG = Object.fromEntries(
+        Object.entries(gCat[cat] || {}).map(([k, v]) => [k, v.sq > 0 ? v.sv / v.sq : null])
+      );
+      const ds = _dsYoYLine(`${cat} (ano ant.)`, _valoresYoY(meses, todasCh, soG), cor + '77');
+      if (ds) datasets.push(ds);
+    });
+  }
+
   if (graficoPrecoCategoria) graficoPrecoCategoria.destroy();
   graficoPrecoCategoria = new Chart(document.getElementById('grafico-preco-categoria'), {
     type: 'line',
@@ -4502,6 +4699,36 @@ function renderizarEvolucaoPreco() {
   const precoOut = meses.map(m => porMes[m].somaQtd    > 0 ? parseFloat((porMes[m].somaOut / porMes[m].somaQtd).toFixed(2))    : null);
   const precoIn  = meses.map(m => porMes[m].somaQtdIn  > 0 ? parseFloat((porMes[m].somaIn  / porMes[m].somaQtdIn).toFixed(2))  : null);
 
+  // YoY: preço médio ponderado por quantidade do ano anterior
+  const yoyPreco = document.getElementById('chk-yoy-evolucao-preco')?.checked;
+  let dsYoYPrecoOut = null, dsYoYPrecoIn = null;
+  if (yoyPreco && meses.length) {
+    const todasCh = _todasChavesGlobais();
+    const clisSel = obterSelecionados('fdrop-cliente'), catsSel = obterSelecionados('fdrop-categoria');
+    const marcsSel = obterSelecionados('fdrop-marca'),  skusSel = obterSelecionados('fdrop-sku');
+    const gOut = {}, gIn = {};
+    dadosGlobais.forEach(r => {
+      if (!r['Ano'] || !r['Mês']) return;
+      if (catsSel.length  && !catsSel.includes(r['Categoria']))       return;
+      if (marcsSel.length && !marcsSel.includes(r['Marca']))          return;
+      if (filtroMarca     && r['Bravir / Terceiros'] !== filtroMarca) return;
+      if (clisSel.length  && !clisSel.includes(r['Cliente']))         return;
+      if (skusSel.length  && !skusSel.includes(r['SKU']))             return;
+      const ch = `${r['Ano']}|${r['Mês']}`;
+      const pOut = num(r['Preço Sell Out']), pIn = num(r['Preço Sell in']), q = num(r['Quantidade Sell Out']);
+      if (q > 0) {
+        if (!gOut[ch]) gOut[ch] = { sv: 0, sq: 0 };
+        if (!gIn[ch])  gIn[ch]  = { sv: 0, sq: 0 };
+        if (pOut > 0) { gOut[ch].sv += pOut * q; gOut[ch].sq += q; }
+        if (pIn  > 0) { gIn[ch].sv  += pIn  * q; gIn[ch].sq  += q; }
+      }
+    });
+    const soOut2 = Object.fromEntries(Object.entries(gOut).map(([k,v]) => [k, v.sq > 0 ? v.sv/v.sq : null]));
+    const soIn2  = Object.fromEntries(Object.entries(gIn).map(([k,v])  => [k, v.sq > 0 ? v.sv/v.sq : null]));
+    dsYoYPrecoOut = _dsYoYLine('Sell-out (ano ant.)', _valoresYoY(meses, todasCh, soOut2), '#2b6cb066');
+    dsYoYPrecoIn  = _dsYoYLine('Sell-in (ano ant.)',  _valoresYoY(meses, todasCh, soIn2),  '#71809666');
+  }
+
   if (graficoEvolucaoPreco) graficoEvolucaoPreco.destroy();
   graficoEvolucaoPreco = new Chart(document.getElementById('grafico-evolucao-preco'), {
     type: 'line',
@@ -4526,7 +4753,9 @@ function renderizarEvolucaoPreco() {
           borderDash: [5, 3],
           pointRadius: 3, pointHoverRadius: 5,
           fill: false, tension: 0.3, spanGaps: false,
-        }
+        },
+        ...(dsYoYPrecoOut ? [dsYoYPrecoOut] : []),
+        ...(dsYoYPrecoIn  ? [dsYoYPrecoIn]  : []),
       ]
     },
     options: {
@@ -4776,6 +5005,16 @@ function renderizarEvolucaoMarcas() {
     borderWidth: 2, pointRadius: 3, fill: false, tension: 0.3,
   }));
 
+  if (document.getElementById('chk-yoy-evolucao-marca')?.checked && meses.length) {
+    const todasCh = _todasChavesGlobais();
+    marcas.forEach((marca, i) => {
+      const soG = _soGlobalPorMes('Valor (R$) Sell Out', r => r['Marca'] === marca);
+      const cor = CORES_M[i % CORES_M.length];
+      const ds = _dsYoYLine(`${marca} (ano ant.)`, _valoresYoY(meses, todasCh, soG), cor + '77');
+      if (ds) datasets.push(ds);
+    });
+  }
+
   if (graficoEvolucaoMarcas) graficoEvolucaoMarcas.destroy();
   graficoEvolucaoMarcas = new Chart(document.getElementById('grafico-evolucao-marca'), {
     type: 'line',
@@ -4993,6 +5232,13 @@ function renderizarEvolucaoSellInCliente() {
     stack: 'total',
   }));
 
+  if (document.getElementById('chk-yoy-sellin-cliente')?.checked && meses.length) {
+    const todasCh = _todasChavesGlobais();
+    const soG = _soGlobalPorMes('Valor (R$) Sell in');
+    const ds = _dsYoYLine('Total ano anterior', _valoresYoY(meses, todasCh, soG), '#a0aec0');
+    if (ds) datasets.push(ds);
+  }
+
   if (graficoEvolucaoSellInCliente) graficoEvolucaoSellInCliente.destroy();
   graficoEvolucaoSellInCliente = new Chart(document.getElementById('grafico-evolucao-sellin-cliente'), {
     type: 'bar',
@@ -5069,6 +5315,13 @@ function renderizarEvolucaoSellInMarca() {
     borderWidth: 1,
     stack: 'total',
   }));
+
+  if (document.getElementById('chk-yoy-sellin-marca')?.checked && meses.length) {
+    const todasCh = _todasChavesGlobais();
+    const soG = _soGlobalPorMes('Valor (R$) Sell in');
+    const ds = _dsYoYLine('Total ano anterior', _valoresYoY(meses, todasCh, soG), '#a0aec0');
+    if (ds) datasets.push(ds);
+  }
 
   if (graficoEvolucaoSellInMarca) graficoEvolucaoSellInMarca.destroy();
   graficoEvolucaoSellInMarca = new Chart(document.getElementById('grafico-evolucao-sellin-marca'), {
