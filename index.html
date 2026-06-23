@@ -5652,23 +5652,13 @@ function _regressaoLinear(ys) {
 
 function _fatorClima(cenario, mesNome, categoria) {
   if (cenario === 'tipico') return 1.0;
+  // Apenas Manteiga de cacau e Protetor Labial têm sazonalidade climática confirmada
+  if (categoria !== 'Manteiga de cacau' && categoria !== 'Protetor Labial') return 1.0;
   const m   = MESES_ORDEM[mesNome] || 6;
   const inv = m >= 5 && m <= 8;
   const ver = m >= 11 || m <= 2;
-  const tabFrio = {
-    'Protetor Labial':   inv ? 1.20 : ver ? 0.90 : 1.05,
-    'Cânfora multiuso':  inv ? 1.15 : ver ? 0.90 : 1.05,
-    'Protetor Solar':    inv ? 0.90 : ver ? 1.10 : 1.00,
-    'Corporal':          inv ? 1.05 : 1.00,
-    'Manteiga de cacau': inv ? 1.05 : 1.00,
-  };
-  const tabQuente = {
-    'Protetor Labial':   inv ? 0.85 : ver ? 1.10 : 0.95,
-    'Cânfora multiuso':  inv ? 0.88 : ver ? 1.10 : 0.95,
-    'Protetor Solar':    inv ? 1.10 : ver ? 0.90 : 1.00,
-    'Corporal':          inv ? 0.95 : 1.00,
-    'Manteiga de cacau': inv ? 0.95 : 1.00,
-  };
+  const tabFrio   = { 'Protetor Labial': inv ? 1.20 : ver ? 0.90 : 1.05, 'Manteiga de cacau': inv ? 1.10 : 1.00 };
+  const tabQuente = { 'Protetor Labial': inv ? 0.85 : ver ? 1.10 : 0.95, 'Manteiga de cacau': inv ? 0.90 : 1.00 };
   return (cenario === 'frio' ? tabFrio : tabQuente)[categoria] ?? 1.0;
 }
 
