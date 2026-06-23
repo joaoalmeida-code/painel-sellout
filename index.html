@@ -525,6 +525,7 @@
   <a href="#sec-precos" class="nav-link">Preços</a>
   <a href="#sec-estoque" class="nav-link">Estoque</a>
   <a href="#sec-avancado" class="nav-link">Análises Específicas</a>
+  <a href="#sec-previsao" class="nav-link">Previsão</a>
 </nav>
 </div><!-- /cabecalho-fixo -->
 
@@ -1004,6 +1005,68 @@
     <canvas id="grafico-temperatura" style="max-height:400px;"></canvas>
   </div>
 
+
+  <!-- ═══ SEÇÃO 9 — PREVISÃO DE VENDAS ═══ -->
+  <div class="secao-header" id="sec-previsao" style="display:none;">9 — Previsão de Vendas</div>
+
+  <!-- Card A: Premissas -->
+  <div class="card" id="area-previsao-premissas" style="display:none;">
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Premissas da Projeção</div>
+    <div class="subtitulo">Ajuste os parâmetros para simular diferentes cenários. Os gráficos recalculam automaticamente.</div>
+    <div class="como-analisar">A projeção combina quatro fatores: (1) tendência — regressão linear dos últimos 6 meses de sell-out; (2) sazonalidade — ratio do mesmo mês do ano anterior vs média histórica do SKU; (3) preço — variação esperada com elasticidade padrão de −0,4 (alta de 10% reduz volume ~4%); (4) estoque — cobertura atual do cliente: acima de 60 dias reduz o sell-in 15%, abaixo de 30 dias aumenta 15%. O sell-in projetado aplica ainda o ratio histórico sell-in/sell-out de cada combinação.</div>
+    <div class="linha-filtro" style="flex-wrap:wrap;gap:1.5rem 3rem;align-items:center;margin-top:.5rem;">
+      <div>
+        <span style="font-size:.8rem;color:#4a5568;font-weight:600;display:block;margin-bottom:.4rem;">Horizonte</span>
+        <label style="cursor:pointer;margin-right:1.2rem;"><input type="radio" name="horizonte-prev" value="3" checked onchange="atualizarPrevisao()"> 3 meses</label>
+        <label style="cursor:pointer;"><input type="radio" name="horizonte-prev" value="6" onchange="atualizarPrevisao()"> 6 meses</label>
+      </div>
+      <div>
+        <span style="font-size:.8rem;color:#4a5568;font-weight:600;display:block;margin-bottom:.4rem;">
+          Variação de preço esperada: <span id="label-var-preco" style="color:#2b6cb0;">0%</span>
+        </span>
+        <input type="range" id="slider-var-preco" min="-30" max="30" value="0" step="1"
+          style="width:200px;vertical-align:middle;"
+          oninput="document.getElementById('label-var-preco').textContent=this.value+'%'"
+          onchange="atualizarPrevisao()">
+        <span style="font-size:.75rem;color:#a0aec0;margin-left:.5rem;">−30% a +30%</span>
+      </div>
+      <div>
+        <span style="font-size:.8rem;color:#4a5568;font-weight:600;display:block;margin-bottom:.4rem;">Cenário climático</span>
+        <select id="sel-cenario-clima" onchange="atualizarPrevisao()" style="font-size:.82rem;padding:.25rem .5rem;">
+          <option value="tipico">Típico</option>
+          <option value="frio">Inverno Frio</option>
+          <option value="quente">Inverno Quente</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Card B: Visão Executiva -->
+  <div class="card" id="area-previsao-exec" style="display:none;">
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Projeção de Sell-in — Visão Executiva</div>
+    <div class="subtitulo">Top 10 combinações SKU×Cliente (pelos filtros ativos) · Azul = média histórica últ. 3 meses · Verde = média projetada · % = variação vs histórico</div>
+    <div class="como-analisar">Use esta visão para comunicar projeções ao time de trade e vendas. A barra verde mostra a média mensal de sell-in esperada para os próximos meses. A variação % compara com a média histórica dos últimos 3 meses. Verde = crescimento; vermelho = queda. Alterne entre "por SKU" e "por Cliente" para mudar o nível de agregação.</div>
+    <div style="margin-bottom:.7rem;">
+      <label style="cursor:pointer;margin-right:1.2rem;font-size:.82rem;"><input type="radio" name="agrup-prev-exec" value="sku" checked onchange="renderizarPrevisaoAgregada()"> Por SKU</label>
+      <label style="cursor:pointer;font-size:.82rem;"><input type="radio" name="agrup-prev-exec" value="cliente" onchange="renderizarPrevisaoAgregada()"> Por Cliente</label>
+    </div>
+    <canvas id="grafico-previsao-exec" style="max-height:360px;"></canvas>
+    <div id="tabela-previsao-exec"></div>
+  </div>
+
+  <!-- Card C: Análise Detalhada -->
+  <div class="card" id="area-previsao-detalhe" style="display:none;">
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Projeção Detalhada por SKU × Cliente</div>
+    <div class="subtitulo">Histórico completo + projeção tracejada · Azul = sell-out · Verde = sell-in · Linha vertical cinza = início da projeção</div>
+    <div class="como-analisar">Mostra o histórico completo de uma combinação SKU×Cliente e projeta os próximos meses. A linha tracejada conecta-se ao último ponto histórico. Use para validar se o modelo captura sazonalidade esperada e comparar sell-out (demanda do consumidor) com sell-in (compra do varejista).</div>
+    <div class="linha-filtro" style="margin-bottom:1rem;">
+      <label for="sel-combo-prev" style="white-space:nowrap;">Combinação SKU × Cliente:</label>
+      <select id="sel-combo-prev" onchange="renderizarPrevisaoDetalhe()" style="max-width:460px;font-size:.82rem;"></select>
+    </div>
+    <canvas id="grafico-previsao-detalhe" style="max-height:380px;"></canvas>
+    <div id="tabela-previsao-detalhe"></div>
+  </div>
+
 </main>
 
 <!-- Chat IA -->
@@ -1098,6 +1161,8 @@ let graficoMargemMarca            = null;
 let graficoRankingMarcas          = null;
 let graficoEvolucaoSellInCliente  = null;
 let graficoEvolucaoSellInMarca    = null;
+let graficoPrevisaoExec           = null;
+let graficoPrevisaoDetalhe        = null;
 
 // ─── Leitura do arquivo ───────────────────────────────────────────────────────
 
@@ -1200,6 +1265,12 @@ document.getElementById('input-arquivo').addEventListener('change', function (e)
       // Seção 8 — Análises Específicas
       document.getElementById('sec-avancado').style.display             = 'block';
       document.getElementById('area-temperatura').style.display         = 'block';
+
+      // Seção 9 — Previsão de Vendas
+      document.getElementById('sec-previsao').style.display             = 'block';
+      document.getElementById('area-previsao-premissas').style.display  = 'block';
+      document.getElementById('area-previsao-exec').style.display       = 'block';
+      document.getElementById('area-previsao-detalhe').style.display    = 'block';
 
       popularSKUs();
       popularClienteTemperatura();
@@ -1530,6 +1601,9 @@ function atualizarGrafico() {
   renderizarEvolucaoMarcas();
   renderizarMargemMarca();
   renderizarRankingMarcas();
+  popularSeletorPrevisao();
+  renderizarPrevisaoAgregada();
+  renderizarPrevisaoDetalhe();
 
   // Destroi gráfico anterior para não acumular
   if (graficoAtual) graficoAtual.destroy();
@@ -5550,6 +5624,326 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarMensagemIA(); }
   });
 });
+
+// ─── PREVISÃO DE VENDAS ──────────────────────────────────────────────────────
+
+const MESES_NOMES_ARR = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                          'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+function _mesAvancar(anoMes, k) {
+  const [ano, mes] = anoMes.split('|');
+  let mesIdx = (MESES_ORDEM[mes] || 1) - 1 + k;
+  let anoN   = parseInt(ano);
+  anoN      += Math.floor(mesIdx / 12);
+  mesIdx     = ((mesIdx % 12) + 12) % 12;
+  return `${anoN}|${MESES_NOMES_ARR[mesIdx]}`;
+}
+
+function _regressaoLinear(ys) {
+  const n = ys.length;
+  if (n < 2) return { a: ys[0] || 0, b: 0 };
+  const meanX = (n - 1) / 2;
+  const meanY = ys.reduce((s, v) => s + v, 0) / n;
+  let numR = 0, den = 0;
+  ys.forEach((y, i) => { numR += (i - meanX) * (y - meanY); den += (i - meanX) ** 2; });
+  const b = den === 0 ? 0 : numR / den;
+  return { a: meanY - b * meanX, b };
+}
+
+function _fatorClima(cenario, mesNome, categoria) {
+  if (cenario === 'tipico') return 1.0;
+  const m   = MESES_ORDEM[mesNome] || 6;
+  const inv = m >= 5 && m <= 8;
+  const ver = m >= 11 || m <= 2;
+  const tabFrio = {
+    'Protetor Labial':   inv ? 1.20 : ver ? 0.90 : 1.05,
+    'Cânfora multiuso':  inv ? 1.15 : ver ? 0.90 : 1.05,
+    'Protetor Solar':    inv ? 0.90 : ver ? 1.10 : 1.00,
+    'Corporal':          inv ? 1.05 : 1.00,
+    'Manteiga de cacau': inv ? 1.05 : 1.00,
+  };
+  const tabQuente = {
+    'Protetor Labial':   inv ? 0.85 : ver ? 1.10 : 0.95,
+    'Cânfora multiuso':  inv ? 0.88 : ver ? 1.10 : 0.95,
+    'Protetor Solar':    inv ? 1.10 : ver ? 0.90 : 1.00,
+    'Corporal':          inv ? 0.95 : 1.00,
+    'Manteiga de cacau': inv ? 0.95 : 1.00,
+  };
+  return (cenario === 'frio' ? tabFrio : tabQuente)[categoria] ?? 1.0;
+}
+
+function _top10SkuCliente() {
+  const dados = filtrarDados();
+  const agr   = {};
+  dados.forEach(r => {
+    const k = `${r['SKU']}|||${r['Cliente']}`;
+    if (!agr[k]) agr[k] = { sku: r['SKU'], cliente: r['Cliente'], si: 0 };
+    agr[k].si += num(r['Valor (R$) Sell in']);
+  });
+  return Object.values(agr)
+    .filter(v => v.sku && v.cliente && v.si > 0)
+    .sort((a, b) => b.si - a.si)
+    .slice(0, 10);
+}
+
+function _premissasAtuais() {
+  const horizonte     = parseInt(document.querySelector('input[name="horizonte-prev"]:checked')?.value || '3');
+  const variacaoPreco = parseFloat(document.getElementById('slider-var-preco')?.value || '0');
+  const cenario       = document.getElementById('sel-cenario-clima')?.value || 'tipico';
+  return { horizonte, variacaoPreco, cenarioClimatico: cenario };
+}
+
+function _projetarCombo(sku, cliente, premissas) {
+  const nMeses  = premissas.horizonte;
+  const linhas  = dadosGlobais.filter(r => r['SKU'] === sku && r['Cliente'] === cliente);
+  if (!linhas.length) return null;
+
+  const categoria = linhas[0]['Categoria'] || '';
+  const todasCh   = _todasChavesGlobais();
+
+  const porMes = {};
+  linhas.forEach(r => {
+    const ch = `${r['Ano']}|${r['Mês']}`;
+    if (!porMes[ch]) porMes[ch] = { so: 0, si: 0, est: 0 };
+    porMes[ch].so += num(r['Valor (R$) Sell Out']);
+    porMes[ch].si += num(r['Valor (R$) Sell in']);
+    const e = num(r['Estoque CD + Loja (último dia do mês)']);
+    if (e > 0) porMes[ch].est = e;
+  });
+
+  const mesesHist = Object.keys(porMes)
+    .filter(ch => porMes[ch].so > 0 || porMes[ch].si > 0)
+    .sort((a, b) => {
+      const iA = todasCh.indexOf(a), iB = todasCh.indexOf(b);
+      return (iA === -1 ? 999 : iA) - (iB === -1 ? 999 : iB);
+    });
+
+  if (mesesHist.length < 2) return null;
+
+  const ult3   = mesesHist.slice(-3);
+  const pesos  = ult3.length === 3 ? [0.2, 0.3, 0.5] : ult3.length === 2 ? [0.4, 0.6] : [1.0];
+  const baseSO   = ult3.reduce((s, ch, i) => s + porMes[ch].so * pesos[i], 0);
+  const totalSO3 = ult3.reduce((s, ch) => s + porMes[ch].so, 0);
+  const totalSI3 = ult3.reduce((s, ch) => s + porMes[ch].si, 0);
+  const ratioSISO = totalSO3 > 0 ? totalSI3 / totalSO3 : 1;
+
+  const ult6 = mesesHist.slice(-6);
+  const { a: tA, b: tB } = _regressaoLinear(ult6.map(ch => porMes[ch].so));
+  const baseRegIdx  = ult6.length - 1;
+  const baseFromReg = Math.max(tA + tB * baseRegIdx, 1);
+
+  const ultimoMes = mesesHist[mesesHist.length - 1];
+  const estoque   = porMes[ultimoMes].est || 0;
+  const so3Avg    = totalSO3 / Math.max(ult3.length, 1);
+  const si3Avg    = totalSI3 / Math.max(ult3.length, 1);
+  const cobertura = so3Avg > 0 ? (estoque / so3Avg) * 30 : 0;
+  const fatorEst  = cobertura > 60 ? 0.85 : (cobertura > 0 && cobertura < 30) ? 1.15 : 1.0;
+  const fatorPreco = 1 + (premissas.variacaoPreco / 100) * (-0.4);
+  const mediaGeral = mesesHist.reduce((s, c) => s + porMes[c].so, 0) / mesesHist.length;
+
+  const projecoes = [];
+  for (let k = 1; k <= nMeses; k++) {
+    const chFut         = _mesAvancar(ultimoMes, k);
+    const [anoFut, mesFut] = chFut.split('|');
+    const chSazon       = _mesAvancar(ultimoMes, k - 12);
+    let fatorSazon      = 1.0;
+    if (porMes[chSazon] && mediaGeral > 0 && porMes[chSazon].so > 0) {
+      fatorSazon = Math.min(Math.max(porMes[chSazon].so / mediaGeral, 0.4), 2.5);
+    }
+    const trend     = tA + tB * (baseRegIdx + k);
+    const fatorTend = Math.min(Math.max(trend / baseFromReg, 0.3), 3.0);
+    const fatorClima = _fatorClima(premissas.cenarioClimatico, mesFut, categoria);
+
+    const soProj = Math.max(0, baseSO * fatorTend * fatorSazon * fatorPreco * fatorClima);
+    const siProj = Math.max(0, soProj * ratioSISO * fatorEst);
+    projecoes.push({ ch: chFut, rotulo: `${mesFut.slice(0,3)}/${anoFut}`, soProj, siProj });
+  }
+
+  return {
+    sku, cliente, categoria,
+    historico: mesesHist.map(ch => {
+      const [a, m] = ch.split('|');
+      return { ch, rotulo: `${m.slice(0,3)}/${a}`, so: porMes[ch].so, si: porMes[ch].si };
+    }),
+    projecoes, so3Avg, si3Avg,
+    coberturaAtual: Math.round(cobertura),
+    ratioSISO,
+  };
+}
+
+function popularSeletorPrevisao() {
+  const top10 = _top10SkuCliente();
+  const sel   = document.getElementById('sel-combo-prev');
+  if (!sel) return;
+  const atual = sel.value;
+  sel.innerHTML = top10.map(t => {
+    const v = `${t.sku}|||${t.cliente}`;
+    const lbl = `${t.sku.length > 35 ? t.sku.slice(0,35)+'…' : t.sku} — ${t.cliente}`;
+    return `<option value="${v}">${lbl}</option>`;
+  }).join('');
+  if (atual && [...sel.options].some(o => o.value === atual)) sel.value = atual;
+}
+
+function atualizarPrevisao() {
+  renderizarPrevisaoAgregada();
+  renderizarPrevisaoDetalhe();
+}
+
+function renderizarPrevisaoAgregada() {
+  const premissas  = _premissasAtuais();
+  const top10      = _top10SkuCliente();
+  const porCli     = document.querySelector('input[name="agrup-prev-exec"]:checked')?.value === 'cliente';
+
+  const agr = {};
+  top10.forEach(({ sku, cliente }) => {
+    const p = _projetarCombo(sku, cliente, premissas);
+    if (!p) return;
+    const key = porCli ? cliente : sku;
+    const lbl = porCli ? cliente : (sku.length > 28 ? sku.slice(0,28)+'…' : sku);
+    if (!agr[key]) agr[key] = { label: lbl, histSI: 0, projSI: 0 };
+    const ult3 = p.historico.slice(-3);
+    agr[key].histSI += ult3.reduce((s, m) => s + m.si, 0) / Math.max(ult3.length, 1);
+    agr[key].projSI += p.projecoes.reduce((s, m) => s + m.siProj, 0) / Math.max(p.projecoes.length, 1);
+  });
+
+  const keys     = Object.keys(agr).sort((a, b) => agr[b].projSI - agr[a].projSI);
+  if (!keys.length) return;
+  const labels   = keys.map(k => agr[k].label);
+  const histData = keys.map(k => agr[k].histSI);
+  const projData = keys.map(k => agr[k].projSI);
+
+  if (graficoPrevisaoExec) graficoPrevisaoExec.destroy();
+  graficoPrevisaoExec = new Chart(document.getElementById('grafico-previsao-exec'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Sell-in histórico (méd. últ. 3 meses)', data: histData, backgroundColor: '#2b6cb0aa', borderColor: '#2b6cb0', borderWidth: 1 },
+        { label: `Sell-in projetado (méd. próx. ${premissas.horizonte} meses)`, data: projData, backgroundColor: '#27674999', borderColor: '#276749', borderWidth: 1 },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: true, position: 'top', labels: { font: { size: 11 } } },
+        tooltip: { callbacks: { label: ctx => `  ${ctx.dataset.label}: ${BRL(ctx.parsed.y)}` } },
+      },
+      scales: {
+        x: { ticks: { font: { size: 10 }, maxRotation: 35 } },
+        y: { ticks: { callback: v => v >= 1e6 ? 'R$'+(v/1e6).toFixed(1)+'M' : v >= 1e3 ? 'R$'+(v/1e3).toFixed(0)+'k' : 'R$'+v } },
+      },
+      layout: { padding: { top: 24 } },
+    },
+    plugins: [{
+      id: 'rotulosVarPrev',
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        const meta1 = chart.getDatasetMeta(1);
+        const h = chart.data.datasets[0].data;
+        const p = chart.data.datasets[1].data;
+        meta1.data.forEach((bar, i) => {
+          if (!h[i] || !p[i]) return;
+          const v   = ((p[i] - h[i]) / h[i]) * 100;
+          const lbl = (v >= 0 ? '+' : '') + v.toFixed(0) + '%';
+          ctx.save();
+          ctx.fillStyle    = v >= 0 ? '#276749' : '#c53030';
+          ctx.font         = 'bold 10px sans-serif';
+          ctx.textAlign    = 'center';
+          ctx.textBaseline = 'bottom';
+          ctx.fillText(lbl, bar.x, bar.y - 2);
+          ctx.restore();
+        });
+      },
+    }],
+  });
+
+  const tabEl = document.getElementById('tabela-previsao-exec');
+  if (!tabEl) return;
+  const linhas = keys.map(k => {
+    const v   = agr[k].projSI, h = agr[k].histSI;
+    const pct = h > 0 ? ((v - h) / h * 100) : 0;
+    const cor = pct >= 5 ? 'color:#276749;font-weight:600' : pct <= -5 ? 'color:#c53030;font-weight:600' : '';
+    return `<tr><td>${agr[k].label}</td><td class="num">${BRL(h)}</td><td class="num">${BRL(v)}</td><td class="num" style="${cor}">${pct >= 0 ? '+' : ''}${pct.toFixed(0)}%</td></tr>`;
+  }).join('');
+  tabEl.innerHTML = `<table class="tabela-dados" style="margin-top:1rem;">
+    <thead><tr><th>${porCli ? 'Cliente' : 'SKU'}</th><th class="num">SI hist. méd./mês</th><th class="num">SI proj. méd./mês</th><th class="num">Variação</th></tr></thead>
+    <tbody>${linhas}</tbody></table>`;
+}
+
+function renderizarPrevisaoDetalhe() {
+  const premissas = _premissasAtuais();
+  const sel       = document.getElementById('sel-combo-prev');
+  if (!sel?.value) return;
+  const [sku, cliente] = sel.value.split('|||');
+  const p = _projetarCombo(sku, cliente, premissas);
+  if (!p) return;
+
+  const nHist   = p.historico.length;
+  const allLbls = [...p.historico.map(m => m.rotulo), ...p.projecoes.map(m => m.rotulo)];
+
+  const soHistArr = p.historico.map(m => m.so);
+  const siHistArr = p.historico.map(m => m.si);
+  const soProjArr = [...new Array(nHist - 1).fill(null), p.historico[nHist-1].so, ...p.projecoes.map(m => m.soProj)];
+  const siProjArr = [...new Array(nHist - 1).fill(null), p.historico[nHist-1].si, ...p.projecoes.map(m => m.siProj)];
+
+  const datasets = [
+    { label: 'Sell-out histórico', data: [...soHistArr, ...new Array(p.projecoes.length).fill(null)], borderColor: '#2b6cb0', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 3, fill: false, tension: 0.3 },
+    { label: 'Sell-in histórico',  data: [...siHistArr, ...new Array(p.projecoes.length).fill(null)], borderColor: '#276749', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 3, fill: false, tension: 0.3 },
+    { label: 'Sell-out projetado', data: soProjArr, borderColor: '#2b6cb0', backgroundColor: 'transparent', borderWidth: 2, borderDash: [6,3], pointRadius: 3, fill: false, tension: 0.3 },
+    { label: 'Sell-in projetado',  data: siProjArr, borderColor: '#276749', backgroundColor: 'transparent', borderWidth: 2, borderDash: [6,3], pointRadius: 3, fill: false, tension: 0.3 },
+  ];
+
+  const sepPlugin = {
+    id: 'sepProjecao',
+    afterDraw(chart) {
+      const { ctx, scales: { x, y } } = chart;
+      const xPos = x.getPixelForValue(nHist - 0.5);
+      ctx.save();
+      ctx.setLineDash([4,4]); ctx.strokeStyle = '#a0aec0'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(xPos, y.top); ctx.lineTo(xPos, y.bottom); ctx.stroke();
+      ctx.setLineDash([]); ctx.fillStyle = '#718096'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('← Histórico   Projeção →', xPos, y.top - 6);
+      ctx.restore();
+    },
+  };
+
+  if (graficoPrevisaoDetalhe) graficoPrevisaoDetalhe.destroy();
+  graficoPrevisaoDetalhe = new Chart(document.getElementById('grafico-previsao-detalhe'), {
+    type: 'line',
+    data: { labels: allLbls, datasets },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: true, position: 'top', labels: { font: { size: 11 } } },
+        tooltip: { callbacks: { label: ctx => ctx.parsed.y !== null ? `  ${ctx.dataset.label}: ${BRL(ctx.parsed.y)}` : null } },
+      },
+      scales: {
+        x: { ticks: { font: { size: 10 }, maxRotation: 45 } },
+        y: { ticks: { callback: v => v >= 1e6 ? 'R$'+(v/1e6).toFixed(1)+'M' : v >= 1e3 ? 'R$'+(v/1e3).toFixed(0)+'k' : 'R$'+v } },
+      },
+      layout: { padding: { top: 20 } },
+    },
+    plugins: [sepPlugin],
+  });
+
+  const tabEl = document.getElementById('tabela-previsao-detalhe');
+  if (!tabEl) return;
+  const linhas = p.projecoes.map(m => {
+    const pct = p.si3Avg > 0 ? ((m.siProj - p.si3Avg) / p.si3Avg * 100) : 0;
+    const cor = pct >= 5 ? 'color:#276749;font-weight:600' : pct <= -5 ? 'color:#c53030;font-weight:600' : '';
+    return `<tr><td>${m.rotulo}</td><td class="num">${BRL(m.soProj)}</td><td class="num">${BRL(m.siProj)}</td><td class="num" style="${cor}">${pct >= 0 ? '+' : ''}${pct.toFixed(0)}%</td></tr>`;
+  }).join('');
+  tabEl.innerHTML = `
+    <table class="tabela-dados" style="margin-top:.75rem;">
+      <thead><tr><th>Mês</th><th class="num">Sell-out proj.</th><th class="num">Sell-in proj.</th><th class="num" title="vs média sell-in histórico últ. 3 meses">Var. vs hist.</th></tr></thead>
+      <tbody>${linhas}</tbody>
+    </table>
+    <div style="font-size:.73rem;color:#a0aec0;margin-top:.4rem;">
+      Categoria: ${p.categoria} · Cobertura de estoque: ${p.coberturaAtual > 0 ? p.coberturaAtual+' dias' : 'sem dado'} ·
+      Ratio sell-in/sell-out hist.: ${(p.ratioSISO*100).toFixed(0)}%
+    </div>`;
+}
 </script>
 
 </body>
