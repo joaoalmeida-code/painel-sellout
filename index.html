@@ -1044,7 +1044,7 @@
   <!-- Card B: Visão Executiva -->
   <div class="card" id="area-previsao-exec" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Projeção de Sell-in — Visão Executiva</div>
-    <div class="subtitulo">Top 10 combinações SKU×Cliente (pelos filtros ativos) · Azul = média histórica últ. 3 meses · Verde = média projetada · % = variação vs histórico</div>
+    <div class="subtitulo">Top 10 combinações SKU×Cliente (pelos filtros ativos) · Eixo Y = unidades sell-in · Azul = média histórica últ. 3 meses · Verde = média projetada · % = variação vs histórico</div>
     <div class="como-analisar">Use esta visão para comunicar projeções ao time de trade e vendas. A barra verde mostra a média mensal de sell-in esperada para os próximos meses. A variação % compara com a média histórica dos últimos 3 meses. Verde = crescimento; vermelho = queda. Alterne entre "por SKU" e "por Cliente" para mudar o nível de agregação.</div>
     <div style="margin-bottom:.7rem;">
       <label style="cursor:pointer;margin-right:1.2rem;font-size:.82rem;"><input type="radio" name="agrup-prev-exec" value="sku" checked onchange="renderizarPrevisaoAgregada()"> Por SKU</label>
@@ -1057,7 +1057,7 @@
   <!-- Card C: Análise Detalhada -->
   <div class="card" id="area-previsao-detalhe" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Projeção Detalhada por SKU × Cliente</div>
-    <div class="subtitulo">Histórico completo + projeção tracejada · Azul = sell-out · Verde = sell-in · Linha vertical cinza = início da projeção</div>
+    <div class="subtitulo">Histórico completo + projeção tracejada · Eixo Y = unidades · Azul = sell-out · Verde = sell-in · Linha vertical cinza = início da projeção</div>
     <div class="como-analisar">Mostra o histórico completo de uma combinação SKU×Cliente e projeta os próximos meses. A linha tracejada conecta-se ao último ponto histórico. Use para validar se o modelo captura sazonalidade esperada e comparar sell-out (demanda do consumidor) com sell-in (compra do varejista).</div>
     <div class="linha-filtro" style="margin-bottom:1rem;">
       <label for="sel-combo-prev" style="white-space:nowrap;">Combinação SKU × Cliente:</label>
@@ -5678,7 +5678,7 @@ function _top10SkuCliente() {
   dados.forEach(r => {
     const k = `${r['SKU']}|||${r['Cliente']}`;
     if (!agr[k]) agr[k] = { sku: r['SKU'], cliente: r['Cliente'], si: 0 };
-    agr[k].si += num(r['Valor (R$) Sell in']);
+    agr[k].si += num(r['Quantidade Sell in']);
   });
   return Object.values(agr)
     .filter(v => v.sku && v.cliente && v.si > 0)
@@ -5705,8 +5705,8 @@ function _projetarCombo(sku, cliente, premissas) {
   linhas.forEach(r => {
     const ch = `${r['Ano']}|${r['Mês']}`;
     if (!porMes[ch]) porMes[ch] = { so: 0, si: 0, est: 0 };
-    porMes[ch].so += num(r['Valor (R$) Sell Out']);
-    porMes[ch].si += num(r['Valor (R$) Sell in']);
+    porMes[ch].so += num(r['Quantidade Sell Out']);
+    porMes[ch].si += num(r['Quantidade Sell in']);
     const e = num(r['Estoque CD + Loja (último dia do mês)']);
     if (e > 0) porMes[ch].est = e;
   });
@@ -5826,11 +5826,11 @@ function renderizarPrevisaoAgregada() {
       responsive: true,
       plugins: {
         legend: { display: true, position: 'top', labels: { font: { size: 11 } } },
-        tooltip: { callbacks: { label: ctx => `  ${ctx.dataset.label}: ${BRL(ctx.parsed.y)}` } },
+        tooltip: { callbacks: { label: ctx => `  ${ctx.dataset.label}: ${Math.round(ctx.parsed.y).toLocaleString('pt-BR')} un.` } },
       },
       scales: {
         x: { ticks: { font: { size: 10 }, maxRotation: 35 } },
-        y: { ticks: { callback: v => v >= 1e6 ? 'R$'+(v/1e6).toFixed(1)+'M' : v >= 1e3 ? 'R$'+(v/1e3).toFixed(0)+'k' : 'R$'+v } },
+        y: { ticks: { callback: v => v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'k' : v } },
       },
       layout: { padding: { top: 24 } },
     },
@@ -5863,10 +5863,10 @@ function renderizarPrevisaoAgregada() {
     const v   = agr[k].projSI, h = agr[k].histSI;
     const pct = h > 0 ? ((v - h) / h * 100) : 0;
     const cor = pct >= 5 ? 'color:#276749;font-weight:600' : pct <= -5 ? 'color:#c53030;font-weight:600' : '';
-    return `<tr><td>${agr[k].label}</td><td class="num">${BRL(h)}</td><td class="num">${BRL(v)}</td><td class="num" style="${cor}">${pct >= 0 ? '+' : ''}${pct.toFixed(0)}%</td></tr>`;
+    return `<tr><td>${agr[k].label}</td><td class="num">${Math.round(h).toLocaleString('pt-BR')} un.</td><td class="num">${Math.round(v).toLocaleString('pt-BR')} un.</td><td class="num" style="${cor}">${pct >= 0 ? '+' : ''}${pct.toFixed(0)}%</td></tr>`;
   }).join('');
   tabEl.innerHTML = `<table class="tabela-dados" style="margin-top:1rem;">
-    <thead><tr><th>${porCli ? 'Cliente' : 'SKU'}</th><th class="num">SI hist. méd./mês</th><th class="num">SI proj. méd./mês</th><th class="num">Variação</th></tr></thead>
+    <thead><tr><th>${porCli ? 'Cliente' : 'SKU'}</th><th class="num">SI hist. méd./mês (un.)</th><th class="num">SI proj. méd./mês (un.)</th><th class="num">Variação</th></tr></thead>
     <tbody>${linhas}</tbody></table>`;
 }
 
@@ -5916,11 +5916,11 @@ function renderizarPrevisaoDetalhe() {
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { display: true, position: 'top', labels: { font: { size: 11 } } },
-        tooltip: { callbacks: { label: ctx => ctx.parsed.y !== null ? `  ${ctx.dataset.label}: ${BRL(ctx.parsed.y)}` : null } },
+        tooltip: { callbacks: { label: ctx => ctx.parsed.y !== null ? `  ${ctx.dataset.label}: ${Math.round(ctx.parsed.y).toLocaleString('pt-BR')} un.` : null } },
       },
       scales: {
         x: { ticks: { font: { size: 10 }, maxRotation: 45 } },
-        y: { ticks: { callback: v => v >= 1e6 ? 'R$'+(v/1e6).toFixed(1)+'M' : v >= 1e3 ? 'R$'+(v/1e3).toFixed(0)+'k' : 'R$'+v } },
+        y: { ticks: { callback: v => v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'k' : v } },
       },
       layout: { padding: { top: 20 } },
     },
@@ -5932,11 +5932,11 @@ function renderizarPrevisaoDetalhe() {
   const linhas = p.projecoes.map(m => {
     const pct = p.si3Avg > 0 ? ((m.siProj - p.si3Avg) / p.si3Avg * 100) : 0;
     const cor = pct >= 5 ? 'color:#276749;font-weight:600' : pct <= -5 ? 'color:#c53030;font-weight:600' : '';
-    return `<tr><td>${m.rotulo}</td><td class="num">${BRL(m.soProj)}</td><td class="num">${BRL(m.siProj)}</td><td class="num" style="${cor}">${pct >= 0 ? '+' : ''}${pct.toFixed(0)}%</td></tr>`;
+    return `<tr><td>${m.rotulo}</td><td class="num">${Math.round(m.soProj).toLocaleString('pt-BR')}</td><td class="num">${Math.round(m.siProj).toLocaleString('pt-BR')}</td><td class="num" style="${cor}">${pct >= 0 ? '+' : ''}${pct.toFixed(0)}%</td></tr>`;
   }).join('');
   tabEl.innerHTML = `
     <table class="tabela-dados" style="margin-top:.75rem;">
-      <thead><tr><th>Mês</th><th class="num">Sell-out proj.</th><th class="num">Sell-in proj.</th><th class="num" title="vs média sell-in histórico últ. 3 meses">Var. vs hist.</th></tr></thead>
+      <thead><tr><th>Mês</th><th class="num">Sell-out proj. (un.)</th><th class="num">Sell-in proj. (un.)</th><th class="num" title="vs média sell-in histórico últ. 3 meses">Var. vs hist.</th></tr></thead>
       <tbody>${linhas}</tbody>
     </table>
     <div style="font-size:.73rem;color:#a0aec0;margin-top:.4rem;">
