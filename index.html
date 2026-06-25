@@ -1080,6 +1080,7 @@
       <div id="tabela-input-simul"></div>
       <div id="info-simul" style="font-size:.82rem;color:#4a5568;line-height:1.9;padding-top:.15rem;"></div>
     </div>
+    <div id="kpis-simul" style="margin-bottom:.9rem;"></div>
     <div id="tabela-hist-simul" style="margin-bottom:1.2rem;"></div>
     <canvas id="grafico-simulador" style="max-height:420px;"></canvas>
   </div>
@@ -5959,6 +5960,91 @@ function renderizarPrevisaoDetalhe() {
 
 // ─── SIMULADOR DE ESTOQUE ────────────────────────────────────────────────────
 
+function renderizarKPIsSimulador(porMes, mesesHist, projecoes) {
+  const el = document.getElementById('kpis-simul');
+  if (!el || !mesesHist.length) return;
+
+  const ultimoMes = mesesHist[mesesHist.length - 1];
+  const [anoUlt, mesUlt] = ultimoMes.split('|');
+  const anoAnt = String(parseInt(anoUlt) - 1);
+
+  const getSO  = ch => porMes[ch]?.so || 0;
+  const sumSO  = chs => chs.reduce((s, ch) => s + getSO(ch), 0);
+
+  // MAT = últimos 12 meses históricos
+  const ult12     = mesesHist.slice(-12);
+  const matVal    = sumSO(ult12);
+  const matAntChs = ult12.map(ch => _mesAvancar(ch, -12));
+  const matAntVal = sumSO(matAntChs);
+  const matVar    = matAntVal > 0 ? ((matVal - matAntVal) / matAntVal * 100) : null;
+
+  // YTD atual = meses do ano corrente (histórico)
+  const ytdChs    = mesesHist.filter(ch => ch.startsWith(anoUlt + '|'));
+  const ytdVal    = sumSO(ytdChs);
+  const ytdAntChs = ytdChs.map(ch => _mesAvancar(ch, -12));
+  const ytdAntVal = sumSO(ytdAntChs);
+  const ytdVar    = ytdAntVal > 0 ? ((ytdVal - ytdAntVal) / ytdAntVal * 100) : null;
+
+  // YTD projetado = YTD atual + projeções do mesmo ano
+  const projAnoAt  = projecoes.filter(p => p.ch.startsWith(anoUlt + '|'));
+  const ytdProjVal = ytdVal + projAnoAt.reduce((s, p) => s + p.soProj, 0);
+  const ytdProjAnt = [...ytdAntChs, ...projAnoAt.map(p => _mesAvancar(p.ch, -12))];
+  const ytdProjAntVal = sumSO(ytdProjAnt);
+  const ytdProjVar = ytdProjAntVal > 0 ? ((ytdProjVal - ytdProjAntVal) / ytdProjAntVal * 100) : null;
+
+  // Próximos N meses projetados vs N meses históricos anteriores
+  const nProj    = projecoes.length;
+  const prox6Val = projecoes.reduce((s, p) => s + p.soProj, 0);
+  const ant6Chs  = mesesHist.slice(-nProj);
+  const ant6Val  = sumSO(ant6Chs);
+  const prox6Var = ant6Val > 0 ? ((prox6Val - ant6Val) / ant6Val * 100) : null;
+
+  // Média mensal proj vs histórico
+  const mediaProj = nProj > 0 ? prox6Val / nProj : 0;
+  const mediaHist = ant6Val / Math.max(ant6Chs.length, 1);
+  const mediaVar  = mediaHist > 0 ? ((mediaProj - mediaHist) / mediaHist * 100) : null;
+
+  const fmt    = v => Math.round(v).toLocaleString('pt-BR');
+  const fmtVar = v => v === null ? '—' : (v >= 0 ? '+' : '') + v.toFixed(0) + '%';
+  const corVar = v => v === null ? 'color:#a0aec0' : v >= 3 ? 'color:#276749;font-weight:700' : v <= -3 ? 'color:#c53030;font-weight:700' : 'color:#4a5568';
+
+  const lastProjRot  = projecoes[projecoes.length - 1]?.rotulo || '';
+  const firstProjRot = projecoes[0]?.rotulo || '';
+
+  const kpis = [
+    { titulo: 'MAT',
+      sub:  `últ. ${ult12.length} meses`,
+      val:  fmt(matVal) + ' un.',
+      vLbl: fmtVar(matVar), vCor: corVar(matVar), vHint: `vs MAT anterior (${anoAnt})` },
+    { titulo: `YTD ${anoUlt}`,
+      sub:  `Jan–${mesUlt.slice(0,3)}/${anoUlt.slice(2)}`,
+      val:  fmt(ytdVal) + ' un.',
+      vLbl: fmtVar(ytdVar), vCor: corVar(ytdVar), vHint: `vs Jan–${mesUlt.slice(0,3)}/${anoAnt.slice(2)}` },
+    { titulo: `YTD proj. ${anoUlt}`,
+      sub:  `Jan–${lastProjRot}`,
+      val:  fmt(ytdProjVal) + ' un.',
+      vLbl: fmtVar(ytdProjVar), vCor: corVar(ytdProjVar), vHint: `vs mesmo período ${anoAnt}` },
+    { titulo: `Próx. ${nProj} meses`,
+      sub:  `${firstProjRot} – ${lastProjRot}`,
+      val:  fmt(prox6Val) + ' un.',
+      vLbl: fmtVar(prox6Var), vCor: corVar(prox6Var), vHint: `vs ant. ${ant6Chs.length} meses hist.` },
+    { titulo: 'Média mensal proj.',
+      sub:  `vs hist. ${ant6Chs.length} meses`,
+      val:  fmt(mediaProj) + ' un./mês',
+      vLbl: fmtVar(mediaVar), vCor: corVar(mediaVar), vHint: `vs méd. últ. ${ant6Chs.length} meses` },
+  ];
+
+  el.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:.6rem;">
+    ${kpis.map(k => `
+      <div style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:.55rem 1rem;min-width:145px;flex:1;">
+        <div style="font-size:.68rem;color:#718096;font-weight:700;text-transform:uppercase;letter-spacing:.04em;">${k.titulo}</div>
+        <div style="font-size:.67rem;color:#a0aec0;margin-bottom:.1rem;">${k.sub}</div>
+        <div style="font-size:1.05rem;font-weight:700;color:#2d3748;margin:.1rem 0;">${k.val}</div>
+        <div style="font-size:.71rem;${k.vCor};" title="${k.vHint}">${k.vLbl} <span style="color:#a0aec0;font-weight:400;">${k.vHint}</span></div>
+      </div>`).join('')}
+  </div>`;
+}
+
 function renderizarTabelaHistSimul(porMes, mesesHist, mesesFut) {
   const tabEl = document.getElementById('tabela-hist-simul');
   if (!tabEl) return;
@@ -6125,6 +6211,7 @@ function recalcularSimulador() {
     return { ...m, soProj, siProj, estFim };
   });
 
+  renderizarKPIsSimulador(porMes, mesesHist, projecoes);
   renderizarSimulador(porMes, mesesHist, projecoes);
 }
 
