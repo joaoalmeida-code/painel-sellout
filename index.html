@@ -1076,8 +1076,9 @@
       <label for="sel-combo-simul" style="white-space:nowrap;">Combinação SKU × Cliente:</label>
       <select id="sel-combo-simul" onchange="carregarSimulador()" style="max-width:460px;font-size:.82rem;"></select>
     </div>
-    <div style="display:flex;gap:2.5rem;align-items:flex-start;flex-wrap:wrap;margin-bottom:1.2rem;">
+    <div style="display:flex;gap:2rem;align-items:flex-start;flex-wrap:wrap;margin-bottom:1.2rem;">
       <div id="tabela-input-simul"></div>
+      <div id="tabela-proj-simul"></div>
       <div id="info-simul" style="font-size:.82rem;color:#4a5568;line-height:1.9;padding-top:.15rem;"></div>
     </div>
     <div id="kpis-simul" style="margin-bottom:.9rem;"></div>
@@ -6045,6 +6046,48 @@ function renderizarKPIsSimulador(porMes, mesesHist, projecoes) {
   </div>`;
 }
 
+function renderizarTabelaProjecaoSimul(projecoes, cobAlvo) {
+  const el = document.getElementById('tabela-proj-simul');
+  if (!el) return;
+  const fmt = v => Math.round(v).toLocaleString('pt-BR');
+  const linhas = projecoes.map(p => {
+    const cobProj = p.soProj > 0 ? Math.round(p.estFim * 30 / p.soProj) : 0;
+    const cobCor  = cobProj > 60 ? 'color:#c05621;font-weight:600' : cobProj > 0 && cobProj < 30 ? 'color:#c53030;font-weight:600' : 'color:#276749;font-weight:600';
+    return `<tr>
+      <td>${p.rotulo}</td>
+      <td class="num">${fmt(p.soProj)}</td>
+      <td class="num" style="font-weight:700;color:#276749;">${fmt(p.siProj)}</td>
+      <td class="num">${fmt(p.estFim)}</td>
+      <td class="num" style="${cobCor}">${cobProj > 0 ? cobProj + ' d' : '—'}</td>
+    </tr>`;
+  }).join('');
+  el.innerHTML = `
+    <table class="tabela-dados" style="font-size:.82rem;">
+      <thead><tr>
+        <th>Mês</th>
+        <th class="num">SO prev.</th>
+        <th class="num">SI proj.</th>
+        <th class="num">Estoque proj.</th>
+        <th class="num" title="Cobertura = Estoque ÷ (SO/30)">Cob.</th>
+      </tr></thead>
+      <tbody>${linhas}</tbody>
+    </table>
+    <div style="font-size:.7rem;color:#a0aec0;margin-top:.3rem;">
+      Alvo: ${Math.round(cobAlvo)} dias · 🟠 &gt;60d excesso · 🔴 &lt;30d risco ruptura
+    </div>`;
+}
+
+function atualizarHistSimulComProjecoes(soInputs, mesesFut) {
+  mesesFut.forEach((m, k) => {
+    const [ano, mes] = m.ch.split('|');
+    const mesIdx = MESES_NOMES_ARR.indexOf(mes);
+    const cel = document.getElementById(`hist-cell-${ano}-${mesIdx}`);
+    if (!cel) return;
+    const val = soInputs[k];
+    cel.textContent = val > 0 ? Math.round(val).toLocaleString('pt-BR') : '—';
+  });
+}
+
 function renderizarTabelaHistSimul(porMes, mesesHist, mesesFut) {
   const tabEl = document.getElementById('tabela-hist-simul');
   if (!tabEl) return;
@@ -6068,17 +6111,18 @@ function renderizarTabelaHistSimul(porMes, mesesHist, mesesFut) {
   }).join('');
 
   const rows = anos.map(ano => {
-    const cells = FULL.map(mesNome => {
+    const cells = FULL.map((mesNome, i) => {
       const ch     = `${ano}|${mesNome}`;
       const isFut  = futSet.has(ch);
       const val    = porMes[ch]?.so || 0;
       const temDado = val > 0;
       const display = temDado ? val.toLocaleString('pt-BR') : '—';
       let style = '';
-      if (isFut)     style = 'background:#ebf8ff;color:#2b6cb0;font-style:italic;';
+      if (isFut)         style = 'background:#ebf8ff;color:#2b6cb0;font-weight:600;';
       else if (!temDado) style = 'color:#cbd5e0;';
       else               style = 'font-weight:500;';
-      return `<td class="num" style="${style}">${display}</td>`;
+      const id = isFut ? `id="hist-cell-${ano}-${i}"` : '';
+      return `<td class="num" ${id} style="${style}">${display}</td>`;
     }).join('');
     return `<tr><td style="font-weight:700;white-space:nowrap;padding-right:.75rem;">${ano}</td>${cells}</tr>`;
   }).join('');
@@ -6212,6 +6256,8 @@ function recalcularSimulador() {
   });
 
   renderizarKPIsSimulador(porMes, mesesHist, projecoes);
+  renderizarTabelaProjecaoSimul(projecoes, cobAlvo);
+  atualizarHistSimulComProjecoes(soInputs, mesesFut);
   renderizarSimulador(porMes, mesesHist, projecoes);
 }
 
