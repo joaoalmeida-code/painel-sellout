@@ -1067,6 +1067,22 @@
     <div id="tabela-previsao-detalhe"></div>
   </div>
 
+  <!-- Card D: Simulador de Estoque -->
+  <div class="card" id="area-previsao-simulador" style="display:none;">
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Simulador de Estoque — SKU × Cliente</div>
+    <div class="subtitulo">Preencha o sell-out previsto (un.) · Sell-in calculado automaticamente para manter a cobertura média dos últimos 3 meses · Estoque = linha laranja (eixo direito)</div>
+    <div class="como-analisar">Preencha a coluna "Sell-out previsto" com sua estimativa de demanda para cada mês futuro. O sell-in projetado é calculado automaticamente para que o estoque ao final de cada mês mantenha a mesma cobertura média (em dias) dos últimos 3 meses históricos. Fórmula: Sell-in = Estoque_alvo_fim_mês − Estoque_início + Sell-out, onde Estoque_alvo = cobertura_dias × Sell-out ÷ 30. Útil para negociação e planejamento de produção.</div>
+    <div class="linha-filtro" style="margin-bottom:1rem;">
+      <label for="sel-combo-simul" style="white-space:nowrap;">Combinação SKU × Cliente:</label>
+      <select id="sel-combo-simul" onchange="carregarSimulador()" style="max-width:460px;font-size:.82rem;"></select>
+    </div>
+    <div style="display:flex;gap:2.5rem;align-items:flex-start;flex-wrap:wrap;margin-bottom:1.2rem;">
+      <div id="tabela-input-simul"></div>
+      <div id="info-simul" style="font-size:.82rem;color:#4a5568;line-height:1.9;padding-top:.15rem;"></div>
+    </div>
+    <canvas id="grafico-simulador" style="max-height:420px;"></canvas>
+  </div>
+
 </main>
 
 <!-- Chat IA -->
@@ -1163,6 +1179,8 @@ let graficoEvolucaoSellInCliente  = null;
 let graficoEvolucaoSellInMarca    = null;
 let graficoPrevisaoExec           = null;
 let graficoPrevisaoDetalhe        = null;
+let graficoSimulador              = null;
+let _simulDadosAtivos             = null;
 
 // ─── Leitura do arquivo ───────────────────────────────────────────────────────
 
@@ -1271,6 +1289,7 @@ document.getElementById('input-arquivo').addEventListener('change', function (e)
       document.getElementById('area-previsao-premissas').style.display  = 'block';
       document.getElementById('area-previsao-exec').style.display       = 'block';
       document.getElementById('area-previsao-detalhe').style.display    = 'block';
+      document.getElementById('area-previsao-simulador').style.display  = 'block';
 
       popularSKUs();
       popularClienteTemperatura();
@@ -1604,6 +1623,8 @@ function atualizarGrafico() {
   popularSeletorPrevisao();
   renderizarPrevisaoAgregada();
   renderizarPrevisaoDetalhe();
+  popularSeletorSimulador();
+  carregarSimulador();
 
   // Destroi gráfico anterior para não acumular
   if (graficoAtual) graficoAtual.destroy();
@@ -5933,6 +5954,205 @@ function renderizarPrevisaoDetalhe() {
       Categoria: ${p.categoria} · Cobertura de estoque: ${p.coberturaAtual > 0 ? p.coberturaAtual+' dias' : 'sem dado'} ·
       Ratio sell-in/sell-out hist.: ${(p.ratioSISO*100).toFixed(0)}%
     </div>`;
+}
+
+// ─── SIMULADOR DE ESTOQUE ────────────────────────────────────────────────────
+
+function popularSeletorSimulador() {
+  const top10 = _top10SkuCliente();
+  const sel   = document.getElementById('sel-combo-simul');
+  if (!sel) return;
+  const atual = sel.value;
+  sel.innerHTML = top10.map(t => {
+    const v   = `${t.sku}|||${t.cliente}`;
+    const lbl = `${t.sku.length > 35 ? t.sku.slice(0,35)+'…' : t.sku} — ${t.cliente}`;
+    return `<option value="${v}">${lbl}</option>`;
+  }).join('');
+  if (atual && [...sel.options].some(o => o.value === atual)) sel.value = atual;
+}
+
+function carregarSimulador() {
+  const sel = document.getElementById('sel-combo-simul');
+  if (!sel?.value) return;
+  const [sku, cliente] = sel.value.split('|||');
+
+  const linhas  = dadosGlobais.filter(r => r['SKU'] === sku && r['Cliente'] === cliente);
+  if (!linhas.length) return;
+
+  const todasCh = _todasChavesGlobais();
+  const porMes  = {};
+  linhas.forEach(r => {
+    const ch = `${r['Ano']}|${r['Mês']}`;
+    if (!porMes[ch]) porMes[ch] = { so: 0, si: 0, est: 0 };
+    porMes[ch].so += num(r['Quantidade Sell Out']);
+    porMes[ch].si += num(r['Quantidade Sell in']);
+    const e = num(r['Estoque CD + Loja (último dia do mês)']);
+    if (e > 0) porMes[ch].est = e;
+  });
+
+  const mesesHist = Object.keys(porMes)
+    .filter(ch => porMes[ch].so > 0 || porMes[ch].si > 0)
+    .sort((a, b) => {
+      const iA = todasCh.indexOf(a), iB = todasCh.indexOf(b);
+      return (iA === -1 ? 999 : iA) - (iB === -1 ? 999 : iB);
+    });
+
+  if (!mesesHist.length) return;
+
+  const ultimoMes = mesesHist[mesesHist.length - 1];
+
+  // Cobertura alvo = média últimos 3 meses com estoque e sell-out
+  const ult3cob  = mesesHist.slice(-3).filter(ch => porMes[ch].so > 0 && porMes[ch].est > 0);
+  const cobAlvo  = ult3cob.length > 0
+    ? ult3cob.reduce((s, ch) => s + (porMes[ch].est * 30 / porMes[ch].so), 0) / ult3cob.length
+    : 30;
+
+  // Próximos 6 meses
+  const mesesFut = Array.from({length: 6}, (_, k) => {
+    const ch = _mesAvancar(ultimoMes, k + 1);
+    const [ano, mes] = ch.split('|');
+    return { ch, rotulo: `${mes.slice(0,3)}/${ano}` };
+  });
+
+  // Sell-out default = projeção ML (se disponível) ou média últimos 3 meses
+  const premissas = _premissasAtuais();
+  const proj      = _projetarCombo(sku, cliente, premissas);
+  const so3Avg    = mesesHist.slice(-3).reduce((s, ch) => s + porMes[ch].so, 0) / Math.max(mesesHist.slice(-3).length, 1);
+  const defaultSO = mesesFut.map((_, k) =>
+    (proj?.projecoes[k] ? Math.round(proj.projecoes[k].soProj) : Math.round(so3Avg))
+  );
+
+  // Tabela de inputs
+  const tabEl = document.getElementById('tabela-input-simul');
+  if (tabEl) {
+    tabEl.innerHTML = `
+      <table class="tabela-dados">
+        <thead><tr><th>Mês</th><th class="num">Sell-out previsto (un.)</th></tr></thead>
+        <tbody>${mesesFut.map((m, k) => `
+          <tr>
+            <td>${m.rotulo}</td>
+            <td class="num"><input type="number" id="simul-so-${k}" value="${defaultSO[k]}"
+              min="0" step="1"
+              style="width:90px;text-align:right;border:1px solid #e2e8f0;border-radius:4px;padding:.2rem .4rem;font-size:.83rem;"
+              oninput="recalcularSimulador()">
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  // Info box
+  const infoEl = document.getElementById('info-simul');
+  if (infoEl) {
+    infoEl.innerHTML = `
+      <strong>Cobertura alvo:</strong> ${Math.round(cobAlvo)} dias<br>
+      <span style="color:#a0aec0;font-size:.75rem;">média últ. ${ult3cob.length} meses com dado</span><br>
+      <strong>Estoque atual:</strong> ${(porMes[ultimoMes].est||0).toLocaleString('pt-BR')} un.<br>
+      <strong>Último mês hist.:</strong> ${ultimoMes.split('|')[1].slice(0,3)}/${ultimoMes.split('|')[0]}`;
+  }
+
+  _simulDadosAtivos = { porMes, mesesHist, ultimoMes, cobAlvo, mesesFut };
+  recalcularSimulador();
+}
+
+function recalcularSimulador() {
+  if (!_simulDadosAtivos) return;
+  const { porMes, mesesHist, ultimoMes, cobAlvo, mesesFut } = _simulDadosAtivos;
+
+  const soInputs = mesesFut.map((_, k) =>
+    Math.max(0, parseFloat(document.getElementById(`simul-so-${k}`)?.value) || 0)
+  );
+
+  let estAnt = porMes[ultimoMes].est || 0;
+  const projecoes = mesesFut.map((m, k) => {
+    const soProj  = soInputs[k];
+    const estAlvo = cobAlvo > 0 ? (cobAlvo * soProj / 30) : soProj;
+    const siProj  = Math.max(0, estAlvo - estAnt + soProj);
+    const estFim  = Math.max(0, estAnt + siProj - soProj);
+    estAnt = estFim;
+    return { ...m, soProj, siProj, estFim };
+  });
+
+  renderizarSimulador(porMes, mesesHist, projecoes);
+}
+
+function renderizarSimulador(porMes, mesesHist, projecoes) {
+  const nHist   = mesesHist.length;
+  const allLbls = [
+    ...mesesHist.map(ch => { const [a,m] = ch.split('|'); return `${m.slice(0,3)}/${a}`; }),
+    ...projecoes.map(p => p.rotulo),
+  ];
+  const nProj = projecoes.length;
+
+  const soHistArr  = mesesHist.map(ch => porMes[ch].so);
+  const siHistArr  = mesesHist.map(ch => porMes[ch].si);
+  const estHistArr = mesesHist.map(ch => porMes[ch].est > 0 ? porMes[ch].est : null);
+
+  // Barras: combinar histórico + projetado em um único dataset com cores por ponto
+  const soData    = [...soHistArr, ...projecoes.map(p => p.soProj)];
+  const soBgColor = [...Array(nHist).fill('#2b6cb0bb'), ...Array(nProj).fill('#2b6cb044')];
+  const siBgColor = [...Array(nHist).fill('#276749bb'), ...Array(nProj).fill('#27674944')];
+  const siData    = [...siHistArr, ...projecoes.map(p => p.siProj)];
+
+  // Linha estoque: histórico sólido, projetado tracejado (com ponte no último ponto histórico)
+  const lastEst   = estHistArr[nHist - 1] ?? 0;
+  const estHLine  = [...estHistArr, ...Array(nProj).fill(null)];
+  const estPLine  = [...Array(nHist - 1).fill(null), lastEst, ...projecoes.map(p => p.estFim)];
+
+  const datasets = [
+    { type:'bar',  label:'Sell-out',         data: soData, backgroundColor: soBgColor, borderColor:'#2b6cb0', borderWidth:1, yAxisID:'y', order:3 },
+    { type:'bar',  label:'Sell-in',          data: siData, backgroundColor: siBgColor, borderColor:'#276749', borderWidth:1, yAxisID:'y', order:2 },
+    { type:'line', label:'Estoque histórico',data: estHLine, borderColor:'#dd6b20', backgroundColor:'transparent', borderWidth:2.5, pointRadius:3, fill:false, tension:0.3, yAxisID:'yEst', order:1 },
+    { type:'line', label:'Estoque projetado',data: estPLine, borderColor:'#dd6b20', backgroundColor:'transparent', borderWidth:2.5, borderDash:[6,3], pointRadius:3, fill:false, tension:0.3, yAxisID:'yEst', order:1 },
+  ];
+
+  const sepPlugin = {
+    id: 'sepSimul',
+    afterDraw(chart) {
+      const { ctx, chartArea: area, scales: { x } } = chart;
+      const xPos = x.getPixelForValue(nHist - 0.5);
+      ctx.save();
+      ctx.setLineDash([4,4]); ctx.strokeStyle = '#a0aec0'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(xPos, area.top); ctx.lineTo(xPos, area.bottom); ctx.stroke();
+      ctx.setLineDash([]); ctx.fillStyle = '#718096'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('← Histórico   Projeção →', xPos, area.top - 6);
+      ctx.restore();
+    },
+  };
+
+  if (graficoSimulador) graficoSimulador.destroy();
+  graficoSimulador = new Chart(document.getElementById('grafico-simulador'), {
+    type: 'bar',
+    data: { labels: allLbls, datasets },
+    options: {
+      responsive: true,
+      interaction: { mode:'index', intersect:false },
+      plugins: {
+        legend: { display:true, position:'top', labels:{ font:{ size:11 } } },
+        tooltip: { callbacks: {
+          label: ctx => ctx.parsed.y !== null
+            ? `  ${ctx.dataset.label}: ${Math.round(ctx.parsed.y).toLocaleString('pt-BR')} un.`
+            : null,
+        }},
+      },
+      scales: {
+        x: { ticks: { font:{ size:10 }, maxRotation:45 } },
+        y: {
+          type:'linear', position:'left',
+          title: { display:true, text:'Sell-out / Sell-in (un.)' },
+          ticks: { callback: v => v >= 1e3 ? (v/1e3).toFixed(0)+'k' : v },
+        },
+        yEst: {
+          type:'linear', position:'right',
+          title: { display:true, text:'Estoque (un.)' },
+          ticks: { callback: v => v >= 1e3 ? (v/1e3).toFixed(0)+'k' : v },
+          grid: { drawOnChartArea:false },
+        },
+      },
+      layout: { padding:{ top:20 } },
+    },
+    plugins: [sepPlugin],
+  });
 }
 </script>
 
