@@ -1069,11 +1069,11 @@
     <div style="display:flex;gap:2rem;align-items:flex-start;flex-wrap:wrap;margin-bottom:1.2rem;">
       <div id="tabela-input-simul"></div>
       <div id="tabela-proj-simul"></div>
-      <div id="info-simul" style="font-size:.82rem;color:#4a5568;line-height:1.9;padding-top:.15rem;"></div>
     </div>
     <div id="tabela-hist-simul" style="margin-bottom:1.2rem;"></div>
     <canvas id="grafico-simulador" style="min-height:520px;max-height:580px;"></canvas>
     <div id="kpis-simul" style="margin-top:1rem;"></div>
+    <div id="info-simul" style="font-size:.82rem;color:#4a5568;line-height:1.9;margin-top:.75rem;"></div>
   </div>
 
 </main>
@@ -5951,34 +5951,40 @@ function renderizarKPIsSimulador(porMes, mesesHist, projecoes) {
 function renderizarTabelaProjecaoSimul(projecoes) {
   const el = document.getElementById('tabela-proj-simul');
   if (!el) return;
-  const fmt = v => Math.round(v).toLocaleString('pt-BR');
+  const fmt  = v => Math.round(v).toLocaleString('pt-BR');
+  const th   = 'padding:.4rem .8rem;font-size:.74rem;font-weight:600;color:#718096;text-align:right;white-space:nowrap;border-bottom:2px solid #e2e8f0;';
+  const thL  = 'padding:.4rem .8rem;font-size:.74rem;font-weight:600;color:#718096;text-align:left;white-space:nowrap;border-bottom:2px solid #e2e8f0;';
+  const tdS  = 'padding:.38rem .8rem;white-space:nowrap;text-align:right;border-bottom:1px solid #f0f4f8;';
+  const tdLS = 'padding:.38rem .8rem;white-space:nowrap;text-align:left;border-bottom:1px solid #f0f4f8;font-weight:600;color:#2d3748;';
+
   const linhas = projecoes.map(p => {
-    const cobProj = p.soProj > 0 ? Math.round(p.estFim * 30 / p.soProj) : 0;
+    const cobProj  = p.soProj > 0 ? Math.round(p.estFim * 30 / p.soProj) : 0;
     const cobAlvoR = Math.round(p.cobAlvo);
-    const cobCor  = cobProj > 60 ? 'color:#c05621;font-weight:600' : cobProj > 0 && cobProj < 30 ? 'color:#c53030;font-weight:600' : 'color:#276749;font-weight:600';
+    const cobCor   = cobProj > 60  ? '#c05621' : cobProj > 0 && cobProj < 30 ? '#c53030' : '#276749';
     return `<tr>
-      <td>${p.rotulo}</td>
-      <td class="num">${fmt(p.soProj)}</td>
-      <td class="num" style="font-weight:700;color:#276749;">${fmt(p.siProj)}</td>
-      <td class="num">${fmt(p.estFim)}</td>
-      <td class="num" style="${cobCor}">${cobProj > 0 ? cobProj + ' d' : '—'}</td>
-      <td class="num" style="color:#718096;font-size:.78rem;">${cobAlvoR} d</td>
+      <td style="${tdLS}">${p.rotulo}</td>
+      <td style="${tdS}color:#2d3748;">${fmt(p.soProj)}</td>
+      <td style="${tdS}font-weight:700;color:#276749;">${fmt(p.siProj)}</td>
+      <td style="${tdS}color:#2d3748;">${fmt(p.estFim)}</td>
+      <td style="${tdS}font-weight:700;color:${cobCor};">${cobProj > 0 ? cobProj + ' d' : '—'}</td>
+      <td style="${tdS}color:#a0aec0;font-size:.78rem;">${cobAlvoR} d</td>
     </tr>`;
   }).join('');
+
   el.innerHTML = `
-    <table class="tabela-dados" style="font-size:.82rem;">
+    <table style="border-collapse:collapse;font-size:.82rem;min-width:340px;">
       <thead><tr>
-        <th>Mês</th>
-        <th class="num">SO prev.</th>
-        <th class="num">SI proj.</th>
-        <th class="num">Estoque proj.</th>
-        <th class="num" title="Cobertura = Estoque ÷ (SO/30)">Cob.</th>
-        <th class="num" title="Meta de cobertura para este mês (ref. ano anterior)">Alvo</th>
+        <th style="${thL}">Mês</th>
+        <th style="${th}">SO prev.</th>
+        <th style="${th}">SI proj.</th>
+        <th style="${th}">Estoque proj.</th>
+        <th style="${th}" title="Cobertura = Estoque ÷ (SO/30)">Cob.</th>
+        <th style="${th}" title="Meta sazonal (ref. ano anterior)">Alvo</th>
       </tr></thead>
       <tbody>${linhas}</tbody>
     </table>
-    <div style="font-size:.7rem;color:#a0aec0;margin-top:.3rem;">
-      Alvo: média de cobertura do mês anterior, do mês e do mês seguinte no ano anterior · 🟠 &gt;60d excesso · 🔴 &lt;30d risco ruptura
+    <div style="font-size:.7rem;color:#a0aec0;margin-top:.4rem;">
+      Alvo: média de cobertura do mês ant. + mês + mês seg. no ano anterior · <span style="color:#c05621;">●</span> &gt;60d excesso · <span style="color:#c53030;">●</span> &lt;30d risco ruptura
     </div>`;
 }
 
@@ -6009,36 +6015,47 @@ function renderizarTabelaHistSimul(porMes, mesesHist, mesesFut) {
   const futSet       = new Set(mesesFut.map(m => m.ch));
   const projMesNomes = new Set(mesesFut.map(m => m.ch.split('|')[1]));
 
+  const thBase = 'text-align:right;padding:.4rem .6rem;font-size:.75rem;font-weight:600;white-space:nowrap;min-width:70px;';
+  const tdBase = 'text-align:right;padding:.35rem .6rem;white-space:nowrap;min-width:70px;';
+
   const headers = FULL.map((mesNome, i) => {
     const isProj = projMesNomes.has(mesNome);
-    const style  = isProj ? 'background:#ebf8ff;color:#2b6cb0;font-weight:700;' : '';
-    return `<th class="num" style="${style}">${ABREV[i]}</th>`;
+    const extra  = isProj ? 'background:#ebf8ff;color:#2b6cb0;' : 'color:#4a5568;';
+    return `<th style="${thBase}${extra}">${ABREV[i]}</th>`;
   }).join('');
 
   const rows = anos.map(ano => {
     const cells = FULL.map((mesNome, i) => {
-      const ch     = `${ano}|${mesNome}`;
-      const isFut  = futSet.has(ch);
-      const val    = porMes[ch]?.so || 0;
+      const ch      = `${ano}|${mesNome}`;
+      const isFut   = futSet.has(ch);
+      const val     = porMes[ch]?.so || 0;
       const temDado = val > 0;
       const display = temDado ? val.toLocaleString('pt-BR') : '—';
-      let style = '';
-      if (isFut)         style = 'background:#ebf8ff;color:#2b6cb0;font-weight:600;';
-      else if (!temDado) style = 'color:#cbd5e0;';
-      else               style = 'font-weight:500;';
+      let extra = '';
+      if (isFut)         extra = 'background:#ebf8ff;color:#2b6cb0;font-weight:600;';
+      else if (!temDado) extra = 'color:#cbd5e0;';
+      else               extra = 'color:#2d3748;font-weight:500;';
       const id = isFut ? `id="hist-cell-${ano}-${i}"` : '';
-      return `<td class="num" ${id} style="${style}">${display}</td>`;
+      return `<td ${id} style="${tdBase}${extra}">${display}</td>`;
     }).join('');
-    return `<tr><td style="font-weight:700;white-space:nowrap;padding-right:.75rem;">${ano}</td>${cells}</tr>`;
+    return `<tr style="border-bottom:1px solid #f0f4f8;">
+      <td style="padding:.35rem .75rem .35rem .1rem;font-weight:700;color:#2d3748;white-space:nowrap;">${ano}</td>
+      ${cells}
+    </tr>`;
   }).join('');
 
   tabEl.innerHTML = `
-    <div style="font-size:.78rem;color:#718096;margin-bottom:.4rem;">
+    <div style="font-size:.78rem;color:#718096;margin-bottom:.5rem;">
       Sell-out histórico (un.) · Colunas azuis = meses projetados · Compare com o mesmo mês do ano anterior na mesma coluna
     </div>
     <div style="overflow-x:auto;">
-      <table class="tabela-dados" style="font-size:.82rem;min-width:560px;">
-        <thead><tr><th></th>${headers}</tr></thead>
+      <table style="border-collapse:collapse;font-size:.82rem;width:100%;">
+        <thead>
+          <tr style="border-bottom:2px solid #e2e8f0;">
+            <th style="text-align:left;padding:.4rem .5rem;"></th>
+            ${headers}
+          </tr>
+        </thead>
         <tbody>${rows}</tbody>
       </table>
     </div>`;
