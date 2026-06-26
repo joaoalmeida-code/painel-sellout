@@ -1055,17 +1055,7 @@
   </div>
 
   <!-- Card C: Análise Detalhada -->
-  <div class="card" id="area-previsao-detalhe" style="display:none;">
-    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Projeção Detalhada por SKU × Cliente</div>
-    <div class="subtitulo">Histórico completo + projeção tracejada · Eixo Y = unidades · Azul = sell-out · Verde = sell-in · Linha vertical cinza = início da projeção</div>
-    <div class="como-analisar">Mostra o histórico completo de uma combinação SKU×Cliente e projeta os próximos meses. A linha tracejada conecta-se ao último ponto histórico. Use para validar se o modelo captura sazonalidade esperada e comparar sell-out (demanda do consumidor) com sell-in (compra do varejista).</div>
-    <div class="linha-filtro" style="margin-bottom:1rem;">
-      <label for="sel-combo-prev" style="white-space:nowrap;">Combinação SKU × Cliente:</label>
-      <select id="sel-combo-prev" onchange="renderizarPrevisaoDetalhe()" style="width:100%;max-width:700px;font-size:.76rem;"></select>
-    </div>
-    <canvas id="grafico-previsao-detalhe" style="max-height:380px;"></canvas>
-    <div id="tabela-previsao-detalhe"></div>
-  </div>
+
 
   <!-- Card D: Simulador de Estoque -->
   <div class="card" id="area-previsao-simulador" style="display:none;">
@@ -1181,7 +1171,6 @@ let graficoRankingMarcas          = null;
 let graficoEvolucaoSellInCliente  = null;
 let graficoEvolucaoSellInMarca    = null;
 let graficoPrevisaoExec           = null;
-let graficoPrevisaoDetalhe        = null;
 let graficoSimulador              = null;
 let _simulDadosAtivos             = null;
 
@@ -1291,7 +1280,6 @@ document.getElementById('input-arquivo').addEventListener('change', function (e)
       document.getElementById('sec-previsao').style.display             = 'block';
       document.getElementById('area-previsao-premissas').style.display  = 'block';
       document.getElementById('area-previsao-exec').style.display       = 'block';
-      document.getElementById('area-previsao-detalhe').style.display    = 'block';
       document.getElementById('area-previsao-simulador').style.display  = 'block';
 
       popularSKUs();
@@ -1623,9 +1611,7 @@ function atualizarGrafico() {
   renderizarEvolucaoMarcas();
   renderizarMargemMarca();
   renderizarRankingMarcas();
-  popularSeletorPrevisao();
   renderizarPrevisaoAgregada();
-  renderizarPrevisaoDetalhe();
   popularSeletorSimulador();
   carregarSimulador();
 
@@ -5785,22 +5771,9 @@ function _projetarCombo(sku, cliente, premissas) {
   };
 }
 
-function popularSeletorPrevisao() {
-  const top10 = _top10SkuCliente();
-  const sel   = document.getElementById('sel-combo-prev');
-  if (!sel) return;
-  const atual = sel.value;
-  sel.innerHTML = top10.map(t => {
-    const v = `${t.sku}|||${t.cliente}`;
-    const lbl = `${t.sku} — ${t.cliente}`;
-    return `<option value="${v}">${lbl}</option>`;
-  }).join('');
-  if (atual && [...sel.options].some(o => o.value === atual)) sel.value = atual;
-}
 
 function atualizarPrevisao() {
   renderizarPrevisaoAgregada();
-  renderizarPrevisaoDetalhe();
 }
 
 function renderizarPrevisaoAgregada() {
@@ -5884,80 +5857,6 @@ function renderizarPrevisaoAgregada() {
     <tbody>${linhas}</tbody></table>`;
 }
 
-function renderizarPrevisaoDetalhe() {
-  const premissas = _premissasAtuais();
-  const sel       = document.getElementById('sel-combo-prev');
-  if (!sel?.value) return;
-  const [sku, cliente] = sel.value.split('|||');
-  const p = _projetarCombo(sku, cliente, premissas);
-  if (!p) return;
-
-  const nHist   = p.historico.length;
-  const allLbls = [...p.historico.map(m => m.rotulo), ...p.projecoes.map(m => m.rotulo)];
-
-  const soHistArr = p.historico.map(m => m.so);
-  const siHistArr = p.historico.map(m => m.si);
-  const soProjArr = [...new Array(nHist - 1).fill(null), p.historico[nHist-1].so, ...p.projecoes.map(m => m.soProj)];
-  const siProjArr = [...new Array(nHist - 1).fill(null), p.historico[nHist-1].si, ...p.projecoes.map(m => m.siProj)];
-
-  const datasets = [
-    { label: 'Sell-out histórico', data: [...soHistArr, ...new Array(p.projecoes.length).fill(null)], borderColor: '#2b6cb0', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 3, fill: false, tension: 0.3 },
-    { label: 'Sell-in histórico',  data: [...siHistArr, ...new Array(p.projecoes.length).fill(null)], borderColor: '#276749', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 3, fill: false, tension: 0.3 },
-    { label: 'Sell-out projetado', data: soProjArr, borderColor: '#2b6cb0', backgroundColor: 'transparent', borderWidth: 2, borderDash: [6,3], pointRadius: 3, fill: false, tension: 0.3 },
-    { label: 'Sell-in projetado',  data: siProjArr, borderColor: '#276749', backgroundColor: 'transparent', borderWidth: 2, borderDash: [6,3], pointRadius: 3, fill: false, tension: 0.3 },
-  ];
-
-  const sepPlugin = {
-    id: 'sepProjecao',
-    afterDraw(chart) {
-      const { ctx, scales: { x, y } } = chart;
-      const xPos = x.getPixelForValue(nHist - 0.5);
-      ctx.save();
-      ctx.setLineDash([4,4]); ctx.strokeStyle = '#a0aec0'; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.moveTo(xPos, y.top); ctx.lineTo(xPos, y.bottom); ctx.stroke();
-      ctx.setLineDash([]); ctx.fillStyle = '#718096'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText('← Histórico   Projeção →', xPos, y.top - 6);
-      ctx.restore();
-    },
-  };
-
-  if (graficoPrevisaoDetalhe) graficoPrevisaoDetalhe.destroy();
-  graficoPrevisaoDetalhe = new Chart(document.getElementById('grafico-previsao-detalhe'), {
-    type: 'line',
-    data: { labels: allLbls, datasets },
-    options: {
-      responsive: true,
-      interaction: { mode: 'index', intersect: false },
-      plugins: {
-        legend: { display: true, position: 'top', labels: { font: { size: 11 } } },
-        tooltip: { callbacks: { label: ctx => ctx.parsed.y !== null ? `  ${ctx.dataset.label}: ${Math.round(ctx.parsed.y).toLocaleString('pt-BR')} un.` : null } },
-      },
-      scales: {
-        x: { ticks: { font: { size: 10 }, maxRotation: 45 } },
-        y: { ticks: { callback: v => v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'k' : v } },
-      },
-      layout: { padding: { top: 20 } },
-    },
-    plugins: [sepPlugin],
-  });
-
-  const tabEl = document.getElementById('tabela-previsao-detalhe');
-  if (!tabEl) return;
-  const linhas = p.projecoes.map(m => {
-    const pct = p.si3Avg > 0 ? ((m.siProj - p.si3Avg) / p.si3Avg * 100) : 0;
-    const cor = pct >= 5 ? 'color:#276749;font-weight:600' : pct <= -5 ? 'color:#c53030;font-weight:600' : '';
-    return `<tr><td>${m.rotulo}</td><td class="num">${Math.round(m.soProj).toLocaleString('pt-BR')}</td><td class="num">${Math.round(m.siProj).toLocaleString('pt-BR')}</td><td class="num" style="${cor}">${pct >= 0 ? '+' : ''}${pct.toFixed(0)}%</td></tr>`;
-  }).join('');
-  tabEl.innerHTML = `
-    <table class="tabela-dados" style="margin-top:.75rem;">
-      <thead><tr><th>Mês</th><th class="num">Sell-out proj. (un.)</th><th class="num">Sell-in proj. (un.)</th><th class="num" title="vs média sell-in histórico últ. 3 meses">Var. vs hist.</th></tr></thead>
-      <tbody>${linhas}</tbody>
-    </table>
-    <div style="font-size:.73rem;color:#a0aec0;margin-top:.4rem;">
-      Categoria: ${p.categoria} · Cobertura de estoque: ${p.coberturaAtual > 0 ? p.coberturaAtual+' dias' : 'sem dado'} ·
-      Ratio sell-in/sell-out hist.: ${(p.ratioSISO*100).toFixed(0)}%
-    </div>`;
-}
 
 // ─── SIMULADOR DE ESTOQUE ────────────────────────────────────────────────────
 
