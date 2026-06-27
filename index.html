@@ -1041,19 +1041,6 @@
     </div>
   </div>
 
-  <!-- Card B: Visão Executiva -->
-  <div class="card" id="area-previsao-exec" style="display:none;">
-    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Projeção de Sell-in — Visão Executiva</div>
-    <div class="subtitulo">Top 10 combinações SKU×Cliente (pelos filtros ativos) · Eixo Y = unidades sell-in · Azul = média histórica últ. 3 meses · Verde = média projetada · % = variação vs histórico</div>
-    <div class="como-analisar">Use esta visão para comunicar projeções ao time de trade e vendas. A barra verde mostra a média mensal de sell-in esperada para os próximos meses. A variação % compara com a média histórica dos últimos 3 meses. Verde = crescimento; vermelho = queda. Alterne entre "por SKU" e "por Cliente" para mudar o nível de agregação.</div>
-    <div style="margin-bottom:.7rem;">
-      <label style="cursor:pointer;margin-right:1.2rem;font-size:.82rem;"><input type="radio" name="agrup-prev-exec" value="sku" checked onchange="renderizarPrevisaoAgregada()"> Por SKU</label>
-      <label style="cursor:pointer;font-size:.82rem;"><input type="radio" name="agrup-prev-exec" value="cliente" onchange="renderizarPrevisaoAgregada()"> Por Cliente</label>
-    </div>
-    <canvas id="grafico-previsao-exec" style="max-height:360px;"></canvas>
-    <div id="tabela-previsao-exec"></div>
-  </div>
-
   <!-- Card C: Análise Detalhada -->
 
 
@@ -1170,7 +1157,6 @@ let graficoMargemMarca            = null;
 let graficoRankingMarcas          = null;
 let graficoEvolucaoSellInCliente  = null;
 let graficoEvolucaoSellInMarca    = null;
-let graficoPrevisaoExec           = null;
 let graficoSimulador              = null;
 let _simulDadosAtivos             = null;
 
@@ -1279,7 +1265,6 @@ document.getElementById('input-arquivo').addEventListener('change', function (e)
       // Seção 9 — Previsão de Vendas
       document.getElementById('sec-previsao').style.display             = 'block';
       document.getElementById('area-previsao-premissas').style.display  = 'block';
-      document.getElementById('area-previsao-exec').style.display       = 'block';
       document.getElementById('area-previsao-simulador').style.display  = 'block';
 
       popularSKUs();
@@ -1611,7 +1596,6 @@ function atualizarGrafico() {
   renderizarEvolucaoMarcas();
   renderizarMargemMarca();
   renderizarRankingMarcas();
-  renderizarPrevisaoAgregada();
   popularSeletorSimulador();
   carregarSimulador();
 
@@ -5772,91 +5756,9 @@ function _projetarCombo(sku, cliente, premissas) {
 }
 
 
-function atualizarPrevisao() {
-  renderizarPrevisaoAgregada();
-}
 
-function renderizarPrevisaoAgregada() {
-  const premissas  = _premissasAtuais();
-  const top10      = _top10SkuCliente();
-  const porCli     = document.querySelector('input[name="agrup-prev-exec"]:checked')?.value === 'cliente';
 
-  const agr = {};
-  top10.forEach(({ sku, cliente }) => {
-    const p = _projetarCombo(sku, cliente, premissas);
-    if (!p) return;
-    const key = porCli ? cliente : sku;
-    const lbl = porCli ? cliente : (sku.length > 28 ? sku.slice(0,28)+'…' : sku);
-    if (!agr[key]) agr[key] = { label: lbl, histSI: 0, projSI: 0 };
-    const ult3 = p.historico.slice(-3);
-    agr[key].histSI += ult3.reduce((s, m) => s + m.si, 0) / Math.max(ult3.length, 1);
-    agr[key].projSI += p.projecoes.reduce((s, m) => s + m.siProj, 0) / Math.max(p.projecoes.length, 1);
-  });
-
-  const keys     = Object.keys(agr).sort((a, b) => agr[b].projSI - agr[a].projSI);
-  if (!keys.length) return;
-  const labels   = keys.map(k => agr[k].label);
-  const histData = keys.map(k => agr[k].histSI);
-  const projData = keys.map(k => agr[k].projSI);
-
-  if (graficoPrevisaoExec) graficoPrevisaoExec.destroy();
-  graficoPrevisaoExec = new Chart(document.getElementById('grafico-previsao-exec'), {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [
-        { label: 'Sell-in histórico (méd. últ. 3 meses)', data: histData, backgroundColor: '#2b6cb0aa', borderColor: '#2b6cb0', borderWidth: 1 },
-        { label: `Sell-in projetado (méd. próx. ${premissas.horizonte} meses)`, data: projData, backgroundColor: '#27674999', borderColor: '#276749', borderWidth: 1 },
-      ],
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { display: true, position: 'top', labels: { font: { size: 11 } } },
-        tooltip: { callbacks: { label: ctx => `  ${ctx.dataset.label}: ${Math.round(ctx.parsed.y).toLocaleString('pt-BR')} un.` } },
-      },
-      scales: {
-        x: { ticks: { font: { size: 10 }, maxRotation: 35 } },
-        y: { ticks: { callback: v => v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'k' : v } },
-      },
-      layout: { padding: { top: 24 } },
-    },
-    plugins: [{
-      id: 'rotulosVarPrev',
-      afterDatasetsDraw(chart) {
-        const ctx = chart.ctx;
-        const meta1 = chart.getDatasetMeta(1);
-        const h = chart.data.datasets[0].data;
-        const p = chart.data.datasets[1].data;
-        meta1.data.forEach((bar, i) => {
-          if (!h[i] || !p[i]) return;
-          const v   = ((p[i] - h[i]) / h[i]) * 100;
-          const lbl = (v >= 0 ? '+' : '') + v.toFixed(0) + '%';
-          ctx.save();
-          ctx.fillStyle    = v >= 0 ? '#276749' : '#c53030';
-          ctx.font         = 'bold 10px sans-serif';
-          ctx.textAlign    = 'center';
-          ctx.textBaseline = 'bottom';
-          ctx.fillText(lbl, bar.x, bar.y - 2);
-          ctx.restore();
-        });
-      },
-    }],
-  });
-
-  const tabEl = document.getElementById('tabela-previsao-exec');
-  if (!tabEl) return;
-  const linhas = keys.map(k => {
-    const v   = agr[k].projSI, h = agr[k].histSI;
-    const pct = h > 0 ? ((v - h) / h * 100) : 0;
-    const cor = pct >= 5 ? 'color:#276749;font-weight:600' : pct <= -5 ? 'color:#c53030;font-weight:600' : '';
-    return `<tr><td>${agr[k].label}</td><td class="num">${Math.round(h).toLocaleString('pt-BR')} un.</td><td class="num">${Math.round(v).toLocaleString('pt-BR')} un.</td><td class="num" style="${cor}">${pct >= 0 ? '+' : ''}${pct.toFixed(0)}%</td></tr>`;
-  }).join('');
-  tabEl.innerHTML = `<table class="tabela-dados" style="margin-top:1rem;">
-    <thead><tr><th>${porCli ? 'Cliente' : 'SKU'}</th><th class="num">SI hist. méd./mês (un.)</th><th class="num">SI proj. méd./mês (un.)</th><th class="num">Variação</th></tr></thead>
-    <tbody>${linhas}</tbody></table>`;
-}
-
+function atualizarPrevisao() { carregarSimulador(); }
 
 // ─── SIMULADOR DE ESTOQUE ────────────────────────────────────────────────────
 
@@ -6159,18 +6061,26 @@ function carregarSimulador() {
   });
 
   // Tabela de inputs
+  const inputStyle = 'text-align:right;border:1px solid #e2e8f0;border-radius:4px;padding:.2rem .4rem;font-size:.83rem;';
   const tabEl = document.getElementById('tabela-input-simul');
   if (tabEl) {
     tabEl.innerHTML = `
-      <table class="tabela-dados">
-        <thead><tr><th>Mês</th><th class="num">Sell-out previsto (un.)</th></tr></thead>
+      <table style="border-collapse:collapse;font-size:.82rem;">
+        <thead><tr>
+          <th style="text-align:left;padding:.4rem .8rem .4rem .1rem;font-size:.74rem;font-weight:600;color:#718096;border-bottom:2px solid #e2e8f0;white-space:nowrap;">Mês</th>
+          <th style="text-align:right;padding:.4rem .8rem;font-size:.74rem;font-weight:600;color:#2b6cb0;border-bottom:2px solid #e2e8f0;white-space:nowrap;">Sell-out prev. (un.)</th>
+          <th style="text-align:right;padding:.4rem .8rem;font-size:.74rem;font-weight:600;color:#718096;border-bottom:2px solid #e2e8f0;white-space:nowrap;" title="Cobertura de estoque alvo (dias)">Cob. alvo (dias)</th>
+        </tr></thead>
         <tbody>${mesesFut.map((m, k) => `
-          <tr>
-            <td>${m.rotulo}</td>
-            <td class="num"><input type="number" id="simul-so-${k}" value="${defaultSO[k]}"
-              min="0" step="1"
-              style="width:90px;text-align:right;border:1px solid #e2e8f0;border-radius:4px;padding:.2rem .4rem;font-size:.83rem;"
-              oninput="recalcularSimulador()">
+          <tr style="border-bottom:1px solid #f0f4f8;">
+            <td style="padding:.35rem .8rem .35rem .1rem;font-weight:600;color:#2d3748;white-space:nowrap;">${m.rotulo}</td>
+            <td style="padding:.35rem .8rem;text-align:right;">
+              <input type="number" id="simul-so-${k}" value="${defaultSO[k]}"
+                min="0" step="100" style="width:90px;${inputStyle}" oninput="recalcularSimulador()">
+            </td>
+            <td style="padding:.35rem .8rem;text-align:right;">
+              <input type="number" id="simul-cob-${k}" value="${Math.round(cobAlvoPerMes[k])}"
+                min="1" step="10" style="width:70px;${inputStyle}" oninput="recalcularSimulador()">
             </td>
           </tr>`).join('')}
         </tbody>
@@ -6208,7 +6118,8 @@ function recalcularSimulador() {
   let estAnt = porMes[ultimoMes].est || 0;
   const projecoes = mesesFut.map((m, k) => {
     const soProj  = soInputs[k];
-    const cob     = cobAlvoPerMes[k] > 0 ? cobAlvoPerMes[k] : 30;
+    const cobInput = parseFloat(document.getElementById(`simul-cob-${k}`)?.value);
+    const cob     = cobInput > 0 ? cobInput : (cobAlvoPerMes[k] > 0 ? cobAlvoPerMes[k] : 30);
     const estAlvo = cob * soProj / 30;
     const siProj  = Math.max(0, estAlvo - estAnt + soProj);
     const estFim  = Math.max(0, estAnt + siProj - soProj);
