@@ -1012,14 +1012,9 @@
   <!-- Card A: Premissas -->
   <div class="card" id="area-previsao-premissas" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Premissas da Projeção</div>
-    <div class="subtitulo">Ajuste os parâmetros para simular diferentes cenários. Os gráficos recalculam automaticamente.</div>
-    <div class="como-analisar">A projeção combina quatro fatores: (1) tendência — regressão linear dos últimos 6 meses de sell-out; (2) sazonalidade — ratio do mesmo mês do ano anterior vs média histórica do SKU; (3) preço — variação esperada com elasticidade padrão de −0,4 (alta de 10% reduz volume ~4%); (4) estoque — cobertura atual do cliente: acima de 60 dias reduz o sell-in 15%, abaixo de 30 dias aumenta 15%. O sell-in projetado aplica ainda o ratio histórico sell-in/sell-out de cada combinação.</div>
+    <div class="subtitulo">Ajuste os parâmetros para recalcular os valores padrão do Simulador automaticamente.</div>
+    <div class="como-analisar">Preço: elasticidade −0,4 (alta de 10% reduz volume ~4%). Clima: afeta apenas Manteiga de cacau e Protetor Labial — inverno frio aumenta demanda de labial e manteiga; inverno quente reduz. Os valores padrão do simulador são recalculados ao mudar qualquer parâmetro, mas você pode sobrescrever manualmente célula a célula.</div>
     <div class="linha-filtro" style="flex-wrap:wrap;gap:1.5rem 3rem;align-items:center;margin-top:.5rem;">
-      <div>
-        <span style="font-size:.8rem;color:#4a5568;font-weight:600;display:block;margin-bottom:.4rem;">Horizonte</span>
-        <label style="cursor:pointer;margin-right:1.2rem;"><input type="radio" name="horizonte-prev" value="3" checked onchange="atualizarPrevisao()"> 3 meses</label>
-        <label style="cursor:pointer;"><input type="radio" name="horizonte-prev" value="6" onchange="atualizarPrevisao()"> 6 meses</label>
-      </div>
       <div>
         <span style="font-size:.8rem;color:#4a5568;font-weight:600;display:block;margin-bottom:.4rem;">
           Variação de preço esperada: <span id="label-var-preco" style="color:#2b6cb0;">0%</span>
@@ -1060,6 +1055,7 @@
     <div id="tabela-hist-simul" style="margin-bottom:1.2rem;"></div>
     <canvas id="grafico-simulador" style="min-height:520px;max-height:580px;"></canvas>
     <div id="kpis-simul" style="margin-top:1rem;"></div>
+    <div id="tabela-cob-simul" style="margin-top:1.4rem;"></div>
     <div id="info-simul" style="font-size:.82rem;color:#4a5568;line-height:1.9;margin-top:.75rem;"></div>
   </div>
 
@@ -5671,10 +5667,9 @@ function _top10SkuCliente() {
 }
 
 function _premissasAtuais() {
-  const horizonte     = parseInt(document.querySelector('input[name="horizonte-prev"]:checked')?.value || '3');
   const variacaoPreco = parseFloat(document.getElementById('slider-var-preco')?.value || '0');
   const cenario       = document.getElementById('sel-cenario-clima')?.value || 'tipico';
-  return { horizonte, variacaoPreco, cenarioClimatico: cenario };
+  return { horizonte: 6, variacaoPreco, cenarioClimatico: cenario };
 }
 
 function _projetarCombo(sku, cliente, premissas) {
@@ -5860,7 +5855,7 @@ function renderizarTabelaProjecaoSimul(projecoes) {
   const tdLS = 'padding:.38rem .8rem;white-space:nowrap;text-align:left;border-bottom:1px solid #f0f4f8;font-weight:600;color:#2d3748;';
 
   const linhas = projecoes.map(p => {
-    const cobProj  = p.soProj > 0 ? Math.round(p.estFim * 30 / p.soProj) : 0;
+    const cobProj  = p.cobResult != null ? Math.round(p.cobResult) : (p.soProj > 0 ? Math.round(p.estFim * 30 / p.soProj) : 0);
     const cobAlvoR = Math.round(p.cobAlvo);
     const cobCor   = cobProj > 60  ? '#c05621' : cobProj > 0 && cobProj < 30 ? '#c53030' : '#276749';
     return `<tr>
@@ -6050,14 +6045,21 @@ function carregarSimulador() {
   const { a: tA, b: tB } = _regressaoLinear(ult6.map(ch => porMes[ch].so));
   const baseRegIdx = ult6.length - 1;
 
+  // Premissas: cenário climático e variação de preço
+  const premissas  = _premissasAtuais();
+  const fatorPreco = 1 + (premissas.variacaoPreco / 100) * (-0.4);
+
   const defaultSO = mesesFut.map((m, k) => {
+    const [, mesFut] = m.ch.split('|');
+    const fatorClima = ehSazonal ? _fatorClima(premissas.cenarioClimatico, mesFut, categoria) : 1.0;
+    let base;
     if (ehSazonal) {
-      // Categoria sazonal: mesmo mês do ano anterior × crescimento YoY
       const chAnt = _mesAvancar(m.ch, -12);
-      if (porMes[chAnt]?.so > 0) return Math.round(porMes[chAnt].so * taxaYoY);
+      base = porMes[chAnt]?.so > 0 ? porMes[chAnt].so * taxaYoY : tA + tB * (baseRegIdx + k + 1);
+    } else {
+      base = tA + tB * (baseRegIdx + k + 1);
     }
-    // Não sazonal (ou sem dado do ano anterior): extrapolação da tendência linear
-    return Math.round(Math.max(0, tA + tB * (baseRegIdx + k + 1)));
+    return Math.round(Math.max(0, base * fatorClima * fatorPreco));
   });
 
   // Tabela de inputs
@@ -6115,25 +6117,115 @@ function recalcularSimulador() {
     Math.max(0, parseFloat(document.getElementById(`simul-so-${k}`)?.value) || 0)
   );
 
+  // SO suavizado: média de (prev, curr, next) para estabilizar cobertura exibida
+  // Sequência completa: histórico + projetado
+  const soHistArr = mesesHist.map(ch => porMes[ch].so);
+  const soAll     = [...soHistArr, ...soInputs];
+  const nHist     = soHistArr.length;
+  const soSmooth  = soAll.map((_, i) => {
+    const vals = [soAll[i - 1], soAll[i], soAll[i + 1]].filter(v => v != null && v > 0);
+    return vals.length > 0 ? vals.reduce((s, v) => s + v, 0) / vals.length : (soAll[i] || 0);
+  });
+
   let estAnt = porMes[ultimoMes].est || 0;
   const projecoes = mesesFut.map((m, k) => {
-    const soProj  = soInputs[k];
+    const soProj   = soInputs[k];
     const cobInput = parseFloat(document.getElementById(`simul-cob-${k}`)?.value);
-    const cob     = cobInput > 0 ? cobInput : (cobAlvoPerMes[k] > 0 ? cobAlvoPerMes[k] : 30);
-    const estAlvo = cob * soProj / 30;
-    const siProj  = Math.max(0, estAlvo - estAnt + soProj);
-    const estFim  = Math.max(0, estAnt + siProj - soProj);
+    const cob      = cobInput > 0 ? cobInput : (cobAlvoPerMes[k] > 0 ? cobAlvoPerMes[k] : 30);
+    const estAlvo  = cob * soProj / 30;
+    const siProj   = Math.max(0, estAlvo - estAnt + soProj);
+    const estFim   = Math.max(0, estAnt + siProj - soProj);
     estAnt = estFim;
-    return { ...m, soProj, siProj, estFim, cobAlvo: cob };
+    const soSm       = soSmooth[nHist + k] || soProj;
+    const cobResult  = soSm > 0 ? estFim * 30 / soSm : 0;
+    return { ...m, soProj, siProj, estFim, cobAlvo: cob, cobResult };
   });
 
   renderizarKPIsSimulador(porMes, mesesHist, projecoes);
   renderizarTabelaProjecaoSimul(projecoes);
   atualizarHistSimulComProjecoes(soInputs, mesesFut);
-  renderizarSimulador(porMes, mesesHist, projecoes);
+  renderizarTabelaCoberturaSimul(porMes, mesesHist, projecoes, soSmooth);
+  renderizarSimulador(porMes, mesesHist, projecoes, soSmooth);
 }
 
-function renderizarSimulador(porMes, mesesHist, projecoes) {
+function renderizarTabelaCoberturaSimul(porMes, mesesHist, projecoes, soSmooth) {
+  const tabEl = document.getElementById('tabela-cob-simul');
+  if (!tabEl) return;
+
+  const ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const FULL  = MESES_NOMES_ARR;
+
+  // Mapear cobertura suavizada por chave "ANO|MesNome"
+  const cobPorMes = {};
+  mesesHist.forEach((ch, i) => {
+    const est  = porMes[ch].est;
+    const soSm = soSmooth ? (soSmooth[i] || 0) : (porMes[ch].so || 0);
+    if (est > 0 && soSm > 0) cobPorMes[ch] = Math.round(est * 30 / soSm);
+  });
+  projecoes.forEach(p => {
+    if (p.cobResult > 0) cobPorMes[p.ch] = Math.round(p.cobResult);
+  });
+
+  // Anos presentes
+  const futSet   = new Set(projecoes.map(p => p.ch));
+  const projMes  = new Set(projecoes.map(p => p.ch.split('|')[1]));
+  const anosSet  = new Set(mesesHist.map(ch => ch.split('|')[0]));
+  projecoes.forEach(p => anosSet.add(p.ch.split('|')[0]));
+  const anos = [...anosSet].sort();
+
+  const thBase = 'text-align:right;padding:.4rem .6rem;font-size:.75rem;font-weight:600;white-space:nowrap;min-width:56px;';
+  const tdBase = 'text-align:right;padding:.35rem .6rem;white-space:nowrap;min-width:56px;font-size:.82rem;';
+
+  const headers = FULL.map((mesNome, i) => {
+    const isProj = projMes.has(mesNome);
+    const extra  = isProj ? 'background:#ebf8ff;color:#2b6cb0;' : 'color:#4a5568;';
+    return `<th style="${thBase}${extra}">${ABREV[i]}</th>`;
+  }).join('');
+
+  const rows = anos.map(ano => {
+    const cells = FULL.map((mesNome, i) => {
+      const ch      = `${ano}|${mesNome}`;
+      const isFut   = futSet.has(ch);
+      const val     = cobPorMes[ch];
+      const temDado = val != null;
+      const display = temDado ? val + ' d' : '—';
+      let extra = '';
+      if (isFut)        extra = 'background:#ebf8ff;color:#2b6cb0;font-weight:600;';
+      else if (!temDado) extra = 'color:#cbd5e0;';
+      else {
+        // cor por nível de cobertura
+        const cor = val > 60 ? 'color:#c05621;' : val < 30 ? 'color:#c53030;' : 'color:#276749;';
+        extra = cor + 'font-weight:500;';
+      }
+      return `<td style="${tdBase}${extra}">${display}</td>`;
+    }).join('');
+    return `<tr style="border-bottom:1px solid #f0f4f8;">
+      <td style="padding:.35rem .75rem .35rem .1rem;font-weight:700;color:#2d3748;white-space:nowrap;">${ano}</td>
+      ${cells}
+    </tr>`;
+  }).join('');
+
+  tabEl.innerHTML = `
+    <div style="font-size:.78rem;color:#718096;margin-bottom:.5rem;">
+      Cobertura de estoque (dias) · SO suavizado: média do mês ant. + mês + mês seg. · Colunas azuis = projetado
+      · <span style="color:#276749;font-weight:600;">Verde</span> = 30–60d
+      · <span style="color:#c05621;font-weight:600;">Laranja</span> &gt;60d
+      · <span style="color:#c53030;font-weight:600;">Vermelho</span> &lt;30d
+    </div>
+    <div style="overflow-x:auto;">
+      <table style="border-collapse:collapse;font-size:.82rem;width:100%;">
+        <thead>
+          <tr style="border-bottom:2px solid #e2e8f0;">
+            <th style="text-align:left;padding:.4rem .5rem;"></th>
+            ${headers}
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+function renderizarSimulador(porMes, mesesHist, projecoes, soSmooth) {
   const nHist   = mesesHist.length;
   const allLbls = [
     ...mesesHist.map(ch => { const [a,m] = ch.split('|'); return `${m.slice(0,3)}/${a}`; }),
@@ -6191,9 +6283,9 @@ function renderizarSimulador(porMes, mesesHist, projecoes) {
             if (ctx.parsed.y === null) return null;
             const val = `  ${ctx.dataset.label}: ${Math.round(ctx.parsed.y).toLocaleString('pt-BR')} un.`;
             if (ctx.dataset.label.startsWith('Estoque')) {
-              const so  = soData[ctx.dataIndex] || 0;
-              const cob = so > 0 ? Math.round(ctx.parsed.y * 30 / so) : null;
-              return cob !== null ? [val, `  Cobertura: ${cob} dias`] : val;
+              const soSm = soSmooth ? (soSmooth[ctx.dataIndex] || 0) : (soData[ctx.dataIndex] || 0);
+              const cob  = soSm > 0 ? Math.round(ctx.parsed.y * 30 / soSm) : null;
+              return cob !== null ? [val, `  Cobertura: ${cob} dias (SO méd. 3m)`] : val;
             }
             return val;
           },
