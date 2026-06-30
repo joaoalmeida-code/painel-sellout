@@ -1043,24 +1043,16 @@
   <!-- Card C: Análise Detalhada -->
 
 
-  <!-- Card D: Simulador de Estoque -->
+  <!-- Card D: Simulador de Vendas e Estoque por SKU -->
   <div class="card" id="area-previsao-simulador" style="display:none;">
-    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Simulador de Estoque — SKU × Cliente</div>
-    <div class="subtitulo">Preencha o sell-out previsto (un.) · Sell-in calculado automaticamente para manter a cobertura de estoque do mesmo período do ano anterior · Estoque = linha laranja (eixo direito)</div>
-    <div class="como-analisar">Preencha a coluna "Sell-out previsto" com sua estimativa de demanda para cada mês futuro. O sell-in projetado é calculado automaticamente para que o estoque mantenha a cobertura (em dias) de referência sazonal: média dos 3 meses vizinhos do ano anterior (ex.: Junho/2026 usa a média de Mai/2025 + Jun/2025 + Jul/2025). Quando não há dado do ano anterior, usa a média de todo o histórico disponível. Fórmula: Sell-in = Estoque_alvo_fim_mês − Estoque_início + Sell-out, onde Estoque_alvo = cobertura_alvo × Sell-out ÷ 30. Útil para negociação e planejamento de produção.</div>
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Simulador de Vendas e Estoque por SKU</div>
+    <div class="subtitulo">Selecione um SKU · Uma análise completa por cliente + totais consolidados · Sell-in calculado para manter cobertura sazonal de referência</div>
+    <div class="como-analisar">Preencha a coluna "Sell-out previsto" com sua estimativa de demanda para cada mês futuro. O sell-in projetado é calculado automaticamente para que o estoque mantenha a cobertura (em dias) de referência sazonal: média dos 3 meses vizinhos do ano anterior (ex.: Junho/2026 usa a média de Mai/2025 + Jun/2025 + Jul/2025). Quando não há dado do ano anterior, usa a média de todo o histórico disponível. Fórmula: Sell-in = Estoque_alvo_fim_mês − Estoque_início + Sell-out, onde Estoque_alvo = cobertura_alvo × Sell-out ÷ 30. Cada cliente tem sua análise independente; "Todos os Clientes" soma os dados reais e roda a mesma lógica sobre o total.</div>
     <div class="linha-filtro" style="margin-bottom:1rem;">
-      <label for="sel-combo-simul" style="white-space:nowrap;">Combinação SKU × Cliente:</label>
-      <select id="sel-combo-simul" onchange="carregarSimulador()" style="width:100%;max-width:700px;font-size:.76rem;"></select>
+      <label for="sel-sku-simul" style="white-space:nowrap;">SKU:</label>
+      <select id="sel-sku-simul" onchange="carregarSimulador()" style="width:100%;max-width:700px;font-size:.76rem;"></select>
     </div>
-    <div style="overflow-x:auto;margin-bottom:1.2rem;">
-      <div id="tabela-input-simul"></div>
-      <div id="tabela-proj-simul"></div>
-    </div>
-    <div id="tabela-hist-simul" style="margin-bottom:1.2rem;"></div>
-    <canvas id="grafico-simulador" style="min-height:520px;max-height:580px;"></canvas>
-    <div id="kpis-simul" style="margin-top:1rem;"></div>
-    <div id="tabela-cob-simul" style="margin-top:1.4rem;"></div>
-    <div id="info-simul" style="font-size:.82rem;color:#4a5568;line-height:1.9;margin-top:.75rem;"></div>
+    <div id="simulador-blocos"></div>
   </div>
 
 </main>
@@ -1156,8 +1148,7 @@ let graficoMargemMarca            = null;
 let graficoRankingMarcas          = null;
 let graficoEvolucaoSellInCliente  = null;
 let graficoEvolucaoSellInMarca    = null;
-let graficoSimulador              = null;
-let _simulDadosAtivos             = null;
+let _simulBlocosAtivos            = {};
 
 // ─── Leitura do arquivo ───────────────────────────────────────────────────────
 
@@ -5851,8 +5842,8 @@ function atualizarPrevisao() { carregarSimulador(); }
 
 // ─── SIMULADOR DE ESTOQUE ────────────────────────────────────────────────────
 
-function renderizarKPIsSimulador(porMes, mesesHist, projecoes) {
-  const el = document.getElementById('kpis-simul');
+function renderizarKPIsSimulador(porMes, mesesHist, projecoes, ns) {
+  const el = document.getElementById(`kpis-${ns}`);
   if (!el || !mesesHist.length) return;
 
   const ultimoMes = mesesHist[mesesHist.length - 1];
@@ -5948,7 +5939,7 @@ function cobCorSimul(dias) {
   return '#2b6cb0';                   // excesso
 }
 
-function renderizarTabelaProjecaoSimul(projecoes) {
+function renderizarTabelaProjecaoSimul(projecoes, ns) {
   const fmt = v => Math.round(v).toLocaleString('pt-BR');
 
   projecoes.forEach((p, k) => {
@@ -5956,23 +5947,23 @@ function renderizarTabelaProjecaoSimul(projecoes) {
     const cobAlvoR = Math.round(p.cobAlvo);
     const cobCor   = cobCorSimul(cobProj);
 
-    const soEl = document.getElementById(`simul-so-prev-${k}`);
+    const soEl = document.getElementById(`${ns}-so-prev-${k}`);
     if (soEl) soEl.textContent = fmt(p.soProj);
 
-    const siEl = document.getElementById(`simul-si-proj-${k}`);
+    const siEl = document.getElementById(`${ns}-si-proj-${k}`);
     if (siEl) siEl.textContent = p.siProj > 0 ? fmt(p.siProj) : '0';
 
-    const estEl = document.getElementById(`simul-est-fim-${k}`);
+    const estEl = document.getElementById(`${ns}-est-fim-${k}`);
     if (estEl) estEl.textContent = fmt(p.estFim);
 
-    const cobEl = document.getElementById(`simul-cob-r-${k}`);
+    const cobEl = document.getElementById(`${ns}-cob-r-${k}`);
     if (cobEl) { cobEl.textContent = cobProj > 0 ? cobProj + ' d' : '—'; cobEl.style.color = cobCor; }
 
-    const alvoEl = document.getElementById(`simul-cob-alvo-${k}`);
+    const alvoEl = document.getElementById(`${ns}-cob-alvo-${k}`);
     if (alvoEl) alvoEl.textContent = cobAlvoR + ' d';
   });
 
-  const el = document.getElementById('tabela-proj-simul');
+  const el = document.getElementById(`${ns}-proj-legenda`);
   if (el) el.innerHTML = `
     <div style="font-size:.7rem;color:#a0aec0;margin-top:.35rem;">
       Alvo: média sazonalizada (mês ant. + mês + mês seg. do ano anterior) ·
@@ -5984,19 +5975,19 @@ function renderizarTabelaProjecaoSimul(projecoes) {
     </div>`;
 }
 
-function atualizarHistSimulComProjecoes(soInputs, mesesFut) {
+function atualizarHistSimulComProjecoes(soInputs, mesesFut, ns) {
   mesesFut.forEach((m, k) => {
     const [ano, mes] = m.ch.split('|');
     const mesIdx = MESES_NOMES_ARR.indexOf(mes);
-    const cel = document.getElementById(`hist-cell-${ano}-${mesIdx}`);
+    const cel = document.getElementById(`${ns}-hist-${ano}-${mesIdx}`);
     if (!cel) return;
     const val = soInputs[k];
     cel.textContent = val > 0 ? Math.round(val).toLocaleString('pt-BR') : '—';
   });
 }
 
-function renderizarTabelaHistSimul(porMes, mesesHist, mesesFut) {
-  const tabEl = document.getElementById('tabela-hist-simul');
+function renderizarTabelaHistSimul(porMes, mesesHist, mesesFut, ns) {
+  const tabEl = document.getElementById(`tabela-hist-${ns}`);
   if (!tabEl) return;
 
   const ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -6031,7 +6022,7 @@ function renderizarTabelaHistSimul(porMes, mesesHist, mesesFut) {
       if (isFut)         extra = 'background:#ebf8ff;color:#2b6cb0;font-weight:600;';
       else if (!temDado) extra = 'color:#cbd5e0;';
       else               extra = 'color:#2d3748;font-weight:500;';
-      const id = isFut ? `id="hist-cell-${ano}-${i}"` : '';
+      const id = isFut ? `id="${ns}-hist-${ano}-${i}"` : '';
       return `<td ${id} style="${tdBase}${extra}">${display}</td>`;
     }).join('');
     return `<tr style="border-bottom:1px solid #f0f4f8;">
@@ -6058,116 +6049,45 @@ function renderizarTabelaHistSimul(porMes, mesesHist, mesesFut) {
 }
 
 function popularSeletorSimulador() {
-  const top10 = _top10SkuCliente();
-  const sel   = document.getElementById('sel-combo-simul');
+  const dados = filtrarDados();
+  const agr   = {};
+  dados.forEach(r => {
+    const sku = r['SKU'];
+    if (!sku) return;
+    agr[sku] = (agr[sku] || 0) + num(r['Quantidade Sell in']);
+  });
+  const skus = Object.keys(agr).filter(s => agr[s] > 0).sort((a, b) => agr[b] - agr[a]).slice(0, 60);
+  const sel  = document.getElementById('sel-sku-simul');
   if (!sel) return;
   const atual = sel.value;
-  sel.innerHTML = top10.map(t => {
-    const v   = `${t.sku}|||${t.cliente}`;
-    const lbl = `${t.sku} — ${t.cliente}`;
-    return `<option value="${v}">${lbl}</option>`;
-  }).join('');
+  sel.innerHTML = skus.map(s => `<option value="${s}">${s}</option>`).join('');
   if (atual && [...sel.options].some(o => o.value === atual)) sel.value = atual;
 }
 
-function carregarSimulador() {
-  const sel = document.getElementById('sel-combo-simul');
-  if (!sel?.value) return;
-  const [sku, cliente] = sel.value.split('|||');
+function _nsSimul(label) {
+  return 'sc' + label.replace(/[^a-zA-Z0-9]/g, '').toLowerCase().slice(0, 24);
+}
 
-  const linhas   = dadosGlobais.filter(r => r['SKU'] === sku && r['Cliente'] === cliente);
-  if (!linhas.length) return;
-  const categoria      = linhas[0]['Categoria'] || '';
-  const CATS_SAZONAIS  = ['Manteiga de cacau', 'Protetor Labial'];
+function toggleBlocoSimul(ns) {
+  const body = document.getElementById(`bloco-body-${ns}`);
+  const icon = document.getElementById(`bloco-icon-${ns}`);
+  if (!body) return;
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  if (icon) icon.textContent = isOpen ? '▼' : '▲';
+}
 
-  const todasCh = _todasChavesGlobais();
-  const porMes  = {};
-  linhas.forEach(r => {
-    const ch = `${r['Ano']}|${r['Mês']}`;
-    if (!porMes[ch]) porMes[ch] = { so: 0, si: 0, est: 0 };
-    porMes[ch].so += num(r['Quantidade Sell Out']);
-    porMes[ch].si += num(r['Quantidade Sell in']);
-    const e = num(r['Estoque CD + Loja (último dia do mês)']);
-    if (e > 0) porMes[ch].est = e;
-  });
-
-  const mesesHist = Object.keys(porMes)
-    .filter(ch => porMes[ch].so > 0 || porMes[ch].si > 0)
-    .sort((a, b) => {
-      const iA = todasCh.indexOf(a), iB = todasCh.indexOf(b);
-      return (iA === -1 ? 999 : iA) - (iB === -1 ? 999 : iB);
-    });
-
-  if (!mesesHist.length) return;
-
-  const ultimoMes = mesesHist[mesesHist.length - 1];
-
-  // Cobertura alvo: por mês projetado, usa o mesmo mês do ano anterior como referência sazonal.
-  // Fallback: média de todos os meses históricos com dado de estoque + sell-out.
-  const todosComDado = mesesHist.filter(ch => porMes[ch].so > 0 && porMes[ch].est > 0);
-  const cobFallback  = todosComDado.length > 0
-    ? todosComDado.reduce((s, ch) => s + (porMes[ch].est * 30 / porMes[ch].so), 0) / todosComDado.length
-    : 30;
-
-  // Próximos 6 meses
-  const mesesFut = Array.from({length: 6}, (_, k) => {
-    const ch = _mesAvancar(ultimoMes, k + 1);
-    const [ano, mes] = ch.split('|');
-    return { ch, rotulo: `${mes.slice(0,3)}/${ano}` };
-  });
-
-  // Cobertura alvo por mês: média dos 3 meses vizinhos no ano anterior
-  // Ex.: Junho/2026 → média de Mai/2025 + Jun/2025 + Jul/2025
-  const cobAlvoPerMes = mesesFut.map(m => {
-    const vizinhos = [-13, -12, -11].map(delta => _mesAvancar(m.ch, delta));
-    const comDado  = vizinhos.filter(ch => porMes[ch]?.so > 0 && porMes[ch]?.est > 0);
-    if (comDado.length > 0) {
-      return comDado.reduce((s, ch) => s + (porMes[ch].est * 30 / porMes[ch].so), 0) / comDado.length;
-    }
-    return cobFallback;
-  });
-
-  // Sell-out default = mesmo mês do ano anterior × taxa de crescimento YoY
-  // Taxa YoY = média das razões individuais dos meses com dado em ambos os anos
-  const mesesComPar = mesesHist.filter(ch => {
-    const chAnt = _mesAvancar(ch, -12);
-    return porMes[chAnt]?.so > 0 && porMes[ch].so > 0;
-  });
-  const taxaYoY = mesesComPar.length > 0
-    ? mesesComPar.reduce((s, ch) => s + porMes[ch].so / porMes[_mesAvancar(ch, -12)].so, 0) / mesesComPar.length
-    : 1.0;
-  const so3Avg    = mesesHist.slice(-3).reduce((s, ch) => s + porMes[ch].so, 0) / Math.max(mesesHist.slice(-3).length, 1);
-  const ehSazonal = CATS_SAZONAIS.includes(categoria);
-
-  // Tendência linear sobre últimos 6 meses (para não-sazonais e fallback)
-  const ult6       = mesesHist.slice(-6);
-  const { a: tA, b: tB } = _regressaoLinear(ult6.map(ch => porMes[ch].so));
-  const baseRegIdx = ult6.length - 1;
-
-  // Premissas: cenário climático e variação de preço
-  const premissas  = _premissasAtuais();
-  const fatorPreco = 1 + (premissas.variacaoPreco / 100) * (-0.4);
-
-  const defaultSO = mesesFut.map((m, k) => {
-    const [, mesFut] = m.ch.split('|');
-    const fatorClima = ehSazonal ? _fatorClima(premissas.cenarioClimatico, mesFut, categoria) : 1.0;
-    let base;
-    if (ehSazonal) {
-      const chAnt = _mesAvancar(m.ch, -12);
-      base = porMes[chAnt]?.so > 0 ? porMes[chAnt].so * taxaYoY : tA + tB * (baseRegIdx + k + 1);
-    } else {
-      base = tA + tB * (baseRegIdx + k + 1);
-    }
-    return Math.round(Math.max(0, base * fatorClima * fatorPreco));
-  });
-
-  // Tabela combinada: inputs à esquerda, projeções à direita (mesma tabela = linhas alinhadas)
+function _blocoSimulHTML(ns, label, mesesFut, defaultSO, cobAlvoPerMes) {
+  const isAll      = ns === 'scall';
+  const hdrBg      = isAll ? '#f0fff4' : '#f7fafc';
+  const hdrBorder  = isAll ? '2px solid #276749' : '1px solid #e2e8f0';
+  const labelColor = isAll ? '#276749' : '#2d3748';
   const inputStyle = 'text-align:right;border:1px solid #e2e8f0;border-radius:4px;padding:.2rem .4rem;font-size:.83rem;';
   const thBase = 'padding:.4rem .8rem;font-size:.74rem;font-weight:600;border-bottom:2px solid #e2e8f0;white-space:nowrap;text-align:right;';
   const tdBase = 'padding:.35rem .8rem;border-bottom:1px solid #f0f4f8;';
-  const tabEl = document.getElementById('tabela-input-simul');
-  if (tabEl) {
-    tabEl.innerHTML = `
+
+  const tabela = `
+    <div style="overflow-x:auto;margin-bottom:1.2rem;">
       <table style="border-collapse:collapse;font-size:.82rem;">
         <thead><tr>
           <th style="${thBase}text-align:left;padding-left:.1rem;color:#718096;">Mês</th>
@@ -6183,53 +6103,209 @@ function carregarSimulador() {
           <tr style="border-bottom:1px solid #f0f4f8;">
             <td style="${tdBase}padding-left:.1rem;font-weight:600;color:#2d3748;white-space:nowrap;">${m.rotulo}</td>
             <td style="${tdBase}text-align:right;">
-              <input type="number" id="simul-so-${k}" value="${defaultSO[k]}"
-                min="0" step="100" style="width:90px;${inputStyle}" oninput="recalcularSimulador()">
+              <input type="number" id="${ns}-so-${k}" value="${defaultSO[k]}"
+                min="0" step="100" style="width:90px;${inputStyle}" oninput="recalcularSimulador('${ns}')">
             </td>
             <td style="${tdBase}text-align:right;">
-              <input type="number" id="simul-cob-${k}" value="${Math.round(cobAlvoPerMes[k])}"
-                min="1" step="10" style="width:70px;${inputStyle}" oninput="recalcularSimulador()">
+              <input type="number" id="${ns}-cob-${k}" value="${Math.round(cobAlvoPerMes[k])}"
+                min="1" step="10" style="width:70px;${inputStyle}" oninput="recalcularSimulador('${ns}')">
             </td>
-            <td id="simul-so-prev-${k}" style="${tdBase}text-align:right;color:#2d3748;border-left:2px solid #edf2f7;">—</td>
-            <td id="simul-si-proj-${k}" style="${tdBase}text-align:right;font-weight:700;color:#276749;">—</td>
-            <td id="simul-est-fim-${k}" style="${tdBase}text-align:right;color:#2d3748;">—</td>
-            <td id="simul-cob-r-${k}" style="${tdBase}text-align:right;font-weight:700;">—</td>
-            <td id="simul-cob-alvo-${k}" style="${tdBase}text-align:right;font-size:.78rem;color:#a0aec0;">—</td>
+            <td id="${ns}-so-prev-${k}" style="${tdBase}text-align:right;color:#2d3748;border-left:2px solid #edf2f7;">—</td>
+            <td id="${ns}-si-proj-${k}" style="${tdBase}text-align:right;font-weight:700;color:#276749;">—</td>
+            <td id="${ns}-est-fim-${k}" style="${tdBase}text-align:right;color:#2d3748;">—</td>
+            <td id="${ns}-cob-r-${k}" style="${tdBase}text-align:right;font-weight:700;">—</td>
+            <td id="${ns}-cob-alvo-${k}" style="${tdBase}text-align:right;font-size:.78rem;color:#a0aec0;">—</td>
           </tr>`).join('')}
         </tbody>
-      </table>`;
-  }
+      </table>
+      <div id="${ns}-proj-legenda"></div>
+    </div>`;
 
-  // Info box
-  const infoEl = document.getElementById('info-simul');
-  if (infoEl) {
-    const cobMedUsada = Math.round(cobAlvoPerMes.reduce((s, v) => s + v, 0) / cobAlvoPerMes.length);
-    const usouAnterior = mesesFut.some(m => {
-      const chSazon = _mesAvancar(m.ch, -12);
-      return porMes[chSazon]?.so > 0 && porMes[chSazon]?.est > 0;
-    });
-    infoEl.innerHTML = `
-      <strong>Cobertura alvo:</strong> por mês (média ${cobMedUsada} dias)<br>
-      <span style="color:#a0aec0;font-size:.75rem;">${usouAnterior ? 'ref. mês ant. + mês + mês seg. do ano anterior' : 'ref. média histórica (sem dado do ano ant.)'}</span><br>
-      <strong>Estoque atual:</strong> ${(porMes[ultimoMes].est||0).toLocaleString('pt-BR')} un.<br>
-      <strong>Último mês hist.:</strong> ${ultimoMes.split('|')[1].slice(0,3)}/${ultimoMes.split('|')[0]}`;
-  }
-
-  _simulDadosAtivos = { porMes, mesesHist, ultimoMes, cobAlvoPerMes, cobFallback, mesesFut };
-  renderizarTabelaHistSimul(porMes, mesesHist, mesesFut);
-  recalcularSimulador();
+  return `
+    <div id="bloco-${ns}" style="border:${hdrBorder};border-radius:8px;margin-bottom:.75rem;overflow:hidden;">
+      <div onclick="toggleBlocoSimul('${ns}')"
+           style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;background:${hdrBg};padding:.6rem 1rem;user-select:none;">
+        <span style="font-weight:700;color:${labelColor};font-size:.92rem;">${label}</span>
+        <span id="bloco-icon-${ns}" style="color:#718096;font-size:.85rem;">▲</span>
+      </div>
+      <div id="bloco-body-${ns}" style="padding:1rem 1.2rem;">
+        ${tabela}
+        <div id="tabela-hist-${ns}" style="margin-bottom:1.2rem;"></div>
+        <canvas id="canvas-${ns}" style="min-height:420px;max-height:480px;"></canvas>
+        <div id="kpis-${ns}" style="margin-top:1rem;"></div>
+        <div id="tabela-cob-${ns}" style="margin-top:1.4rem;"></div>
+        <div id="info-${ns}" style="font-size:.82rem;color:#4a5568;line-height:1.9;margin-top:.75rem;"></div>
+      </div>
+    </div>`;
 }
 
-function recalcularSimulador() {
-  if (!_simulDadosAtivos) return;
-  const { porMes, mesesHist, ultimoMes, cobAlvoPerMes, mesesFut } = _simulDadosAtivos;
+function carregarSimulador() {
+  const sel = document.getElementById('sel-sku-simul');
+  if (!sel?.value) return;
+  const sku = sel.value;
+
+  const linhasSKU = dadosGlobais.filter(r => r['SKU'] === sku);
+  if (!linhasSKU.length) return;
+
+  const categoria     = linhasSKU[0]['Categoria'] || '';
+  const CATS_SAZONAIS = ['Manteiga de cacau', 'Protetor Labial'];
+  const ehSazonal     = CATS_SAZONAIS.includes(categoria);
+  const premissas     = _premissasAtuais();
+  const fatorPreco    = 1 + (premissas.variacaoPreco / 100) * (-0.4);
+  const todasCh       = _todasChavesGlobais();
+
+  // Destruir gráficos anteriores
+  Object.values(_simulBlocosAtivos).forEach(b => { if (b.grafico) b.grafico.destroy(); });
+  _simulBlocosAtivos = {};
+
+  const clientes = [...new Set(linhasSKU.map(r => r['Cliente']).filter(Boolean))].sort();
+
+  function ordenarMeses(pm) {
+    return Object.keys(pm)
+      .filter(ch => pm[ch].so > 0 || pm[ch].si > 0)
+      .sort((a, b) => {
+        const iA = todasCh.indexOf(a), iB = todasCh.indexOf(b);
+        return (iA === -1 ? 999 : iA) - (iB === -1 ? 999 : iB);
+      });
+  }
+
+  function calcCobAlvo(pm, mesesFut, cobFallback) {
+    return mesesFut.map(m => {
+      const vizinhos = [-13, -12, -11].map(d => _mesAvancar(m.ch, d));
+      const comDado  = vizinhos.filter(ch => pm[ch]?.so > 0 && pm[ch]?.est > 0);
+      if (comDado.length > 0)
+        return comDado.reduce((s, ch) => s + pm[ch].est * 30 / pm[ch].so, 0) / comDado.length;
+      return cobFallback;
+    });
+  }
+
+  function calcDefaultSO(pm, mesesHist, mesesFut) {
+    const mesesComPar = mesesHist.filter(ch => {
+      const chAnt = _mesAvancar(ch, -12);
+      return pm[chAnt]?.so > 0 && pm[ch].so > 0;
+    });
+    const taxaYoY = mesesComPar.length > 0
+      ? mesesComPar.reduce((s, ch) => s + pm[ch].so / pm[_mesAvancar(ch, -12)].so, 0) / mesesComPar.length
+      : 1.0;
+    const ult6 = mesesHist.slice(-6);
+    const { a: tA, b: tB } = _regressaoLinear(ult6.map(ch => pm[ch].so));
+    const baseRegIdx = ult6.length - 1;
+    return mesesFut.map((m, k) => {
+      const [, mesFut] = m.ch.split('|');
+      const fatorClima = ehSazonal ? _fatorClima(premissas.cenarioClimatico, mesFut, categoria) : 1.0;
+      let base;
+      if (ehSazonal) {
+        const chAnt = _mesAvancar(m.ch, -12);
+        base = pm[chAnt]?.so > 0 ? pm[chAnt].so * taxaYoY : tA + tB * (baseRegIdx + k + 1);
+      } else {
+        base = tA + tB * (baseRegIdx + k + 1);
+      }
+      return Math.round(Math.max(0, base * fatorClima * fatorPreco));
+    });
+  }
+
+  function makeMesesFut(ultimoMes) {
+    return Array.from({length: 6}, (_, k) => {
+      const ch = _mesAvancar(ultimoMes, k + 1);
+      const [ano, mes] = ch.split('|');
+      return { ch, rotulo: `${mes.slice(0,3)}/${ano}` };
+    });
+  }
+
+  // Construir porMes por cliente
+  const porMesPorCli = {};
+  clientes.forEach(cli => {
+    const pm = {};
+    linhasSKU.filter(r => r['Cliente'] === cli).forEach(r => {
+      const ch = `${r['Ano']}|${r['Mês']}`;
+      if (!pm[ch]) pm[ch] = { so: 0, si: 0, est: 0 };
+      pm[ch].so += num(r['Quantidade Sell Out']);
+      pm[ch].si += num(r['Quantidade Sell in']);
+      const e = num(r['Estoque CD + Loja (último dia do mês)']);
+      if (e > 0) pm[ch].est = e;
+    });
+    porMesPorCli[cli] = pm;
+  });
+
+  // Aggregate = soma de todos os clientes
+  const porMesAll = {};
+  Object.values(porMesPorCli).forEach(pm => {
+    Object.entries(pm).forEach(([ch, v]) => {
+      if (!porMesAll[ch]) porMesAll[ch] = { so: 0, si: 0, est: 0 };
+      porMesAll[ch].so  += v.so;
+      porMesAll[ch].si  += v.si;
+      porMesAll[ch].est += v.est;
+    });
+  });
+
+  let htmlTudo = '';
+  const nsList = [];
+
+  clientes.forEach(cli => {
+    const pm        = porMesPorCli[cli];
+    const mesesHist = ordenarMeses(pm);
+    if (!mesesHist.length) return;
+    const ultimoMes      = mesesHist[mesesHist.length - 1];
+    const todosComDado   = mesesHist.filter(ch => pm[ch].so > 0 && pm[ch].est > 0);
+    const cobFallback    = todosComDado.length > 0
+      ? todosComDado.reduce((s, ch) => s + pm[ch].est * 30 / pm[ch].so, 0) / todosComDado.length : 30;
+    const mesesFut       = makeMesesFut(ultimoMes);
+    const cobAlvoPerMes  = calcCobAlvo(pm, mesesFut, cobFallback);
+    const defaultSO      = calcDefaultSO(pm, mesesHist, mesesFut);
+    const ns             = _nsSimul(cli);
+    _simulBlocosAtivos[ns] = { porMes: pm, mesesHist, ultimoMes, cobAlvoPerMes, cobFallback, mesesFut, grafico: null };
+    htmlTudo += _blocoSimulHTML(ns, cli, mesesFut, defaultSO, cobAlvoPerMes);
+    nsList.push(ns);
+  });
+
+  // Bloco aggregate no final
+  const mesesHistAll = ordenarMeses(porMesAll);
+  if (mesesHistAll.length) {
+    const ultimoMesAll     = mesesHistAll[mesesHistAll.length - 1];
+    const todosComDadoAll  = mesesHistAll.filter(ch => porMesAll[ch].so > 0 && porMesAll[ch].est > 0);
+    const cobFallbackAll   = todosComDadoAll.length > 0
+      ? todosComDadoAll.reduce((s, ch) => s + porMesAll[ch].est * 30 / porMesAll[ch].so, 0) / todosComDadoAll.length : 30;
+    const mesesFutAll      = makeMesesFut(ultimoMesAll);
+    const cobAlvoPerMesAll = calcCobAlvo(porMesAll, mesesFutAll, cobFallbackAll);
+    const defaultSOAll     = calcDefaultSO(porMesAll, mesesHistAll, mesesFutAll);
+    const nsAll            = 'scall';
+    _simulBlocosAtivos[nsAll] = { porMes: porMesAll, mesesHist: mesesHistAll, ultimoMes: ultimoMesAll, cobAlvoPerMes: cobAlvoPerMesAll, cobFallback: cobFallbackAll, mesesFut: mesesFutAll, grafico: null };
+    htmlTudo += _blocoSimulHTML(nsAll, 'Todos os Clientes', mesesFutAll, defaultSOAll, cobAlvoPerMesAll);
+    nsList.push(nsAll);
+  }
+
+  const container = document.getElementById('simulador-blocos');
+  if (container) container.innerHTML = htmlTudo;
+
+  nsList.forEach(ns => {
+    const b = _simulBlocosAtivos[ns];
+    renderizarTabelaHistSimul(b.porMes, b.mesesHist, b.mesesFut, ns);
+    recalcularSimulador(ns);
+    const infoEl = document.getElementById(`info-${ns}`);
+    if (infoEl) {
+      const cobMed = Math.round(b.cobAlvoPerMes.reduce((s, v) => s + v, 0) / b.cobAlvoPerMes.length);
+      const usouAnt = b.mesesFut.some(m => {
+        const chS = _mesAvancar(m.ch, -12);
+        return b.porMes[chS]?.so > 0 && b.porMes[chS]?.est > 0;
+      });
+      infoEl.innerHTML = `
+        <strong>Cobertura alvo:</strong> por mês (média ${cobMed} dias)<br>
+        <span style="color:#a0aec0;font-size:.75rem;">${usouAnt ? 'ref. mês ant. + mês + mês seg. do ano anterior' : 'ref. média histórica (sem dado do ano ant.)'}</span><br>
+        <strong>Estoque atual:</strong> ${(b.porMes[b.ultimoMes].est||0).toLocaleString('pt-BR')} un.<br>
+        <strong>Último mês hist.:</strong> ${b.ultimoMes.split('|')[1].slice(0,3)}/${b.ultimoMes.split('|')[0]}`;
+    }
+  });
+}
+
+function recalcularSimulador(ns) {
+  const b = _simulBlocosAtivos[ns];
+  if (!b) return;
+  const { porMes, mesesHist, ultimoMes, cobAlvoPerMes, mesesFut } = b;
 
   const soInputs = mesesFut.map((_, k) =>
-    Math.max(0, parseFloat(document.getElementById(`simul-so-${k}`)?.value) || 0)
+    Math.max(0, parseFloat(document.getElementById(`${ns}-so-${k}`)?.value) || 0)
   );
 
-  // SO suavizado: média de (prev, curr, next) para estabilizar cobertura exibida
-  // Sequência completa: histórico + projetado
   const soHistArr = mesesHist.map(ch => porMes[ch].so);
   const soAll     = [...soHistArr, ...soInputs];
   const nHist     = soHistArr.length;
@@ -6241,26 +6317,26 @@ function recalcularSimulador() {
   let estAnt = porMes[ultimoMes].est || 0;
   const projecoes = mesesFut.map((m, k) => {
     const soProj   = soInputs[k];
-    const cobInput = parseFloat(document.getElementById(`simul-cob-${k}`)?.value);
+    const cobInput = parseFloat(document.getElementById(`${ns}-cob-${k}`)?.value);
     const cob      = cobInput > 0 ? cobInput : (cobAlvoPerMes[k] > 0 ? cobAlvoPerMes[k] : 30);
     const estAlvo  = cob * soProj / 30;
     const siProj   = Math.max(0, estAlvo - estAnt + soProj);
     const estFim   = Math.max(0, estAnt + siProj - soProj);
     estAnt = estFim;
-    const soSm       = soSmooth[nHist + k] || soProj;
-    const cobResult  = soSm > 0 ? estFim * 30 / soSm : 0;
+    const soSm      = soSmooth[nHist + k] || soProj;
+    const cobResult = soSm > 0 ? estFim * 30 / soSm : 0;
     return { ...m, soProj, siProj, estFim, cobAlvo: cob, cobResult };
   });
 
-  renderizarKPIsSimulador(porMes, mesesHist, projecoes);
-  renderizarTabelaProjecaoSimul(projecoes);
-  atualizarHistSimulComProjecoes(soInputs, mesesFut);
-  renderizarTabelaCoberturaSimul(porMes, mesesHist, projecoes, soSmooth);
-  renderizarSimulador(porMes, mesesHist, projecoes, soSmooth);
+  renderizarKPIsSimulador(porMes, mesesHist, projecoes, ns);
+  renderizarTabelaProjecaoSimul(projecoes, ns);
+  atualizarHistSimulComProjecoes(soInputs, mesesFut, ns);
+  renderizarTabelaCoberturaSimul(porMes, mesesHist, projecoes, soSmooth, ns);
+  renderizarSimulador(porMes, mesesHist, projecoes, soSmooth, ns);
 }
 
-function renderizarTabelaCoberturaSimul(porMes, mesesHist, projecoes, soSmooth) {
-  const tabEl = document.getElementById('tabela-cob-simul');
+function renderizarTabelaCoberturaSimul(porMes, mesesHist, projecoes, soSmooth, ns) {
+  const tabEl = document.getElementById(`tabela-cob-${ns}`);
   if (!tabEl) return;
 
   const ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -6338,7 +6414,7 @@ function renderizarTabelaCoberturaSimul(porMes, mesesHist, projecoes, soSmooth) 
     </div>`;
 }
 
-function renderizarSimulador(porMes, mesesHist, projecoes, soSmooth) {
+function renderizarSimulador(porMes, mesesHist, projecoes, soSmooth, ns) {
   const nHist   = mesesHist.length;
   const allLbls = [
     ...mesesHist.map(ch => { const [a,m] = ch.split('|'); return `${m.slice(0,3)}/${a}`; }),
@@ -6382,8 +6458,9 @@ function renderizarSimulador(porMes, mesesHist, projecoes, soSmooth) {
     },
   };
 
-  if (graficoSimulador) graficoSimulador.destroy();
-  graficoSimulador = new Chart(document.getElementById('grafico-simulador'), {
+  const b = _simulBlocosAtivos[ns];
+  if (b?.grafico) b.grafico.destroy();
+  const chart = new Chart(document.getElementById(`canvas-${ns}`), {
     type: 'bar',
     data: { labels: allLbls, datasets },
     options: {
@@ -6417,6 +6494,7 @@ function renderizarSimulador(porMes, mesesHist, projecoes, soSmooth) {
     },
     plugins: [sepPlugin],
   });
+  if (b) b.grafico = chart;
 }
 </script>
 
