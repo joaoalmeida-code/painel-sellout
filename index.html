@@ -345,10 +345,11 @@
     .tabela-ranking tr:last-child td { border-bottom: none; }
 
     /* ---- Heatmap de preços ---- */
-    .heatmap-preco { border-collapse: collapse; font-size: .75rem; width: 100%; }
+    .heatmap-preco { border-collapse: collapse; font-size: .75rem; }
     .heatmap-preco th { background: #edf2f7; padding: .35rem .55rem; font-weight: 600; color: #2d3748;
       border: 1px solid #e2e8f0; white-space: nowrap; text-align: center; }
-    .heatmap-preco th:first-child { text-align: left; min-width: 140px; }
+    .heatmap-preco th:first-child { text-align: left; min-width: 260px; max-width: 320px;
+      white-space: normal; word-break: break-word; }
     .heatmap-preco td { padding: .3rem .5rem; border: 1px solid #e2e8f0; white-space: nowrap; }
     .tabela-ranking tr:hover td { background: #f7fafc; }
 
@@ -636,18 +637,22 @@
 
   <!-- Comparação Margem Bravir × Margem Cliente -->
   <div class="card" id="area-margem-comp" style="display:none;">
-    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.4rem;">Margem Bravir × Margem Cliente por Cliente</div>
-    <div class="subtitulo">Comparação das margens % ponderadas pelo faturamento sell-out · Verde = Bravir · Azul = Cliente</div>
-    <div class="como-analisar">Compara o que cada "lado" ganha na transação. Se a margem do varejista for sistematicamente maior que a da Bravir, o canal está extraindo mais valor da cadeia do que o fabricante — pode indicar que o preço de sell-in está abaixo do adequado ou que o consumidor aceita pagar mais pelo produto do que a Bravir está cobrando do varejista. O equilíbrio ideal depende da estratégia de canal, but uma inversão acentuada merece revisão comercial.</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;margin-bottom:.4rem;">
+      <div style="font-size:.95rem;font-weight:600;color:#2d3748;">Margem Bravir × Margem Cliente por Cliente</div>
+      <div style="display:flex;gap:.4rem;">
+        <button id="btn-ord-margem-bravir" onclick="ordenarMargemComp('bravir')"
+          style="font-size:.75rem;padding:.25rem .65rem;border-radius:4px;border:1px solid #276749;background:#f0fff4;color:#276749;cursor:pointer;font-weight:600;">
+          ↓ Margem Bravir
+        </button>
+        <button id="btn-ord-margem-cliente" onclick="ordenarMargemComp('cliente')"
+          style="font-size:.75rem;padding:.25rem .65rem;border-radius:4px;border:1px solid #2b6cb0;background:#ebf8ff;color:#2b6cb0;cursor:pointer;opacity:.45;">
+          ↓ Margem Cliente
+        </button>
+      </div>
+    </div>
+    <div class="subtitulo">Comparação das margens % ponderadas pelo faturamento · Verde = Bravir (sell-in) · Azul = Cliente (sell-out)</div>
+    <div class="como-analisar">Compara o que cada "lado" ganha na transação. Se a margem do varejista for sistematicamente maior que a da Bravir, o canal está extraindo mais valor da cadeia do que o fabricante — pode indicar que o preço de sell-in está abaixo do adequado ou que o consumidor aceita pagar mais pelo produto do que a Bravir está cobrando do varejista. O equilíbrio ideal depende da estratégia de canal, mas uma inversão acentuada merece revisão comercial.</div>
     <canvas id="grafico-margem-comp" style="max-height:360px;"></canvas>
-  </div>
-
-  <!-- Margem Cliente % por Cliente -->
-  <div class="card" id="area-margem" style="display:none;">
-    <div id="titulo-margem" style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Margem Cliente % por Cliente</div>
-    <div class="subtitulo">Margem % que o varejista pratica sobre os produtos da Bravir · (Preço sell-out − Preço sell-in) ÷ Preço sell-in</div>
-    <div class="como-analisar">Mostra o quanto cada varejista ganha ao revender os produtos da Bravir. Margens muito altas podem indicar que o produto está precificado acima do ideal ao consumidor, reduzindo competitividade frente a concorrentes. Margens muito baixas podem sinalizar pressão promocional excessiva — o varejista pode estar vendendo com desconto frequente, o que pode deteriorar a percepção de valor da marca a longo prazo.</div>
-    <canvas id="grafico-margem" style="max-height:340px;"></canvas>
   </div>
 
   <!-- ═══ SEÇÃO 3 — MARCAS ═══ -->
@@ -871,12 +876,27 @@
     <div id="heatmap-markup-container" style="overflow-x:auto;margin-top:.75rem;"></div>
   </div>
 
-  <!-- Heatmap Preço SKU × Cliente -->
-  <div class="card" id="area-heatmap-preco" style="display:none;">
-    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Mapa de Preços — Top SKUs × Clientes</div>
-    <div class="subtitulo">Preço sell-out médio ponderado · Azul mais escuro = preço mais alto · Cores relativas por linha (SKU) · Top 15 SKUs por faturamento</div>
-    <div class="como-analisar">Este mapa mostra como cada varejista precifica cada produto. As cores são relativas dentro de cada linha (produto): um azul escuro significa que aquele varejista cobra mais do que os demais pelo mesmo SKU. Use para identificar inconsistências de canal — um cliente que vende muito mais barato pode estar atraindo volume às custas de outros canais, o que pode gerar conflito entre redes. Também ajuda a identificar onde há espaço para reajuste de preço ao consumidor sem perda de competitividade.</div>
-    <div id="heatmap-preco-container" style="margin-top:.75rem;overflow-x:auto;"></div>
+  <!-- Radar de Precificação -->
+  <div class="card" id="area-radar-precificacao" style="display:none;">
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Radar de Precificação — Desvio vs Mercado</div>
+    <div class="subtitulo">Preço sell-out por SKU × Cliente · Desvio em relação à média ponderada de mercado · Top 15 SKUs por faturamento</div>
+    <div class="como-analisar">Este radar mostra se cada varejista está acima ou abaixo da média de mercado para cada produto. Células vermelhas (desvio &gt; +25%) indicam que o varejista cobra muito mais do que a média — risco de perda de competitividade na gôndola. Células azuis (desvio &lt; −25%) indicam preço muito abaixo — possível oportunidade de reajuste para capturar mais margem. A faixa verde (±10%) é considerada saudável. Use em conjunto com o card de Oportunidade de Repricing para priorizar ações.</div>
+    <div id="radar-precificacao-container" style="overflow-x:auto;margin-top:.75rem;"></div>
+    <div style="margin-top:.75rem;display:flex;gap:1rem;flex-wrap:wrap;font-size:.78rem;">
+      <span style="display:flex;align-items:center;gap:.3rem;"><span style="width:14px;height:14px;border-radius:3px;background:rgba(72,187,120,0.7);display:inline-block;"></span>±10% (OK)</span>
+      <span style="display:flex;align-items:center;gap:.3rem;"><span style="width:14px;height:14px;border-radius:3px;background:rgba(237,137,54,0.7);display:inline-block;"></span>▲ +10% a +25% (acima)</span>
+      <span style="display:flex;align-items:center;gap:.3rem;"><span style="width:14px;height:14px;border-radius:3px;background:rgba(229,62,62,0.8);display:inline-block;"></span>▲ Acima +25% (muito caro)</span>
+      <span style="display:flex;align-items:center;gap:.3rem;"><span style="width:14px;height:14px;border-radius:3px;background:rgba(99,179,237,0.65);display:inline-block;"></span>▼ −10% a −25% (abaixo)</span>
+      <span style="display:flex;align-items:center;gap:.3rem;"><span style="width:14px;height:14px;border-radius:3px;background:rgba(49,130,206,0.8);display:inline-block;"></span>▼ Abaixo −25% (muito barato)</span>
+    </div>
+  </div>
+
+  <!-- Oportunidade de Repricing -->
+  <div class="card" id="area-oportunidade-repricing" style="display:none;">
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Oportunidade de Repricing — Impacto Estimado</div>
+    <div class="subtitulo">Estimativa a preços de venda ao consumidor · Elasticidade −0,4 · Os resultados acompanham os filtros ativos — filtrar por um único cliente mostrará apenas os dados desse canal</div>
+    <div class="como-analisar">Quantifica o impacto financeiro estimado das discrepâncias de preço identificadas no Radar de Precificação. A seção "acima da média" mostra onde preços elevados podem estar reduzindo volume (perda estimada com elasticidade −0,4). A seção "abaixo da média" mostra onde há espaço para reajuste de preço capturando ganho de receita. Use como ponto de partida para negociações comerciais — os números são estimativas e devem ser validados com análise de campo.</div>
+    <div id="oportunidade-repricing-container" style="margin-top:.75rem;"></div>
   </div>
 
   <!-- Ranking variação de preço -->
@@ -950,22 +970,6 @@
       <div id="container-cli-estoque-linha" style="display:flex;flex-wrap:wrap;gap:.4rem .9rem;"></div>
     </div>
     <canvas id="grafico-estoque" style="max-height:340px;"></canvas>
-  </div>
-
-  <!-- Estoque por PDV -->
-  <div class="card" id="area-estoque-pdv" style="display:none;">
-    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Estoque por PDV</div>
-    <div class="subtitulo">Unidades em estoque (CD + Loja) ÷ número de PDVs do cliente · Seleção de clientes também controla o gráfico de Cobertura abaixo</div>
-    <div class="como-analisar">Normaliza o estoque pelo número de lojas do varejista, permitindo comparar clientes de tamanhos muito diferentes em igualdade de condições. Um varejista com 500 lojas e 10.000 unidades em estoque tem apenas 20 unidades por PDV — pode ser insuficiente dependendo do giro. Use esta métrica para identificar quais clientes precisam de reposição prioritária, independentemente do tamanho da rede.</div>
-    <div style="margin:.6rem 0 1rem;">
-      <div style="font-size:.78rem;color:#718096;margin-bottom:.4rem;">
-        Clientes exibidos —
-        <a href="#" style="color:#2b6cb0;text-decoration:none;" onclick="event.preventDefault();selecionarTodosEstoque(true)">todos</a> ·
-        <a href="#" style="color:#2b6cb0;text-decoration:none;" onclick="event.preventDefault();selecionarTodosEstoque(false)">nenhum</a>
-      </div>
-      <div id="container-cli-estoque" style="display:flex;flex-wrap:wrap;gap:.4rem .9rem;"></div>
-    </div>
-    <canvas id="grafico-estoque-pdv" style="max-height:360px;"></canvas>
   </div>
 
   <!-- Cobertura de Estoque -->
@@ -1048,7 +1052,7 @@
       <label for="sel-combo-simul" style="white-space:nowrap;">Combinação SKU × Cliente:</label>
       <select id="sel-combo-simul" onchange="carregarSimulador()" style="width:100%;max-width:700px;font-size:.76rem;"></select>
     </div>
-    <div style="display:flex;gap:2rem;align-items:flex-start;flex-wrap:wrap;margin-bottom:1.2rem;">
+    <div style="overflow-x:auto;margin-bottom:1.2rem;">
       <div id="tabela-input-simul"></div>
       <div id="tabela-proj-simul"></div>
     </div>
@@ -1128,7 +1132,7 @@ let graficoEvolucaoCat = null;
 let graficoTopSKUs     = null;
 let graficoSellInOut   = null;
 let graficoEvolucaoQtd = null;
-let graficoMargem      = null;
+
 let graficoVendaPDV    = null;
 let graficoEstoque        = null;
 let graficoTop5Evolucao   = null;
@@ -1136,7 +1140,6 @@ let graficoElasticidade   = null;
 let graficoTemperatura    = null;
 let filtroMarca = ''; // controlado pelos botões Bravir / Terceiros
 let graficoEvolucaoMargem      = null;
-let graficoEstoquePDV          = null;
 let graficoCobertura           = null;
 let graficoPrecoCategoria      = null;
 let graficoPrecoCliente        = null;
@@ -1214,7 +1217,6 @@ document.getElementById('input-arquivo').addEventListener('change', function (e)
       document.getElementById('area-evolucao-sellin-marca').style.display    = 'block';
       document.getElementById('area-venda-pdv').style.display                = 'block';
       document.getElementById('area-margem-comp').style.display         = 'block';
-      document.getElementById('area-margem').style.display              = 'block';
 
       // Seção 3 — Marcas
       document.getElementById('sec-marcas').style.display               = 'block';
@@ -1243,7 +1245,8 @@ document.getElementById('input-arquivo').addEventListener('change', function (e)
       document.getElementById('area-preco-cliente').style.display       = 'block';
       document.getElementById('area-evolucao-preco').style.display           = 'block';
       document.getElementById('area-markup-cliente').style.display           = 'block';
-      document.getElementById('area-heatmap-preco').style.display            = 'block';
+      document.getElementById('area-radar-precificacao').style.display       = 'block';
+      document.getElementById('area-oportunidade-repricing').style.display   = 'block';
       document.getElementById('area-ranking-variacao-preco').style.display   = 'block';
       document.getElementById('area-scatter-preco-pdv').style.display        = 'block';
       document.getElementById('area-elasticidade').style.display             = 'block';
@@ -1251,7 +1254,6 @@ document.getElementById('input-arquivo').addEventListener('change', function (e)
       // Seção 7 — Estoque
       document.getElementById('sec-estoque').style.display              = 'block';
       document.getElementById('area-estoque').style.display             = 'block';
-      document.getElementById('area-estoque-pdv').style.display         = 'block';
       document.getElementById('area-cobertura').style.display           = 'block';
 
       // Seção 8 — Análises Específicas
@@ -1566,14 +1568,12 @@ function atualizarGrafico() {
   renderizarEvolucaoQtd();
   renderizarEvolucaoSellInCliente();
   renderizarEvolucaoSellInMarca();
-  renderizarMargem(dados);
   renderizarMargemComparativa(dados);
   renderizarMargemBravirPorCategoria(dados);
   renderizarTabelasMargemBravir(dados);
   renderizarVendaPorPDV(dados);
   renderizarScatterMargemBravir(dados);
   renderizarEstoque();
-  renderizarEstoquePDV();
   renderizarCobertura();
   popularSKUs();
   renderizarElasticidade();
@@ -1583,7 +1583,8 @@ function atualizarGrafico() {
   renderizarPrecoCliente();
   renderizarEvolucaoPreco();
   renderizarMarkupCliente();
-  renderizarHeatmapPreco();
+  renderizarRadarPrecificacao();
+  renderizarOportunidadeRepricing();
   renderizarRankingVariacaoPreco();
   popularScatterPrecoPDV();
   renderizarScatterPrecoPDV();
@@ -1594,6 +1595,7 @@ function atualizarGrafico() {
   renderizarRankingMarcas();
   popularSeletorSimulador();
   carregarSimulador();
+  ocultarCardsIrrelevantes();
 
   // Destroi gráfico anterior para não acumular
   if (graficoAtual) graficoAtual.destroy();
@@ -1646,6 +1648,88 @@ function atualizarGrafico() {
           }
         }
       }
+    }
+  });
+}
+
+// ─── Oculta cards sem sentido com os filtros atuais ──────────────────────────
+
+function ocultarCardsIrrelevantes() {
+  const dados = filtrarDados();
+  if (!dados.length) return;
+
+  const nCli  = new Set(dados.map(r => r['Cliente']).filter(Boolean)).size;
+  const nMar  = new Set(dados.map(r => r['Marca']).filter(Boolean)).size;
+  const nSKU  = new Set(dados.map(r => r['SKU']).filter(Boolean)).size;
+  const nCat  = new Set(dados.map(r => r['Categoria']).filter(Boolean)).size;
+
+  // [id, condição para ocultar]
+  const regras = [
+    // Seção 1 — só a tabela de resumo perde sentido com 1 cliente (o gráfico mantém dados)
+    ['area-tabela-clientes',         nCli  <= 1],
+    // Seção 2 — comparações entre clientes
+    ['area-sell-in-out',             nCli  <= 1],
+    ['area-evolucao-sellin-cliente', nCli  <= 1],
+    ['area-venda-pdv',               nCli  <= 1],
+    ['area-margem-comp',             nCli  <= 1],
+    // Seção 3 — comparações entre marcas
+    ['area-heatmap-marcas',          nMar  <= 1],
+    ['area-mix-marca-cliente',       nMar  <= 1],
+    ['area-evolucao-marca',          nMar  <= 1],
+    ['area-margem-marca',            nMar  <= 1],
+    ['area-ranking-marcas',          nMar  <= 1],
+    ['area-evolucao-sellin-marca',   nMar  <= 1],
+    // Seção 4 — rankings e comparações entre SKUs
+    ['area-top-skus',                nSKU  <= 1],
+    ['area-ranking-margem-skus',     nSKU  <= 1],
+    ['area-scatter-margem-bravir',   nSKU  <= 1],
+    // Seção 5 — comparações entre categorias
+    ['area-donut-cat',               nCat  <= 1],
+    ['area-margem-cat',              nCat  <= 1],
+    // Seção 6 — comparações entre clientes e/ou SKUs
+    ['area-preco-cliente',           nCli  <= 1],
+    ['area-markup-cliente',          nCli  <= 1],
+    ['area-radar-precificacao',      nCli  <= 1 || nSKU <= 1],
+    ['area-oportunidade-repricing',  nCli  <= 1],
+    ['area-scatter-preco-pdv',       nCli  <= 1],
+    // Seção 7 — comparações entre clientes
+    ['area-estoque',                 nCli  <= 1],
+    ['area-cobertura',               nCli  <= 1],
+  ];
+
+  regras.forEach(([id, ocultar]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (ocultar) {
+      el.style.display = 'none';
+      el.dataset.filtroOculto = '1';
+    } else if (el.dataset.filtroOculto === '1') {
+      el.style.display = 'block';
+      delete el.dataset.filtroOculto;
+    }
+  });
+
+  // Oculta cabeçalho de seção se todos os seus cards estiverem ocultos
+  const secoes = [
+    { hdr: 'sec-marcas',     cards: ['area-heatmap-marcas','area-mix-marca-cliente','area-evolucao-marca','area-margem-marca','area-ranking-marcas','area-evolucao-sellin-marca'] },
+    { hdr: 'sec-clientes',   cards: ['area-sell-in-out','area-evolucao-sellin-cliente','area-venda-pdv','area-margem-comp','area-evolucao-qtd'] },
+    { hdr: 'sec-skus',       cards: ['area-top-skus','area-top5-evolucao','area-ranking-margem-skus','area-scatter-margem-bravir'] },
+    { hdr: 'sec-categorias', cards: ['area-donut-cat','area-evolucao-cat','area-margem-cat'] },
+  ];
+
+  secoes.forEach(({ hdr, cards }) => {
+    const hEl = document.getElementById(hdr);
+    if (!hEl) return;
+    const todosOcultos = cards.every(id => {
+      const el = document.getElementById(id);
+      return !el || el.style.display === 'none';
+    });
+    if (todosOcultos) {
+      hEl.style.display = 'none';
+      hEl.dataset.filtroOculto = '1';
+    } else if (hEl.dataset.filtroOculto === '1') {
+      hEl.style.display = 'block';
+      delete hEl.dataset.filtroOculto;
     }
   });
 }
@@ -2086,7 +2170,7 @@ function renderizarDonutCategorias(dados) {
     agrupado[cat] = (agrupado[cat] || 0) + num(r['Valor (R$) Sell Out']);
   });
 
-  const cats    = Object.keys(agrupado).sort();
+  const cats    = Object.keys(agrupado).sort((a, b) => agrupado[b] - agrupado[a]);
   const valores = cats.map(c => agrupado[c]);
   const total   = valores.reduce((s, v) => s + v, 0);
 
@@ -2485,153 +2569,6 @@ function renderizarEstoque() {
   });
 }
 
-// ─── Estoque por PDV + Giro (cobertura em dias) ──────────────────────────────
-
-function popularCheckboxesEstoque(clientesOrdenados) {
-  const container = document.getElementById('container-cli-estoque');
-  const listaAtual = clientesOrdenados.join('|');
-  if (container.dataset.lista === listaAtual) return; // sem mudança, preserva seleções
-  container.dataset.lista = listaAtual;
-
-  // Preserva quais estavam marcados antes
-  const marcadosAntes = new Set(
-    [...container.querySelectorAll('input[type=checkbox]:checked')].map(c => c.value)
-  );
-  const primeiraVez = marcadosAntes.size === 0 && container.children.length === 0;
-
-  container.innerHTML = '';
-  clientesOrdenados.forEach((cli, i) => {
-    const marcado = primeiraVez ? i < 5 : marcadosAntes.has(cli);
-    const label = document.createElement('label');
-    label.style.cssText = 'display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:#2d3748;cursor:pointer;white-space:nowrap;';
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.value = cli;
-    cb.checked = marcado;
-    cb.style.accentColor = '#2b6cb0';
-    cb.addEventListener('change', renderizarEstoquePDV);
-    label.appendChild(cb);
-    label.appendChild(document.createTextNode(cli));
-    container.appendChild(label);
-  });
-}
-
-function selecionarTodosEstoque(todos) {
-  document.querySelectorAll('#container-cli-estoque input[type=checkbox]')
-    .forEach(cb => { cb.checked = todos; });
-  renderizarEstoquePDV();
-}
-
-function renderizarEstoquePDV() {
-  const CAMPO_EST = 'Estoque CD + Loja (último dia do mês)';
-
-  // Para o giro, precisamos de sell-out de todos os períodos (para a média móvel de 3 meses)
-  const dadosTodos   = dadosFiltradosSemPeriodo();
-  const dadosPeriodo = filtrarDados();
-
-  // Sell-out mensal por cliente (sem filtro de período — base para MA3)
-  const soMesCli = {};
-  dadosTodos.forEach(r => {
-    const cli = r['Cliente'];
-    if (!cli) return;
-    const ch = `${r['Ano']}|${r['Mês']}`;
-    if (!soMesCli[cli]) soMesCli[cli] = {};
-    soMesCli[cli][ch] = (soMesCli[cli][ch] || 0) + num(r['Quantidade Sell Out']);
-  });
-
-  // Estoque e PDVs por mês × cliente (com filtro de período)
-  const estPDV = {}, mesesSet = new Set(), cliSet = new Set();
-  dadosPeriodo.forEach(r => {
-    const cli = r['Cliente'], est = r[CAMPO_EST];
-    if (!cli || vazio(est)) return;
-    const ch = `${r['Ano']}|${r['Mês']}`;
-    if (!estPDV[ch]) estPDV[ch] = {};
-    if (!estPDV[ch][cli]) estPDV[ch][cli] = { est: 0, pdvSoma: 0, pdvCnt: 0 };
-    estPDV[ch][cli].est += num(est);
-    const pdvs = num(r['# PDVs Cliente']);
-    if (pdvs > 0) { estPDV[ch][cli].pdvSoma += pdvs; estPDV[ch][cli].pdvCnt++; }
-    mesesSet.add(ch); cliSet.add(cli);
-  });
-
-  const meses = [...mesesSet].sort((a, b) => {
-    const [anoA, mesA] = a.split('|'), [anoB, mesB] = b.split('|');
-    return (parseInt(anoA)*100+(MESES_ORDEM[mesA]||0)) - (parseInt(anoB)*100+(MESES_ORDEM[mesB]||0));
-  });
-  if (!meses.length) return;
-
-  const rotulos = meses.map(m => { const [a,ms]=m.split('|'); return `${ms.slice(0,3)}/${a}`; });
-
-  // Ranqueia clientes por volume total de estoque e popula checkboxes
-  const totalEstCli = {};
-  [...cliSet].forEach(cli => {
-    totalEstCli[cli] = meses.reduce((s, m) => s + (estPDV[m]?.[cli]?.est || 0), 0);
-  });
-  const clientesOrdenados = [...cliSet].sort((a, b) => totalEstCli[b] - totalEstCli[a]);
-  popularCheckboxesEstoque(clientesOrdenados);
-  const clientes = clientesOrdenados.filter(cli => {
-    const cb = document.querySelector(`#container-cli-estoque input[value="${CSS.escape(cli)}"]`);
-    return cb ? cb.checked : false;
-  });
-
-  // Média móvel de 3 meses para o sell-out de um cliente em dado mês
-  function ma3(cli, chAtual) {
-    const todos = Object.keys(soMesCli[cli] || {}).sort((a, b) => {
-      const [aA, mA] = a.split('|'), [aB, mB] = b.split('|');
-      return (parseInt(aA)*100+(MESES_ORDEM[mA]||0)) - (parseInt(aB)*100+(MESES_ORDEM[mB]||0));
-    });
-    const idx = todos.indexOf(chAtual);
-    if (idx < 0) return null;
-    const janela = todos.slice(Math.max(0, idx - 2), idx + 1);
-    const soma = janela.reduce((s, m) => s + (soMesCli[cli][m] || 0), 0);
-    return soma / janela.length;
-  }
-
-  // ── Gráfico 1: Estoque por PDV (linhas) ──
-  const dsEstPDV = clientes.map((cli, i) => ({
-    label: cli,
-    data: meses.map(m => {
-      const d = estPDV[m]?.[cli];
-      if (!d || d.pdvCnt === 0) return null;
-      return parseFloat((d.est / (d.pdvSoma / d.pdvCnt)).toFixed(2));
-    }),
-    borderColor: CORES[i % CORES.length],
-    backgroundColor: CORES[i % CORES.length] + '22',
-    borderWidth: 2,
-    pointRadius: 3, pointHoverRadius: 5,
-    fill: false, tension: 0.3, spanGaps: false,
-  }));
-
-  if (graficoEstoquePDV) graficoEstoquePDV.destroy();
-  graficoEstoquePDV = new Chart(document.getElementById('grafico-estoque-pdv'), {
-    type: 'line',
-    data: { labels: rotulos, datasets: dsEstPDV },
-    options: {
-      responsive: true,
-      interaction: { mode: 'nearest', intersect: true },
-      plugins: {
-        legend: { display: true, position: 'top' },
-        tooltip: {
-          callbacks: {
-            title: ctx => `${ctx[0].dataset.label} · ${ctx[0].label}`,
-            label: ctx => ctx.parsed.y !== null
-              ? `  ${ctx.parsed.y.toFixed(1)} un./loja`
-              : null
-          }
-        }
-      },
-      scales: {
-        x: { ticks: { font: { size: 11 } } },
-        y: {
-          beginAtZero: true,
-          title: { display: true, text: 'Unidades por PDV' },
-          ticks: { callback: v => v >= 1e3 ? (v/1e3).toFixed(0)+'k' : v }
-        }
-      }
-    }
-  });
-
-}
-
 // ─── Top 10 SKUs ─────────────────────────────────────────────────────────────
 
 function renderizarTopSKUs(dados) {
@@ -2948,86 +2885,17 @@ function renderizarSellInVsSellOut(dados) {
   });
 }
 
-// ─── Margem % por cliente ─────────────────────────────────────────────────────
+// ─── Ordenação Margem Comparativa ────────────────────────────────────────────
 
-function renderizarMargem(dados) {
-  const agrupado = {};
-  dados.forEach(r => {
-    const cli = r['Cliente'] || '(sem cliente)';
-    if (!agrupado[cli]) agrupado[cli] = { valor: 0, margemRS: 0, temMargem: false };
-    agrupado[cli].valor += num(r['Valor (R$) Sell Out']);
-    const m = r['Margem Cliente (R$)'];
-    if (!vazio(m)) {
-      agrupado[cli].margemRS  += num(m);
-      agrupado[cli].temMargem  = true;
-    }
-  });
+let ordemMargemComp = 'bravir';
 
-  const clientes = Object.keys(agrupado)
-    .filter(c => agrupado[c].temMargem && agrupado[c].valor > 0)
-    .map(c => ({ nome: c, pct: agrupado[c].margemRS / agrupado[c].valor * 100 }))
-    .sort((a, b) => b.pct - a.pct);
-
-  const labels  = clientes.map(c => c.nome);
-  const valores = clientes.map(c => c.pct);
-  const cores   = valores.map(v =>
-    v >= 60 ? '#276749' : v >= 40 ? '#2c7a7b' : v >= 20 ? '#744210' : '#9c4221'
-  );
-
-  if (graficoMargem) graficoMargem.destroy();
-  graficoMargem = new Chart(document.getElementById('grafico-margem'), {
-    type: 'bar',
-    plugins: [{
-      id: 'rotulosFinal',
-      afterDatasetsDraw(chart) {
-        const ctx = chart.ctx;
-        const dataset = chart.data.datasets[0];
-        const meta = chart.getDatasetMeta(0);
-        meta.data.forEach((bar, j) => {
-          const value = dataset.data[j];
-          if (value === null || value === undefined) return;
-          ctx.save();
-          ctx.fillStyle = '#2d3748';
-          ctx.font = 'bold 11px sans-serif';
-          ctx.textAlign = 'left';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(value.toFixed(1) + '%', bar.x + 5, bar.y);
-          ctx.restore();
-        });
-      }
-    }],
-    data: {
-      labels,
-      datasets: [{
-        data: valores,
-        backgroundColor: cores.map(c => c + 'cc'),
-        borderColor: cores,
-        borderWidth: 1,
-        borderRadius: 4,
-      }]
-    },
-    options: {
-      indexAxis: 'y',
-      responsive: true,
-      layout: { padding: { right: 45 } },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: ctx => `  ${ctx.parsed.x.toFixed(1)}%`
-          }
-        }
-      },
-      scales: {
-        x: {
-          beginAtZero: true,
-          max: 100,
-          ticks: { callback: v => v + '%' }
-        },
-        y: { ticks: { font: { size: 12 } } }
-      }
-    }
-  });
+function ordenarMargemComp(ord) {
+  ordemMargemComp = ord;
+  const btnB = document.getElementById('btn-ord-margem-bravir');
+  const btnC = document.getElementById('btn-ord-margem-cliente');
+  if (btnB) btnB.style.opacity = ord === 'bravir'  ? '1' : '.45';
+  if (btnC) btnC.style.opacity = ord === 'cliente' ? '1' : '.45';
+  renderizarMargemComparativa(filtrarDados());
 }
 
 // ─── Cobertura de Estoque (autônoma, seletor próprio) ────────────────────────
@@ -3831,7 +3699,14 @@ function renderizarMargemComparativa(dados) {
 
   const clientes = Object.keys(agr)
     .filter(c => (agr[c].fat > 0 || agr[c].fatIn > 0) && (agr[c].temMC || agr[c].temMB))
-    .sort((a, b) => (agr[b].fatIn > 0 ? agr[b].mb / agr[b].fatIn : 0) - (agr[a].fatIn > 0 ? agr[a].mb / agr[a].fatIn : 0));
+    .sort((a, b) => {
+      if (ordemMargemComp === 'cliente') {
+        const pA = agr[a].fat > 0 ? agr[a].mc / agr[a].fat : 0;
+        const pB = agr[b].fat > 0 ? agr[b].mc / agr[b].fat : 0;
+        return pB - pA;
+      }
+      return (agr[b].fatIn > 0 ? agr[b].mb / agr[b].fatIn : 0) - (agr[a].fatIn > 0 ? agr[a].mb / agr[a].fatIn : 0);
+    });
 
   const pctBravir  = clientes.map(c => agr[c].temMB && agr[c].fatIn > 0 ? agr[c].mb / agr[c].fatIn * 100 : null);
   const pctCliente = clientes.map(c => agr[c].temMC && agr[c].fat  > 0 ? agr[c].mc / agr[c].fat  * 100 : null);
@@ -4237,56 +4112,275 @@ function renderizarMarkupCliente() {
   document.getElementById('heatmap-markup-container').innerHTML = html;
 }
 
-// ─── Heatmap de preços SKU × Cliente ─────────────────────────────────────────
+// ─── Dados compartilhados de precificação ─────────────────────────────────────
 
-function renderizarHeatmapPreco() {
+function _dadosPrecificacao() {
   const dados = filtrarDados();
   const porSKUCli = {}, fatSKU = {};
-
   dados.forEach(r => {
     const sku = r['SKU'], cli = r['Cliente'];
     const p = num(r['Preço Sell Out']), q = num(r['Quantidade Sell Out']);
     if (!sku || !cli || p <= 0 || q <= 0) return;
     if (!porSKUCli[sku]) porSKUCli[sku] = {};
-    if (!porSKUCli[sku][cli]) porSKUCli[sku][cli] = { pSoma: 0, qSoma: 0 };
-    porSKUCli[sku][cli].pSoma += p * q;
-    porSKUCli[sku][cli].qSoma += q;
+    if (!porSKUCli[sku][cli]) porSKUCli[sku][cli] = { pSoma: 0, qSoma: 0, siSoma: 0, qiSoma: 0, mbSoma: 0, mbN: 0 };
+    const d = porSKUCli[sku][cli];
+    d.pSoma += p * q;
+    d.qSoma += q;
     fatSKU[sku] = (fatSKU[sku] || 0) + num(r['Valor (R$) Sell Out']);
+    // Preço sell-in
+    const pi = num(r['Preço Sell in']), qi = num(r['Quantidade Sell in']);
+    if (pi > 0 && qi > 0) { d.siSoma += pi * qi; d.qiSoma += qi; }
+    // Margem Bravir por unidade
+    const mb = r['Margem Contribuição Bravir (R$)'], qi2 = num(r['Quantidade Sell in']);
+    if (!vazio(mb) && qi2 > 0) { d.mbSoma += num(mb); d.mbN += qi2; }
+  });
+  const topSKUs = Object.keys(fatSKU).sort((a, b) => fatSKU[b] - fatSKU[a]).slice(0, 15);
+  const clientes = [...new Set(dados.map(r => r['Cliente']).filter(Boolean))].sort();
+  const mediaGeral = {};
+  topSKUs.forEach(sku => {
+    let pT = 0, qT = 0;
+    clientes.forEach(cli => { const d = porSKUCli[sku]?.[cli]; if (d?.qSoma > 0) { pT += d.pSoma; qT += d.qSoma; } });
+    if (qT > 0) mediaGeral[sku] = pT / qT;
+  });
+  return { porSKUCli, mediaGeral, topSKUs, clientes };
+}
+
+function _elasticidadePorSKU() {
+  const base = dadosFiltradosSemPeriodo();
+  const agr = {};
+  base.forEach(r => {
+    const sku = r['SKU'];
+    if (!sku) return;
+    if (!agr[sku]) agr[sku] = {};
+    const ch = `${r['Ano']}|${r['Mês']}`;
+    if (!agr[sku][ch]) agr[sku][ch] = { pSum: 0, pCnt: 0, qtd: 0, pdvs: 0 };
+    const p = num(r['Preço Sell Out']);
+    if (p > 0) { agr[sku][ch].pSum += p; agr[sku][ch].pCnt++; }
+    agr[sku][ch].qtd  += num(r['Quantidade Sell Out']);
+    agr[sku][ch].pdvs += num(r['# PDVs Cliente']);
+  });
+  const result = {};
+  Object.keys(agr).forEach(sku => {
+    const pares = Object.values(agr[sku])
+      .filter(d => d.pCnt > 0 && d.qtd > 0 && d.pdvs > 0)
+      .map(d => ({ p: d.pSum / d.pCnt, q: d.qtd / d.pdvs }));
+    const reg = regressaoLogLog(pares);
+    if (reg && reg.slope < 0) result[sku] = Math.max(reg.slope, -2);
+  });
+  return result;
+}
+
+// ─── Radar de Precificação — Desvio vs Mercado ────────────────────────────────
+
+function renderizarRadarPrecificacao() {
+  const cont = document.getElementById('radar-precificacao-container');
+  if (!cont) return;
+  const { porSKUCli, mediaGeral, topSKUs, clientes } = _dadosPrecificacao();
+  if (!topSKUs.length) { cont.innerHTML = '<p style="color:#718096;font-size:.85rem;">Sem dados suficientes para o período/filtro selecionado.</p>'; return; }
+
+  const thVP = s => `<th style="writing-mode:vertical-rl;transform:rotate(180deg);min-height:160px;height:160px;vertical-align:bottom;text-align:left;padding:.5rem .3rem .3rem;white-space:nowrap;font-size:.76rem;min-width:36px;">${s}</th>`;
+  let html = `<table style="border-collapse:collapse;font-size:.78rem;">`;
+  html += `<thead><tr><th style="min-width:260px;white-space:normal;word-break:break-word;padding:.4rem .5rem;border-bottom:2px solid #e2e8f0;text-align:left;font-weight:600;">SKU</th>`;
+  html += `${clientes.map(c => thVP(c)).join('')}<th style="writing-mode:vertical-rl;transform:rotate(180deg);min-height:160px;height:160px;vertical-align:bottom;text-align:left;padding:.5rem .3rem .3rem;white-space:nowrap;font-size:.76rem;min-width:36px;font-weight:600;color:#4a5568;">Média mercado</th>`;
+  html += `</tr></thead><tbody>`;
+
+  topSKUs.forEach((sku, i) => {
+    const avg = mediaGeral[sku];
+    const rowBg = i % 2 === 0 ? '#f8fafc' : '#fff';
+    html += `<tr style="background:${rowBg};">`;
+    html += `<td style="font-size:.75rem;min-width:260px;max-width:320px;white-space:normal;word-break:break-word;padding:.45rem .5rem;border-bottom:1px solid #edf2f7;">${sku}</td>`;
+
+    clientes.forEach(cli => {
+      const d = porSKUCli[sku]?.[cli];
+      if (!d || d.qSoma <= 0 || !avg) {
+        html += `<td style="text-align:center;color:#cbd5e0;border-bottom:1px solid #edf2f7;padding:.45rem .3rem;">—</td>`;
+        return;
+      }
+      const preco = d.pSoma / d.qSoma;
+      const desv = (preco - avg) / avg;
+      const absDesv = Math.abs(desv);
+      let bg, textColor;
+      if (absDesv <= 0.10) {
+        const a = 0.35 + absDesv * 3.5;
+        bg = `rgba(72,187,120,${a.toFixed(2)})`;
+        textColor = '#1a4731';
+      } else if (desv > 0.10 && desv <= 0.25) {
+        const a = 0.45 + (desv - 0.10) * 2.0;
+        bg = `rgba(237,137,54,${Math.min(a, 0.85).toFixed(2)})`;
+        textColor = '#7b341e';
+      } else if (desv > 0.25) {
+        const a = Math.min(0.6 + (desv - 0.25) * 0.8, 0.92);
+        bg = `rgba(229,62,62,${a.toFixed(2)})`;
+        textColor = '#fff';
+      } else if (desv < -0.10 && desv >= -0.25) {
+        const a = 0.35 + (absDesv - 0.10) * 2.0;
+        bg = `rgba(99,179,237,${Math.min(a, 0.75).toFixed(2)})`;
+        textColor = '#1a365d';
+      } else {
+        const a = Math.min(0.6 + (absDesv - 0.25) * 0.8, 0.92);
+        bg = `rgba(49,130,206,${a.toFixed(2)})`;
+        textColor = '#fff';
+      }
+      const seta = desv >= 0 ? '▲' : '▼';
+      const pct = (desv * 100).toFixed(1);
+      html += `<td style="text-align:center;background:${bg};color:${textColor};border-bottom:1px solid #edf2f7;padding:.45rem .3rem;white-space:nowrap;">`;
+      html += `<div style="font-weight:600;">${BRL(preco)}</div>`;
+      html += `<div style="font-size:.72rem;opacity:.9;">${seta} ${pct}%</div>`;
+      html += `</td>`;
+    });
+
+    // Coluna média mercado
+    if (avg) {
+      html += `<td style="text-align:center;background:#edf2f7;color:#4a5568;border-bottom:1px solid #edf2f7;padding:.45rem .3rem;white-space:nowrap;font-weight:600;">${BRL(avg)}</td>`;
+    } else {
+      html += `<td style="text-align:center;color:#cbd5e0;border-bottom:1px solid #edf2f7;padding:.45rem .3rem;">—</td>`;
+    }
+    html += `</tr>`;
   });
 
-  const topSKUs  = Object.keys(fatSKU).sort((a, b) => fatSKU[b] - fatSKU[a]).slice(0, 15);
-  const clientes = [...new Set(dados.map(r => r['Cliente']).filter(Boolean))].sort();
+  html += `</tbody></table>`;
+  cont.innerHTML = html;
+}
 
-  const thVP = s => `<th style="writing-mode:vertical-rl;transform:rotate(180deg);height:120px;vertical-align:bottom;text-align:left;padding:.5rem .25rem .25rem;white-space:nowrap;font-size:.78rem;">${s}</th>`;
-  let html = `<table class="heatmap-preco"><thead><tr><th>SKU</th>${clientes.map(c => thVP(c)).join('')}</tr></thead><tbody>`;
+// ─── Oportunidade de Repricing — Impacto Estimado ────────────────────────────
+
+function renderizarOportunidadeRepricing() {
+  const cont = document.getElementById('oportunidade-repricing-container');
+  if (!cont) return;
+  const { porSKUCli, mediaGeral, topSKUs, clientes } = _dadosPrecificacao();
+  const elastPorSKU = _elasticidadePorSKU();
+
+  const caros = [], baratos = [];
 
   topSKUs.forEach(sku => {
-    const precos = clientes.map(cli => {
-      const d = porSKUCli[sku]?.[cli];
-      return d && d.qSoma > 0 ? d.pSoma / d.qSoma : null;
-    });
-    const vals  = precos.filter(v => v !== null);
-    const min   = vals.length ? Math.min(...vals) : 0;
-    const max   = vals.length ? Math.max(...vals) : 0;
-    const span  = max - min || 1;
-    const label = sku.length > 38 ? sku.slice(0, 38) + '…' : sku;
+    const avg = mediaGeral[sku];
+    if (!avg) return;
+    const elastRaw = elastPorSKU[sku];
+    const elast    = Math.abs(elastRaw != null ? elastRaw : -0.4);
+    const elastSrc = elastRaw != null ? 'calc.' : 'padrão';
 
-    html += `<tr><td style="font-size:.75rem;" title="${sku}">${label}</td>`;
-    precos.forEach(v => {
-      if (v === null) {
-        html += `<td style="text-align:center;color:#a0aec0;">—</td>`;
-      } else {
-        const t     = (v - min) / span;
-        const alpha = 0.12 + t * 0.78;
-        const cor   = t > 0.55 ? '#fff' : '#2d3748';
-        html += `<td style="text-align:center;background:rgba(43,108,176,${alpha.toFixed(2)});color:${cor};">${BRL(v)}</td>`;
+    clientes.forEach(cli => {
+      const d = porSKUCli[sku]?.[cli];
+      if (!d || d.qSoma <= 0) return;
+      const clientPrice = d.pSoma / d.qSoma;
+      const currentVol  = d.qSoma;
+      const desv        = (clientPrice - avg) / avg;
+      const precoSI     = d.qiSoma > 0 ? d.siSoma / d.qiSoma : null;
+      const mbPorUnit   = d.mbN    > 0 ? d.mbSoma / d.mbN    : null;
+
+      if (desv > 0.10) {
+        const volPerdido       = currentVol * desv * elast;
+        const receitaSOPerdida = volPerdido * avg;
+        const receitaSIPerdida = precoSI   != null ? volPerdido * precoSI   : null;
+        const margemBravirPerd = mbPorUnit != null ? volPerdido * mbPorUnit : null;
+        caros.push({ sku, cli, clientPrice, avg, desv, elast, elastSrc, receitaSOPerdida, receitaSIPerdida, margemBravirPerd });
+      } else if (desv < -0.10) {
+        const precoIncrease     = avg / clientPrice - 1;
+        const novoVol           = currentVol * (1 - precoIncrease * elast);
+        const ganhoSOCliente    = (novoVol * avg) - (currentVol * clientPrice);
+        const perdaSIBravir     = precoSI   != null ? (novoVol - currentVol) * precoSI   : null;
+        const perdaMargemBravir = mbPorUnit != null ? (novoVol - currentVol) * mbPorUnit : null;
+        baratos.push({ sku, cli, clientPrice, avg, desv, elast, elastSrc, ganhoSOCliente, perdaSIBravir, perdaMargemBravir });
       }
     });
-    html += '</tr>';
   });
 
-  html += '</tbody></table>';
-  document.getElementById('heatmap-preco-container').innerHTML = html;
+  caros.sort((a, b)   => b.receitaSOPerdida - a.receitaSOPerdida);
+  baratos.sort((a, b) => b.ganhoSOCliente   - a.ganhoSOCliente);
+
+  const top15caros   = caros.slice(0, 15);
+  const top15baratos = baratos.slice(0, 15);
+
+  const fmt = v => v != null ? BRL(v) : '<span style="color:#a0aec0;">—</span>';
+
+  const thL = (extra='') => `style="padding:.4rem .55rem;text-align:left;font-size:.76rem;font-weight:600;border-bottom:2px solid #e2e8f0;white-space:nowrap;${extra}"`;
+  const thR = (extra='') => `style="padding:.4rem .55rem;text-align:right;font-size:.76rem;font-weight:600;border-bottom:2px solid #e2e8f0;white-space:nowrap;${extra}"`;
+  const tdL = (extra='') => `style="padding:.35rem .55rem;font-size:.76rem;border-bottom:1px solid #edf2f7;vertical-align:top;${extra}"`;
+  const tdR = (extra='') => `style="padding:.35rem .55rem;font-size:.76rem;border-bottom:1px solid #edf2f7;text-align:right;white-space:nowrap;vertical-align:middle;${extra}"`;
+
+  function skuCell(r, corDesvio) {
+    const trunc = r.sku.length > 35 ? `<span title="${r.sku}">${r.sku.slice(0,35)}…</span>` : r.sku;
+    return `<td ${tdL('min-width:180px;max-width:240px;white-space:normal;word-break:break-word;')}>
+      <span style="font-weight:600;">${trunc}</span><br>
+      <span style="font-size:.72rem;color:#718096;">
+        Praticado: <span style="color:${corDesvio};">${BRL(r.clientPrice)}</span> | Mercado: ${BRL(r.avg)}<br>
+        elast. −${r.elast.toFixed(2)} <em style="color:#a0aec0;">${r.elastSrc}</em>
+      </span>
+    </td>`;
+  }
+
+  function tabelaCaros(linhas) {
+    if (!linhas.length) return `<p style="color:#718096;font-size:.85rem;margin:.5rem 0 1.5rem;">Nenhum SKU × Cliente com desvio &gt; +10% no período/filtro selecionado.</p>`;
+    let t = `<table style="border-collapse:collapse;font-size:.76rem;width:100%;">`;
+    t += `<thead><tr>
+      <th ${thL('min-width:180px;max-width:240px;')}>SKU + Preços</th>
+      <th ${thL('min-width:90px;')}>Cliente</th>
+      <th ${thR('min-width:80px;')}>Desvio</th>
+      <th ${thR('min-width:115px;color:#c53030;')}>Rec. perdida (SO)</th>
+      <th ${thR('min-width:115px;color:#276749;')}>Rec. perdida (SI)</th>
+      <th ${thR('min-width:115px;color:#276749;')}>Margem Bravir</th>
+    </tr></thead><tbody>`;
+    linhas.forEach((r, i) => {
+      const bg = i % 2 === 0 ? '#fff5f5' : '#fff';
+      t += `<tr style="background:${bg};">`;
+      t += skuCell(r, '#c53030');
+      t += `<td ${tdL('min-width:90px;white-space:nowrap;vertical-align:middle;')}>${r.cli}</td>`;
+      t += `<td ${tdR('color:#c53030;font-weight:700;')}>▲ ${(r.desv*100).toFixed(1)}%</td>`;
+      t += `<td ${tdR('color:#c53030;font-weight:700;')}>${BRL(r.receitaSOPerdida)}</td>`;
+      t += `<td ${tdR('color:#276749;')}>${fmt(r.receitaSIPerdida)}</td>`;
+      t += `<td ${tdR('color:#276749;font-weight:700;')}>${fmt(r.margemBravirPerd)}</td>`;
+      t += `</tr>`;
+    });
+    t += `</tbody></table>`;
+    return t;
+  }
+
+  function tabelaBaratos(linhas) {
+    if (!linhas.length) return `<p style="color:#718096;font-size:.85rem;margin:.5rem 0 1.5rem;">Nenhum SKU × Cliente com desvio &lt; −10% no período/filtro selecionado.</p>`;
+    let t = `<table style="border-collapse:collapse;font-size:.76rem;width:100%;">`;
+    t += `<thead><tr>
+      <th ${thL('min-width:180px;max-width:240px;')}>SKU + Preços</th>
+      <th ${thL('min-width:90px;')}>Cliente</th>
+      <th ${thR('min-width:80px;')}>Desvio</th>
+      <th ${thR('min-width:115px;color:#2b6cb0;')}>Ganho potencial (SO)</th>
+      <th ${thR('min-width:115px;color:#c53030;')}>Rec. SI impactada</th>
+      <th ${thR('min-width:115px;color:#c53030;')}>Margem Bravir</th>
+    </tr></thead><tbody>`;
+    linhas.forEach((r, i) => {
+      const bg = i % 2 === 0 ? '#ebf8ff' : '#fff';
+      t += `<tr style="background:${bg};">`;
+      t += skuCell(r, '#2b6cb0');
+      t += `<td ${tdL('min-width:90px;white-space:nowrap;vertical-align:middle;')}>${r.cli}</td>`;
+      t += `<td ${tdR('color:#2b6cb0;font-weight:700;')}>▼ ${(Math.abs(r.desv)*100).toFixed(1)}%</td>`;
+      t += `<td ${tdR('color:#2b6cb0;font-weight:700;')}>${BRL(r.ganhoSOCliente)}</td>`;
+      t += `<td ${tdR('color:#c53030;')}>${fmt(r.perdaSIBravir)}</td>`;
+      t += `<td ${tdR('color:#c53030;font-weight:700;')}>${fmt(r.perdaMargemBravir)}</td>`;
+      t += `</tr>`;
+    });
+    t += `</tbody></table>`;
+    return t;
+  }
+
+  const notaCaro   = `<p style="font-size:.74rem;color:#718096;margin-top:.4rem;">
+    Elasticidade calculada por SKU via regressão log-log preço × demanda (indicada como <em>calc.</em>) ou −0,4 como padrão quando há dados insuficientes (<em>padrão</em>).
+    Rec. perdida SO = receita sell-out que o cliente deixa de gerar por estar acima do mercado;
+    Rec. perdida SI = receita sell-in Bravir sobre esse volume perdido; Margem = margem de contribuição perdida.
+  </p>`;
+  const notaBarato = `<p style="font-size:.74rem;color:#718096;margin-top:.4rem;">
+    Ganho potencial: receita sell-out adicional se o cliente subir ao preço médio de mercado, com elasticidade por SKU.
+    Impacto Bravir: sell-in e margem que deixam de ser gerados pelo volume que cai com o reajuste.
+    O argumento central é que o produto <strong>aguenta</strong> um reajuste — e que, por isso, o cliente pode absorver também o aumento no sell-in.
+  </p>`;
+
+  let html = '';
+  html += `<div style="font-size:.86rem;font-weight:600;color:#c53030;margin-bottom:.3rem;">▲ Preço acima da média de mercado — receita perdida pelo cliente (sell-out)</div>`;
+  html += tabelaCaros(top15caros);
+  html += notaCaro;
+  html += `<div style="font-size:.86rem;font-weight:600;color:#2b6cb0;margin-top:1.6rem;margin-bottom:.3rem;">▼ Preço abaixo da média de mercado — ganho potencial do cliente + argumento de reajuste Bravir</div>`;
+  html += tabelaBaratos(top15baratos);
+  html += notaBarato;
+
+  cont.innerHTML = html;
 }
 
 // ─── Ranking variação de preço por SKU ───────────────────────────────────────
@@ -5845,43 +5939,48 @@ function renderizarKPIsSimulador(porMes, mesesHist, projecoes) {
   </div>`;
 }
 
-function renderizarTabelaProjecaoSimul(projecoes) {
-  const el = document.getElementById('tabela-proj-simul');
-  if (!el) return;
-  const fmt  = v => Math.round(v).toLocaleString('pt-BR');
-  const th   = 'padding:.4rem .8rem;font-size:.74rem;font-weight:600;color:#718096;text-align:right;white-space:nowrap;border-bottom:2px solid #e2e8f0;';
-  const thL  = 'padding:.4rem .8rem;font-size:.74rem;font-weight:600;color:#718096;text-align:left;white-space:nowrap;border-bottom:2px solid #e2e8f0;';
-  const tdS  = 'padding:.38rem .8rem;white-space:nowrap;text-align:right;border-bottom:1px solid #f0f4f8;';
-  const tdLS = 'padding:.38rem .8rem;white-space:nowrap;text-align:left;border-bottom:1px solid #f0f4f8;font-weight:600;color:#2d3748;';
+function cobCorSimul(dias) {
+  if (dias <= 0)    return '#a0aec0';
+  if (dias < 30)    return '#c53030'; // crítica
+  if (dias < 60)    return '#dd6b20'; // baixa
+  if (dias < 90)    return '#276749'; // ideal
+  if (dias <= 120)  return '#b7791f'; // alta
+  return '#2b6cb0';                   // excesso
+}
 
-  const linhas = projecoes.map(p => {
+function renderizarTabelaProjecaoSimul(projecoes) {
+  const fmt = v => Math.round(v).toLocaleString('pt-BR');
+
+  projecoes.forEach((p, k) => {
     const cobProj  = p.cobResult != null ? Math.round(p.cobResult) : (p.soProj > 0 ? Math.round(p.estFim * 30 / p.soProj) : 0);
     const cobAlvoR = Math.round(p.cobAlvo);
-    const cobCor   = cobProj > 60  ? '#c05621' : cobProj > 0 && cobProj < 30 ? '#c53030' : '#276749';
-    return `<tr>
-      <td style="${tdLS}">${p.rotulo}</td>
-      <td style="${tdS}color:#2d3748;">${fmt(p.soProj)}</td>
-      <td style="${tdS}font-weight:700;color:#276749;">${fmt(p.siProj)}</td>
-      <td style="${tdS}color:#2d3748;">${fmt(p.estFim)}</td>
-      <td style="${tdS}font-weight:700;color:${cobCor};">${cobProj > 0 ? cobProj + ' d' : '—'}</td>
-      <td style="${tdS}color:#a0aec0;font-size:.78rem;">${cobAlvoR} d</td>
-    </tr>`;
-  }).join('');
+    const cobCor   = cobCorSimul(cobProj);
 
-  el.innerHTML = `
-    <table style="border-collapse:collapse;font-size:.82rem;min-width:340px;">
-      <thead><tr>
-        <th style="${thL}">Mês</th>
-        <th style="${th}">SO prev.</th>
-        <th style="${th}">SI proj.</th>
-        <th style="${th}">Estoque proj.</th>
-        <th style="${th}" title="Cobertura = Estoque ÷ (SO/30)">Cob.</th>
-        <th style="${th}" title="Meta sazonal (ref. ano anterior)">Alvo</th>
-      </tr></thead>
-      <tbody>${linhas}</tbody>
-    </table>
-    <div style="font-size:.7rem;color:#a0aec0;margin-top:.4rem;">
-      Alvo: média de cobertura do mês ant. + mês + mês seg. no ano anterior · <span style="color:#c05621;">●</span> &gt;60d excesso · <span style="color:#c53030;">●</span> &lt;30d risco ruptura
+    const soEl = document.getElementById(`simul-so-prev-${k}`);
+    if (soEl) soEl.textContent = fmt(p.soProj);
+
+    const siEl = document.getElementById(`simul-si-proj-${k}`);
+    if (siEl) siEl.textContent = p.siProj > 0 ? fmt(p.siProj) : '0';
+
+    const estEl = document.getElementById(`simul-est-fim-${k}`);
+    if (estEl) estEl.textContent = fmt(p.estFim);
+
+    const cobEl = document.getElementById(`simul-cob-r-${k}`);
+    if (cobEl) { cobEl.textContent = cobProj > 0 ? cobProj + ' d' : '—'; cobEl.style.color = cobCor; }
+
+    const alvoEl = document.getElementById(`simul-cob-alvo-${k}`);
+    if (alvoEl) alvoEl.textContent = cobAlvoR + ' d';
+  });
+
+  const el = document.getElementById('tabela-proj-simul');
+  if (el) el.innerHTML = `
+    <div style="font-size:.7rem;color:#a0aec0;margin-top:.35rem;">
+      Alvo: média sazonalizada (mês ant. + mês + mês seg. do ano anterior) ·
+      <span style="color:#c53030;">●</span> &lt;30d crítica ·
+      <span style="color:#dd6b20;">●</span> 30–60d baixa ·
+      <span style="color:#276749;">●</span> 60–90d ideal ·
+      <span style="color:#b7791f;">●</span> 90–120d alta ·
+      <span style="color:#2b6cb0;">●</span> &gt;120d excesso
     </div>`;
 }
 
@@ -6062,28 +6161,40 @@ function carregarSimulador() {
     return Math.round(Math.max(0, base * fatorClima * fatorPreco));
   });
 
-  // Tabela de inputs
+  // Tabela combinada: inputs à esquerda, projeções à direita (mesma tabela = linhas alinhadas)
   const inputStyle = 'text-align:right;border:1px solid #e2e8f0;border-radius:4px;padding:.2rem .4rem;font-size:.83rem;';
+  const thBase = 'padding:.4rem .8rem;font-size:.74rem;font-weight:600;border-bottom:2px solid #e2e8f0;white-space:nowrap;text-align:right;';
+  const tdBase = 'padding:.35rem .8rem;border-bottom:1px solid #f0f4f8;';
   const tabEl = document.getElementById('tabela-input-simul');
   if (tabEl) {
     tabEl.innerHTML = `
       <table style="border-collapse:collapse;font-size:.82rem;">
         <thead><tr>
-          <th style="text-align:left;padding:.4rem .8rem .4rem .1rem;font-size:.74rem;font-weight:600;color:#718096;border-bottom:2px solid #e2e8f0;white-space:nowrap;">Mês</th>
-          <th style="text-align:right;padding:.4rem .8rem;font-size:.74rem;font-weight:600;color:#2b6cb0;border-bottom:2px solid #e2e8f0;white-space:nowrap;">Sell-out prev. (un.)</th>
-          <th style="text-align:right;padding:.4rem .8rem;font-size:.74rem;font-weight:600;color:#718096;border-bottom:2px solid #e2e8f0;white-space:nowrap;" title="Cobertura de estoque alvo (dias)">Cob. alvo (dias)</th>
+          <th style="${thBase}text-align:left;padding-left:.1rem;color:#718096;">Mês</th>
+          <th style="${thBase}color:#2b6cb0;">Sell-out prev. (un.)</th>
+          <th style="${thBase}color:#718096;" title="Cobertura de estoque alvo (dias)">Cob. alvo (dias)</th>
+          <th style="${thBase}color:#718096;border-left:2px solid #e2e8f0;">SO prev.</th>
+          <th style="${thBase}color:#276749;">SI proj.</th>
+          <th style="${thBase}color:#718096;">Estoque proj.</th>
+          <th style="${thBase}color:#718096;" title="Cobertura = Estoque ÷ (SO/30)">Cob.</th>
+          <th style="${thBase}color:#a0aec0;" title="Meta sazonal (ref. ano anterior)">Alvo</th>
         </tr></thead>
         <tbody>${mesesFut.map((m, k) => `
           <tr style="border-bottom:1px solid #f0f4f8;">
-            <td style="padding:.35rem .8rem .35rem .1rem;font-weight:600;color:#2d3748;white-space:nowrap;">${m.rotulo}</td>
-            <td style="padding:.35rem .8rem;text-align:right;">
+            <td style="${tdBase}padding-left:.1rem;font-weight:600;color:#2d3748;white-space:nowrap;">${m.rotulo}</td>
+            <td style="${tdBase}text-align:right;">
               <input type="number" id="simul-so-${k}" value="${defaultSO[k]}"
                 min="0" step="100" style="width:90px;${inputStyle}" oninput="recalcularSimulador()">
             </td>
-            <td style="padding:.35rem .8rem;text-align:right;">
+            <td style="${tdBase}text-align:right;">
               <input type="number" id="simul-cob-${k}" value="${Math.round(cobAlvoPerMes[k])}"
                 min="1" step="10" style="width:70px;${inputStyle}" oninput="recalcularSimulador()">
             </td>
+            <td id="simul-so-prev-${k}" style="${tdBase}text-align:right;color:#2d3748;border-left:2px solid #edf2f7;">—</td>
+            <td id="simul-si-proj-${k}" style="${tdBase}text-align:right;font-weight:700;color:#276749;">—</td>
+            <td id="simul-est-fim-${k}" style="${tdBase}text-align:right;color:#2d3748;">—</td>
+            <td id="simul-cob-r-${k}" style="${tdBase}text-align:right;font-weight:700;">—</td>
+            <td id="simul-cob-alvo-${k}" style="${tdBase}text-align:right;font-size:.78rem;color:#a0aec0;">—</td>
           </tr>`).join('')}
         </tbody>
       </table>`;
@@ -6194,7 +6305,7 @@ function renderizarTabelaCoberturaSimul(porMes, mesesHist, projecoes, soSmooth) 
       else if (!temDado) extra = 'color:#cbd5e0;';
       else {
         // cor por nível de cobertura
-        const cor = val > 60 ? 'color:#c05621;' : val < 30 ? 'color:#c53030;' : 'color:#276749;';
+        const cor = 'color:' + cobCorSimul(val) + ';';
         extra = cor + 'font-weight:500;';
       }
       return `<td style="${tdBase}${extra}">${display}</td>`;
@@ -6208,9 +6319,11 @@ function renderizarTabelaCoberturaSimul(porMes, mesesHist, projecoes, soSmooth) 
   tabEl.innerHTML = `
     <div style="font-size:.78rem;color:#718096;margin-bottom:.5rem;">
       Cobertura de estoque (dias) · SO suavizado: média do mês ant. + mês + mês seg. · Colunas azuis = projetado
-      · <span style="color:#276749;font-weight:600;">Verde</span> = 30–60d
-      · <span style="color:#c05621;font-weight:600;">Laranja</span> &gt;60d
-      · <span style="color:#c53030;font-weight:600;">Vermelho</span> &lt;30d
+      · <span style="color:#c53030;font-weight:600;">Vermelho</span> &lt;30d crítica
+      · <span style="color:#dd6b20;font-weight:600;">Laranja</span> 30–60d baixa
+      · <span style="color:#276749;font-weight:600;">Verde</span> 60–90d ideal
+      · <span style="color:#b7791f;font-weight:600;">Âmbar</span> 90–120d alta
+      · <span style="color:#2b6cb0;font-weight:600;">Azul</span> &gt;120d excesso
     </div>
     <div style="overflow-x:auto;">
       <table style="border-collapse:collapse;font-size:.82rem;width:100%;">
