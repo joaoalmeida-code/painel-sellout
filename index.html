@@ -32,9 +32,9 @@
     header span { font-size: .85rem; opacity: .7; }
 
     main {
-      max-width: 1000px;
+      max-width: 1400px;
       margin: 2rem auto;
-      padding: 0 1.25rem;
+      padding: 0 1.5rem;
     }
 
     .card {
@@ -208,15 +208,16 @@
       display: flex;
       align-items: center;
       gap: .6rem;
-      flex-wrap: wrap;
-      max-width: 1000px;
+      flex-wrap: nowrap;
+      max-width: 1400px;
       margin: 0 auto;
     }
     .f-sep { width: 1px; height: 1.4rem; background: #e2e8f0; margin: 0 .15rem; }
     .f-label { font-size: .8rem; font-weight: 600; color: #4a5568; white-space: nowrap; }
 
     /* Dropdowns de seleção múltipla */
-    .f-grupo { position: relative; }
+    .f-grupo { position: relative; display: inline-flex; flex-direction: column; align-items: center; gap: 2px; vertical-align: middle; }
+    .f-hint { font-size: .67rem; color: #2b6cb0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; line-height: 1; min-height: 0; }
     .f-btn {
       display: inline-flex;
       align-items: center;
@@ -489,11 +490,13 @@
 
     <div class="f-grupo">
       <button class="f-btn" id="fbtn-categoria">Categoria <span class="f-seta">▾</span></button>
+      <div class="f-hint" id="fhint-categoria"></div>
       <div class="f-drop" id="fdrop-categoria"></div>
     </div>
 
     <div class="f-grupo">
       <button class="f-btn" id="fbtn-marca">Marca <span class="f-seta">▾</span></button>
+      <div class="f-hint" id="fhint-marca"></div>
       <div class="f-drop" id="fdrop-marca"></div>
     </div>
 
@@ -507,13 +510,21 @@
 
     <div class="f-grupo">
       <button class="f-btn" id="fbtn-cliente">Cliente <span class="f-seta">▾</span></button>
+      <div class="f-hint" id="fhint-cliente"></div>
       <div class="f-drop" id="fdrop-cliente"></div>
     </div>
 
     <div class="f-grupo">
       <button class="f-btn" id="fbtn-sku">SKU <span class="f-seta">▾</span></button>
+      <div class="f-hint" id="fhint-sku"></div>
       <div class="f-drop" id="fdrop-sku"></div>
     </div>
+
+    <div class="f-sep"></div>
+
+    <button onclick="limparFiltros()" style="padding:.35rem .8rem;font-size:.8rem;border-radius:5px;border:1px solid #e53e3e;background:#fff5f5;color:#c53030;cursor:pointer;font-weight:600;white-space:nowrap;line-height:1.4;">
+      ✕ Limpar filtros
+    </button>
   </div>
 </div>
 
@@ -630,7 +641,7 @@
   <!-- Venda por PDV -->
   <div class="card" id="area-venda-pdv" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Venda por PDV por Cliente — Média Mensal</div>
-    <div class="subtitulo">Faturamento sell-out médio por loja por mês · R$ / PDV / mês no período filtrado</div>
+    <div class="subtitulo">Faturamento sell-out médio por loja por mês · denominador = PDVs apenas nos meses com sell-out > 0</div>
     <div class="como-analisar">Normaliza o faturamento pelo número de lojas de cada rede, permitindo comparar clientes de tamanhos muito diferentes em igualdade de condições. Um cliente com muitas lojas mas baixa venda por PDV pode indicar presença fraca na gôndola, sortimento limitado ou produto com baixo giro naquele perfil de shopper. É uma métrica mais justa do que o faturamento absoluto para avaliar a eficiência comercial em cada ponto de venda.</div>
     <canvas id="grafico-venda-pdv" style="max-height:340px;"></canvas>
   </div>
@@ -819,6 +830,14 @@
 
   <!-- ═══ SEÇÃO 6 — PREÇOS ═══ -->
   <div class="secao-header" id="sec-precos" style="display:none;">6 — Preços</div>
+
+  <!-- Volume × Preço Sell-out ao longo do tempo -->
+  <div class="card" id="area-preco-volume" style="display:none;">
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Volume × Preço Sell-out ao Longo do Tempo</div>
+    <div class="subtitulo">Barras = quantidade vendida sell-out (eixo esquerdo) · Linha = preço médio ponderado sell-out (eixo direito, começa em zero)</div>
+    <div class="como-analisar">Relaciona a evolução de volume e preço no mesmo gráfico. Uma queda de preço acompanhada de alta de volume pode indicar promoção ou elasticidade positiva. Um aumento de preço sem queda de volume sugere que o consumidor aceita o reajuste.</div>
+    <canvas id="grafico-preco-volume" style="max-height:340px;"></canvas>
+  </div>
 
   <!-- Evolução do preço médio ponderado por categoria -->
   <div class="card" id="area-preco-categoria" style="display:none;">
@@ -1013,34 +1032,7 @@
   <!-- ═══ SEÇÃO 9 — PREVISÃO DE VENDAS ═══ -->
   <div class="secao-header" id="sec-previsao" style="display:none;">9 — Previsão de Vendas</div>
 
-  <!-- Card A: Premissas -->
-  <div class="card" id="area-previsao-premissas" style="display:none;">
-    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Premissas da Projeção</div>
-    <div class="subtitulo">Ajuste os parâmetros para recalcular os valores padrão do Simulador automaticamente.</div>
-    <div class="como-analisar">Preço: elasticidade −0,4 (alta de 10% reduz volume ~4%). Clima: afeta apenas Manteiga de cacau e Protetor Labial — inverno frio aumenta demanda de labial e manteiga; inverno quente reduz. Os valores padrão do simulador são recalculados ao mudar qualquer parâmetro, mas você pode sobrescrever manualmente célula a célula.</div>
-    <div class="linha-filtro" style="flex-wrap:wrap;gap:1.5rem 3rem;align-items:center;margin-top:.5rem;">
-      <div>
-        <span style="font-size:.8rem;color:#4a5568;font-weight:600;display:block;margin-bottom:.4rem;">
-          Variação de preço esperada: <span id="label-var-preco" style="color:#2b6cb0;">0%</span>
-        </span>
-        <input type="range" id="slider-var-preco" min="-30" max="30" value="0" step="1"
-          style="width:200px;vertical-align:middle;"
-          oninput="document.getElementById('label-var-preco').textContent=this.value+'%'"
-          onchange="atualizarPrevisao()">
-        <span style="font-size:.75rem;color:#a0aec0;margin-left:.5rem;">−30% a +30%</span>
-      </div>
-      <div>
-        <span style="font-size:.8rem;color:#4a5568;font-weight:600;display:block;margin-bottom:.4rem;">Cenário climático</span>
-        <select id="sel-cenario-clima" onchange="atualizarPrevisao()" style="font-size:.82rem;padding:.25rem .5rem;">
-          <option value="tipico">Típico</option>
-          <option value="frio">Inverno Frio</option>
-          <option value="quente">Inverno Quente</option>
-        </select>
-      </div>
-    </div>
-  </div>
-
-  <!-- Card C: Análise Detalhada -->
+  <!-- Card D: Simulador de Vendas e Estoque por SKU -->
 
 
   <!-- Card D: Simulador de Vendas e Estoque por SKU -->
@@ -1126,6 +1118,7 @@ let graficoSellInOut   = null;
 let graficoEvolucaoQtd = null;
 
 let graficoVendaPDV    = null;
+let graficoPrecoVolume = null;
 let graficoEstoque        = null;
 let graficoTop5Evolucao   = null;
 let graficoElasticidade   = null;
@@ -1232,6 +1225,7 @@ document.getElementById('input-arquivo').addEventListener('change', function (e)
 
       // Seção 6 — Preços
       document.getElementById('sec-precos').style.display               = 'block';
+      document.getElementById('area-preco-volume').style.display        = 'block';
       document.getElementById('area-preco-categoria').style.display     = 'block';
       document.getElementById('area-preco-cliente').style.display       = 'block';
       document.getElementById('area-evolucao-preco').style.display           = 'block';
@@ -1253,7 +1247,6 @@ document.getElementById('input-arquivo').addEventListener('change', function (e)
 
       // Seção 9 — Previsão de Vendas
       document.getElementById('sec-previsao').style.display             = 'block';
-      document.getElementById('area-previsao-premissas').style.display  = 'block';
       document.getElementById('area-previsao-simulador').style.display  = 'block';
 
       popularSKUs();
@@ -1457,11 +1450,14 @@ function popularDropdownMulti(dropId, btnId, labelBase, opcoes, onchange, comBus
   function todos() { return [...drop.querySelectorAll('input.f-check')]; }
 
   function atualizar() {
-    const sel = todos().filter(c => c.checked).length;
+    const marcados = todos().filter(c => c.checked);
+    const sel = marcados.length;
     const tot = todos().length;
     const sufixo = (sel > 0 && sel < tot) ? ` (${sel})` : '';
     btn.innerHTML = `${labelBase}${sufixo} <span class="f-seta">▾</span>`;
     btn.classList.toggle('ativo', sel > 0 && sel < tot);
+    const hint = document.getElementById(dropId.replace('fdrop', 'fhint'));
+    if (hint) hint.textContent = (sel === 1) ? (marcados[0]?.value ?? '') : '';
   }
 
   btn.addEventListener('click', e => {
@@ -1476,6 +1472,114 @@ document.addEventListener('click', e => {
   if (e.target.closest('.f-drop')) return;
   document.querySelectorAll('.f-drop.aberto').forEach(d => d.classList.remove('aberto'));
 });
+
+// ─── Filtros dinâmicos por clique em gráfico / tabela ────────────────────────
+
+function _aplicarFiltroDropdown(dropId, btnId, labelBase, valor) {
+  const drop = document.getElementById(dropId);
+  const btn  = document.getElementById(btnId);
+  if (!drop || !btn) return false;
+
+  const hint     = document.getElementById(dropId.replace('fdrop', 'fhint'));
+  const checks   = [...drop.querySelectorAll('input.f-check')];
+  const chkTodos = drop.querySelector('label:not(.f-item) input[type="checkbox"]');
+  const ativos   = checks.filter(c => c.checked);
+  const jaUnico  = ativos.length === 1 && ativos[0].value === valor;
+
+  if (jaUnico) {
+    checks.forEach(c => c.checked = true);
+    if (chkTodos) chkTodos.checked = true;
+    btn.innerHTML = `${labelBase} <span class="f-seta">▾</span>`;
+    btn.classList.remove('ativo');
+    if (hint) hint.textContent = '';
+    return false;
+  } else {
+    checks.forEach(c => c.checked = (c.value === valor));
+    if (chkTodos) chkTodos.checked = false;
+    btn.innerHTML = `${labelBase} (1) <span class="f-seta">▾</span>`;
+    btn.classList.add('ativo');
+    if (hint) hint.textContent = valor;
+    return true;
+  }
+}
+
+function aplicarFiltroCliente(nome) {
+  _aplicarFiltroDropdown('fdrop-cliente', 'fbtn-cliente', 'Cliente', nome);
+  atualizarGrafico();
+}
+
+function aplicarFiltroMarca(nome) {
+  _aplicarFiltroDropdown('fdrop-marca', 'fbtn-marca', 'Marca', nome);
+  atualizarGrafico();
+}
+
+function aplicarFiltroCategoria(nome) {
+  _aplicarFiltroDropdown('fdrop-categoria', 'fbtn-categoria', 'Categoria', nome);
+  atualizarGrafico();
+}
+
+function aplicarFiltroSKU(nome) {
+  _aplicarFiltroDropdown('fdrop-sku', 'fbtn-sku', 'SKU', nome);
+  atualizarGrafico();
+}
+
+function aplicarFiltroPeriodo(chave) {
+  const de  = document.getElementById('sel-periodo-de');
+  const ate = document.getElementById('sel-periodo-ate');
+  if (!de || !ate) return;
+  const jaFiltrado = de.value === chave && ate.value === chave;
+  de.value  = jaFiltrado ? '' : chave;
+  ate.value = jaFiltrado ? '' : chave;
+  atualizarGrafico();
+}
+
+function aplicarFiltroClienteMarca(cliente, marca) {
+  _aplicarFiltroDropdown('fdrop-cliente', 'fbtn-cliente', 'Cliente', cliente);
+  _aplicarFiltroDropdown('fdrop-marca',   'fbtn-marca',   'Marca',   marca);
+  atualizarGrafico();
+}
+
+function limparFiltros() {
+  // Período: volta para primeiro e último mês disponíveis
+  const selDe  = document.getElementById('sel-periodo-de');
+  const selAte = document.getElementById('sel-periodo-ate');
+  if (selDe  && selDe.options.length  > 0) selDe.value  = selDe.options[0].value;
+  if (selAte && selAte.options.length > 0) selAte.value = selAte.options[selAte.options.length - 1].value;
+
+  // Dropdowns: marca todos como selecionados
+  [
+    { dropId: 'fdrop-categoria', btnId: 'fbtn-categoria', label: 'Categoria' },
+    { dropId: 'fdrop-marca',     btnId: 'fbtn-marca',     label: 'Marca'     },
+    { dropId: 'fdrop-cliente',   btnId: 'fbtn-cliente',   label: 'Cliente'   },
+    { dropId: 'fdrop-sku',       btnId: 'fbtn-sku',       label: 'SKU'       },
+  ].forEach(({ dropId, btnId, label }) => {
+    const drop = document.getElementById(dropId);
+    const btn  = document.getElementById(btnId);
+    if (!drop || !btn) return;
+    drop.querySelectorAll('input[type="checkbox"]').forEach(c => c.checked = true);
+    btn.innerHTML = `${label} <span class="f-seta">▾</span>`;
+    btn.classList.remove('ativo');
+    const hint = document.getElementById(dropId.replace('fdrop', 'fhint'));
+    if (hint) hint.textContent = '';
+  });
+
+  // Botões Bravir / Terceiros: volta para "Todas"
+  filtroMarca = '';
+  const grupo = document.getElementById('grupo-marca');
+  if (grupo) {
+    grupo.querySelectorAll('button').forEach(b => b.classList.remove('ativo'));
+    const btnTodas = grupo.querySelector('button[data-valor=""]');
+    if (btnTodas) btnTodas.classList.add('ativo');
+  }
+
+  atualizarGrafico();
+}
+
+// Helpers de cursor reutilizáveis
+function _onHoverCursor(event, elements) {
+  const el = event.native?.target;
+  if (el) el.style.cursor = elements.length ? 'pointer' : 'default';
+}
 
 // ─── Helper: aplica todos os filtros ativos ───────────────────────────────────
 
@@ -1570,6 +1674,7 @@ function atualizarGrafico() {
   renderizarElasticidade();
   renderizarTemperatura();
   popularSKUPreco();
+  renderizarPrecoVolume(dados);
   renderizarPrecoCategoria();
   renderizarPrecoCliente();
   renderizarEvolucaoPreco();
@@ -1616,6 +1721,14 @@ function atualizarGrafico() {
     },
     options: {
       responsive: true,
+      onClick: (event, elements) => {
+        if (!elements.length) return;
+        aplicarFiltroCliente(clientes[elements[0].index]);
+      },
+      onHover: (event, elements) => {
+        const el = event.native?.target;
+        if (el) el.style.cursor = elements.length ? 'pointer' : 'default';
+      },
       plugins: {
         legend: { display: true, position: 'top' },
         tooltip: {
@@ -1947,6 +2060,11 @@ function renderizarEvolucao() {
     },
     options: {
       responsive: true,
+      onClick: (event, elements) => {
+        if (!elements.length) return;
+        aplicarFiltroPeriodo(mesesOrdenados[elements[0].index]);
+      },
+      onHover: _onHoverCursor,
       plugins: {
         legend: { display: true, position: 'top' },
         tooltip: {
@@ -2204,6 +2322,11 @@ function renderizarDonutCategorias(dados) {
     },
     options: {
       responsive: true,
+      onClick: (event, elements) => {
+        if (!elements.length) return;
+        aplicarFiltroCategoria(cats[elements[0].index]);
+      },
+      onHover: _onHoverCursor,
       plugins: {
         legend: { display: true, position: 'right' },
         tooltip: {
@@ -2361,6 +2484,12 @@ function renderizarEvolucaoPorCategoria() {
     options: {
       responsive: true,
       interaction: { mode: 'nearest', intersect: true },
+      onClick: (event, elements) => {
+        if (!elements.length) return;
+        const label = graficoEvolucaoCat.data.datasets[elements[0].datasetIndex]?.label;
+        if (label && !label.includes('ano ant.')) aplicarFiltroCategoria(label);
+      },
+      onHover: _onHoverCursor,
       plugins: {
         legend: { display: false },
         tooltip: { callbacks: { label: ctx => `  ${ctx.dataset.label}: ${BRL(ctx.parsed.y)}` } }
@@ -2384,29 +2513,78 @@ function renderizarEvolucaoPorCategoria() {
 
 // ─── Venda por PDV por cliente ───────────────────────────────────────────────
 
-function renderizarVendaPorPDV(dados) {
-  const valor = {};       // valor total sell-out por cliente
-  const pdvMes = {};      // pdvMes[cli][mes] = PDVs daquele mês (único por cli×mês)
-
+function _agruparPDV(dados) {
+  // Retorna agr[cli] = { soVal, margemVal, pdvSO } onde pdvSO só conta meses com SO > 0
+  const agr = {};
   dados.forEach(r => {
-    const cli = r['Cliente'];
+    const cli  = r['Cliente'];
     if (!cli) return;
-    valor[cli] = (valor[cli] || 0) + num(r['Valor (R$) Sell Out']);
-    const pdvs = num(r['# PDVs Cliente']);
-    if (pdvs > 0) {
-      const ch = `${r['Ano']}|${r['Mês']}`;
-      if (!pdvMes[cli]) pdvMes[cli] = {};
-      // Mesmo cliente×mês pode ter várias linhas (um por SKU) — pega o maior valor
-      pdvMes[cli][ch] = Math.max(pdvMes[cli][ch] || 0, pdvs);
+    const pdvs   = num(r['# PDVs Cliente']);
+    const soVal  = num(r['Valor (R$) Sell Out']);
+    const margem = num(r['Margem Cliente (R$)']);
+    const ch     = `${r['Ano']}|${r['Mês']}`;
+    if (!agr[cli]) agr[cli] = { soVal: 0, margemVal: 0, pdvSO: {} };
+    agr[cli].soVal    += soVal;
+    agr[cli].margemVal += margem;
+    // Denominador compartilhado: meses com SO > 0 (clientes novos não são penalizados)
+    if (pdvs > 0 && soVal > 0) agr[cli].pdvSO[ch] = Math.max(agr[cli].pdvSO[ch] || 0, pdvs);
+  });
+  return agr;
+}
+
+function _chartBarPDV(canvasId, graficoAtual, clientes, valorFn, cor, tooltipLabel) {
+  if (graficoAtual) graficoAtual.destroy();
+  return new Chart(document.getElementById(canvasId), {
+    type: 'bar',
+    plugins: [{
+      id: 'rotulosPDV',
+      afterDatasetsDraw(chart) {
+        const ctx  = chart.ctx;
+        const meta = chart.getDatasetMeta(0);
+        meta.data.forEach((bar, j) => {
+          const v = chart.data.datasets[0].data[j];
+          if (!v) return;
+          ctx.save();
+          ctx.fillStyle = '#2d3748';
+          ctx.font = 'bold 11px sans-serif';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(BRL(v), bar.x + 5, bar.y);
+          ctx.restore();
+        });
+      }
+    }],
+    data: {
+      labels: clientes.map(c => c.nome),
+      datasets: [{
+        data: clientes.map(valorFn),
+        backgroundColor: clientes.map((_, i) => CORES[i % CORES.length] + 'cc'),
+        borderColor:     clientes.map((_, i) => CORES[i % CORES.length]),
+        borderWidth: 1, borderRadius: 4,
+      }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true,
+      layout: { padding: { right: 75 } },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => '  ' + BRL(ctx.parsed.x) + tooltipLabel } }
+      },
+      scales: {
+        x: { beginAtZero: true, ticks: { callback: v => v >= 1e3 ? 'R$ '+(v/1e3).toFixed(0)+'k' : 'R$ '+v } },
+        y: { ticks: { font: { size: 12 } } }
+      }
     }
   });
+}
 
-  // vpdv mensal = valor total ÷ Σ PDVs por mês (sem duplicar por SKU)
-  const clientes = Object.keys(valor)
-    .filter(c => pdvMes[c])
-    .map(c => {
-      const totalPDVMeses = Object.values(pdvMes[c]).reduce((s, v) => s + v, 0);
-      return { nome: c, vpdv: totalPDVMeses > 0 ? valor[c] / totalPDVMeses : 0 };
+function renderizarVendaPorPDV(dados) {
+  const agr = _agruparPDV(dados);
+  const clientes = Object.entries(agr)
+    .filter(([, d]) => Object.keys(d.pdvSO).length > 0)
+    .map(([nome, d]) => {
+      const tot = Object.values(d.pdvSO).reduce((s, v) => s + v, 0);
+      return { nome, vpdv: tot > 0 ? d.soVal / tot : 0 };
     })
     .sort((a, b) => b.vpdv - a.vpdv);
 
@@ -2414,20 +2592,19 @@ function renderizarVendaPorPDV(dados) {
   graficoVendaPDV = new Chart(document.getElementById('grafico-venda-pdv'), {
     type: 'bar',
     plugins: [{
-      id: 'rotulosFinal',
+      id: 'rotulosPDV',
       afterDatasetsDraw(chart) {
-        const ctx = chart.ctx;
-        const dataset = chart.data.datasets[0];
+        const ctx  = chart.ctx;
         const meta = chart.getDatasetMeta(0);
         meta.data.forEach((bar, j) => {
-          const value = dataset.data[j];
-          if (value === null || value === undefined) return;
+          const v = chart.data.datasets[0].data[j];
+          if (!v) return;
           ctx.save();
           ctx.fillStyle = '#2d3748';
           ctx.font = 'bold 11px sans-serif';
           ctx.textAlign = 'left';
           ctx.textBaseline = 'middle';
-          ctx.fillText(BRL(value), bar.x + 5, bar.y);
+          ctx.fillText(BRL(v), bar.x + 5, bar.y);
           ctx.restore();
         });
       }
@@ -2443,13 +2620,18 @@ function renderizarVendaPorPDV(dados) {
     },
     options: {
       indexAxis: 'y', responsive: true,
-      layout: { padding: { right: 70 } },
+      onClick: (event, elements) => {
+        if (!elements.length) return;
+        aplicarFiltroCliente(clientes[elements[0].index].nome);
+      },
+      onHover: _onHoverCursor,
+      layout: { padding: { right: 75 } },
       plugins: {
         legend: { display: false },
         tooltip: { callbacks: { label: ctx => '  ' + BRL(ctx.parsed.x) + ' / PDV / mês' } }
       },
       scales: {
-        x: { beginAtZero: true, ticks: { callback: v => v >= 1e6 ? 'R$ '+(v/1e6).toFixed(1)+'M' : v >= 1e3 ? 'R$ '+(v/1e3).toFixed(0)+'k' : 'R$ '+v } },
+        x: { beginAtZero: true, ticks: { callback: v => v >= 1e3 ? 'R$ '+(v/1e3).toFixed(0)+'k' : 'R$ '+v } },
         y: { ticks: { font: { size: 12 } } }
       }
     }
@@ -2612,6 +2794,11 @@ function renderizarTopSKUs(dados) {
     options: {
       indexAxis: 'y',
       responsive: true,
+      onClick: (event, elements) => {
+        if (!elements.length) return;
+        aplicarFiltroSKU(skus[elements[0].index]);
+      },
+      onHover: _onHoverCursor,
       layout: { padding: { right: 70 } },
       plugins: {
         legend: { display: false },
@@ -2788,6 +2975,11 @@ function renderizarEvolucaoQtd() {
     options: {
       responsive: true,
       interaction: { mode: 'index', intersect: false },
+      onClick: (event, elements) => {
+        if (!elements.length) return;
+        aplicarFiltroPeriodo(meses[elements[0].index]);
+      },
+      onHover: _onHoverCursor,
       plugins: {
         legend: { display: true, position: 'top' },
         tooltip: {
@@ -2857,6 +3049,11 @@ function renderizarSellInVsSellOut(dados) {
     },
     options: {
       responsive: true,
+      onClick: (event, elements) => {
+        if (!elements.length) return;
+        aplicarFiltroCliente(clientes[elements[0].index]);
+      },
+      onHover: _onHoverCursor,
       plugins: {
         legend: { display: true, position: 'top' },
         tooltip: {
@@ -3651,6 +3848,11 @@ function renderizarEvolucaoMargemBravir(dados) {
     },
     options: {
       responsive: true,
+      onClick: (event, elements) => {
+        if (!elements.length) return;
+        aplicarFiltroPeriodo(mesesOrdenados[elements[0].index]);
+      },
+      onHover: _onHoverCursor,
       plugins: {
         legend: { display: false },
         tooltip: { callbacks: { label: ctx => '  ' + BRL(ctx.parsed.y) } }
@@ -3749,6 +3951,11 @@ function renderizarMargemComparativa(dados) {
     },
     options: {
       responsive: true,
+      onClick: (event, elements) => {
+        if (!elements.length) return;
+        aplicarFiltroCliente(clientes[elements[0].index]);
+      },
+      onHover: _onHoverCursor,
       layout: { padding: { top: 18 } },
       plugins: {
         legend: { display: true, position: 'top' },
@@ -3829,6 +4036,11 @@ function renderizarMargemBravirPorCategoria(dados) {
     options: {
       indexAxis: 'y',
       responsive: true,
+      onClick: (event, elements) => {
+        if (!elements.length) return;
+        aplicarFiltroCategoria(cats[elements[0].index]);
+      },
+      onHover: _onHoverCursor,
       layout: { padding: { right: 45 } },
       plugins: {
         legend: { display: false },
@@ -4455,6 +4667,11 @@ function renderizarRankingVariacaoPreco() {
     },
     options: {
       indexAxis: 'y', responsive: true,
+      onClick: (event, elements) => {
+        if (!elements.length) return;
+        aplicarFiltroSKU(selecionados[elements[0].index].sku);
+      },
+      onHover: _onHoverCursor,
       layout: { padding: { right: 50, left: 10 } },
       plugins: {
         legend: { display: false },
@@ -4625,6 +4842,137 @@ function selecionarTodasCatPreco(todos) {
   renderizarPrecoCategoria();
 }
 
+function renderizarPrecoVolume(dados) {
+  const agr = {};
+  dados.forEach(r => {
+    const ch  = `${r['Ano']}|${r['Mês']}`;
+    const qty = num(r['Quantidade Sell Out']);
+    const val = num(r['Valor (R$) Sell Out']);
+    if (!agr[ch]) agr[ch] = { qty: 0, val: 0 };
+    agr[ch].qty += qty;
+    agr[ch].val += val;
+  });
+
+  const meses = Object.keys(agr).sort((a, b) => {
+    const [anoA, mesA] = a.split('|');
+    const [anoB, mesB] = b.split('|');
+    return (parseInt(anoA) * 100 + (MESES_ORDEM[mesA] || 0)) -
+           (parseInt(anoB) * 100 + (MESES_ORDEM[mesB] || 0));
+  });
+
+  const labels = meses.map(ch => {
+    const [ano, mes] = ch.split('|');
+    return mes.slice(0, 3) + '/' + ano;
+  });
+  const qtds   = meses.map(ch => agr[ch].qty);
+  const precos = meses.map(ch => agr[ch].qty > 0 ? agr[ch].val / agr[ch].qty : null);
+
+  if (graficoPrecoVolume) graficoPrecoVolume.destroy();
+  graficoPrecoVolume = new Chart(document.getElementById('grafico-preco-volume'), {
+    plugins: [{
+      id: 'rotulosPrecoVolume',
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        // Rótulos das barras — quantidade
+        const metaQtd = chart.getDatasetMeta(0);
+        metaQtd.data.forEach((bar, i) => {
+          const v = chart.data.datasets[0].data[i];
+          if (!v) return;
+          const label = v >= 1e6 ? (v / 1e6).toFixed(1) + 'M'
+                      : v >= 1e3 ? (v / 1e3).toFixed(0) + 'k'
+                      : String(v);
+          ctx.save();
+          ctx.fillStyle = '#1a4f8a';
+          ctx.font = 'bold 9px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'bottom';
+          ctx.fillText(label, bar.x, bar.y - 2);
+          ctx.restore();
+        });
+        // Rótulos da linha — preço
+        const metaPreco = chart.getDatasetMeta(1);
+        metaPreco.data.forEach((point, i) => {
+          const v = chart.data.datasets[1].data[i];
+          if (v == null) return;
+          ctx.save();
+          ctx.fillStyle = '#c53030';
+          ctx.font = 'bold 9px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'bottom';
+          ctx.fillText(BRL(v), point.x, point.y - 6);
+          ctx.restore();
+        });
+      }
+    }],
+    data: {
+      labels,
+      datasets: [
+        {
+          type: 'bar',
+          label: 'Quantidade Sell-out (un.)',
+          data: qtds,
+          backgroundColor: '#2b6cb0aa',
+          borderColor: '#2b6cb0',
+          borderWidth: 1,
+          borderRadius: 3,
+          yAxisID: 'yQtd',
+          order: 2,
+        },
+        {
+          type: 'line',
+          label: 'Preço Sell-out (R$)',
+          data: precos,
+          borderColor: '#e53e3e',
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          pointRadius: 3,
+          pointBackgroundColor: '#e53e3e',
+          tension: 0.3,
+          yAxisID: 'yPreco',
+          order: 1,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      onClick: (event, elements) => {
+        if (!elements.length) return;
+        aplicarFiltroPeriodo(meses[elements[0].index]);
+      },
+      onHover: _onHoverCursor,
+      plugins: {
+        legend: { display: true, position: 'top' },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              if (ctx.dataset.yAxisID === 'yPreco') return `  Preço: ${BRL(ctx.parsed.y)}`;
+              return `  Qtd: ${ctx.parsed.y.toLocaleString('pt-BR')} un.`;
+            }
+          }
+        }
+      },
+      scales: {
+        yQtd: {
+          type: 'linear',
+          position: 'left',
+          beginAtZero: true,
+          title: { display: true, text: 'Quantidade (un.)' },
+          ticks: { callback: v => v.toLocaleString('pt-BR') }
+        },
+        yPreco: {
+          type: 'linear',
+          position: 'right',
+          beginAtZero: true,
+          title: { display: true, text: 'Preço (R$)' },
+          grid: { drawOnChartArea: false },
+          ticks: { callback: v => 'R$ ' + v.toFixed(2) }
+        }
+      }
+    }
+  });
+}
+
 function renderizarPrecoCategoria() {
   const dados = filtrarDados();
   const porCatMes = {}, totCat = {}, mesSet = new Set();
@@ -4709,6 +5057,12 @@ function renderizarPrecoCategoria() {
     options: {
       responsive: true,
       interaction: { mode: 'nearest', intersect: true },
+      onClick: (event, elements) => {
+        if (!elements.length) return;
+        const label = graficoPrecoCategoria.data.datasets[elements[0].datasetIndex]?.label;
+        if (label && !label.includes('ano ant.')) aplicarFiltroCategoria(label);
+      },
+      onHover: _onHoverCursor,
       plugins: {
         legend: { display: false },
         tooltip: {
@@ -4791,6 +5145,11 @@ function renderizarPrecoCliente() {
     options: {
       indexAxis: 'y',
       responsive: true,
+      onClick: (event, elements) => {
+        if (!elements.length) return;
+        aplicarFiltroCliente(clientes[elements[0].index]);
+      },
+      onHover: _onHoverCursor,
       layout: { padding: { right: 80 } },
       plugins: {
         legend: { display: false },
@@ -4910,6 +5269,11 @@ function renderizarEvolucaoPreco() {
     options: {
       responsive: true,
       interaction: { mode: 'index', intersect: false },
+      onClick: (event, elements) => {
+        if (!elements.length) return;
+        aplicarFiltroPeriodo(meses[elements[0].index]);
+      },
+      onHover: _onHoverCursor,
       plugins: {
         legend: { display: true, position: 'top' },
         tooltip: {
@@ -4973,18 +5337,19 @@ function renderizarHeatmapMarcas() {
   let globalMax = 0;
   marcas.forEach(m => clientes.forEach(c => { globalMax = Math.max(globalMax, por[m]?.[c] || 0); }));
 
-  const thVert = s => `<th style="writing-mode:vertical-rl;transform:rotate(180deg);height:120px;vertical-align:bottom;text-align:left;padding:.5rem .25rem .25rem;white-space:nowrap;font-size:.78rem;border-bottom:2px solid #e2e8f0;">${s}</th>`;
-  const tdFixo = (s, extra = '') => `<td style="position:sticky;left:0;z-index:1;background:#fff;padding:.4rem .6rem;white-space:nowrap;font-weight:600;border-right:1px solid #e2e8f0;${extra}">${s}</td>`;
+  const cursorFn = `style="cursor:pointer;"`;
+  const thVert = (s, onclick) => `<th ${onclick ? `onclick="${onclick}" ${cursorFn}` : ''} style="writing-mode:vertical-rl;transform:rotate(180deg);height:120px;vertical-align:bottom;text-align:left;padding:.5rem .25rem .25rem;white-space:nowrap;font-size:.78rem;border-bottom:2px solid #e2e8f0;">${s}</th>`;
+  const tdFixo = (s, extra = '', onclick = '') => `<td ${onclick ? `onclick="${onclick}" ${cursorFn}` : ''} style="position:sticky;left:0;z-index:1;background:#fff;padding:.4rem .6rem;white-space:nowrap;font-weight:600;border-right:1px solid #e2e8f0;${extra}">${s}</td>`;
   let html = '<table style="border-collapse:collapse;font-size:.82rem;">';
   html += '<thead><tr>';
   html += `<th style="position:sticky;left:0;z-index:2;background:#fff;padding:.4rem .6rem;text-align:left;border-bottom:2px solid #e2e8f0;border-right:1px solid #e2e8f0;white-space:nowrap;">Marca</th>`;
-  clientes.forEach(c => { html += thVert(c); });
+  clientes.forEach(c => { html += thVert(c, `aplicarFiltroCliente(${JSON.stringify(c)})`); });
   html += thVert('<b>Total</b>') + '</tr></thead><tbody>';
 
   marcas.forEach((m, idx) => {
     const bg = idx % 2 === 0 ? '#fff' : '#f7fafc';
     let totMarca = 0;
-    html += `<tr style="background:${bg};">` + tdFixo(m, `background:${bg};`);
+    html += `<tr style="background:${bg};">` + tdFixo(m, `background:${bg};`, `aplicarFiltroMarca(${JSON.stringify(m)})`);
     clientes.forEach(c => {
       const v = por[m]?.[c] || 0;
       totMarca += v;
@@ -4992,7 +5357,8 @@ function renderizarHeatmapMarcas() {
       const alpha = v > 0 ? 0.12 + t * 0.78 : 0;
       const cellBg = v > 0 ? `rgba(43,108,176,${alpha.toFixed(2)})` : 'transparent';
       const cor = alpha > 0.55 ? '#fff' : '#2d3748';
-      html += `<td style="padding:.4rem .6rem;text-align:right;background:${cellBg};color:${cor};">${v > 0 ? BRL(v) : '—'}</td>`;
+      const onclick = v > 0 ? `aplicarFiltroClienteMarca(${JSON.stringify(c)},${JSON.stringify(m)})` : '';
+      html += `<td onclick="${onclick}" style="padding:.4rem .6rem;text-align:right;background:${cellBg};color:${cor};${onclick ? 'cursor:pointer;' : ''}">${v > 0 ? BRL(v) : '—'}</td>`;
     });
     html += `<td style="padding:.4rem .6rem;text-align:right;font-weight:600;background:#edf2f7;">${BRL(totMarca)}</td></tr>`;
   });
@@ -5056,6 +5422,13 @@ function renderizarMixMarcaCliente() {
     data: { labels: clientes, datasets },
     options: {
       indexAxis: 'y', responsive: true,
+      onClick: (event, elements) => {
+        if (!elements.length) return;
+        const cli   = clientes[elements[0].index];
+        const marca = graficoMixMarcaCliente.data.datasets[elements[0].datasetIndex]?.label;
+        if (cli && marca) aplicarFiltroClienteMarca(cli, marca);
+      },
+      onHover: _onHoverCursor,
       plugins: {
         legend: { display: true, position: 'right', labels: { font: { size: 11 } } },
         tooltip: { callbacks: { label: ctx => `  ${ctx.dataset.label}: ${ctx.parsed.x.toFixed(1)}%` } }
@@ -5171,6 +5544,12 @@ function renderizarEvolucaoMarcas() {
     options: {
       responsive: true,
       interaction: { mode: 'nearest', intersect: true },
+      onClick: (event, elements) => {
+        if (!elements.length) return;
+        const label = graficoEvolucaoMarcas.data.datasets[elements[0].datasetIndex]?.label;
+        if (label && !label.includes('ano ant.')) aplicarFiltroMarca(label);
+      },
+      onHover: _onHoverCursor,
       plugins: {
         legend: { display: true, position: 'top', labels: { font: { size: 11 } } },
         tooltip: { callbacks: { label: ctx => `  ${ctx.dataset.label}: ${BRL(ctx.parsed.y)}` } }
@@ -5244,6 +5623,11 @@ function renderizarMargemMarca() {
     },
     options: {
       indexAxis: 'y', responsive: true,
+      onClick: (event, elements) => {
+        if (!elements.length) return;
+        aplicarFiltroMarca(marcas[elements[0].index]);
+      },
+      onHover: _onHoverCursor,
       layout: { padding: { right: 45 } },
       plugins: {
         legend: { display: false },
@@ -5314,6 +5698,11 @@ function renderizarRankingMarcas() {
     },
     options: {
       responsive: true,
+      onClick: (event, elements) => {
+        if (!elements.length) return;
+        aplicarFiltroMarca(marcas[elements[0].index]);
+      },
+      onHover: _onHoverCursor,
       plugins: {
         legend: { display: true, position: 'top' },
         tooltip: {
@@ -5395,6 +5784,18 @@ function renderizarEvolucaoSellInCliente() {
     options: {
       responsive: true,
       interaction: { mode: 'index', intersect: false },
+      onClick: (event, elements) => {
+        if (!elements.length) return;
+        const cli = graficoEvolucaoSellInCliente.data.datasets[elements[0].datasetIndex]?.label;
+        const mes = meses[elements[0].index];
+        if (cli && !cli.includes('ano ant.')) {
+          _aplicarFiltroDropdown('fdrop-cliente', 'fbtn-cliente', 'Cliente', cli);
+          aplicarFiltroPeriodo(mes);
+        } else if (mes) {
+          aplicarFiltroPeriodo(mes);
+        }
+      },
+      onHover: _onHoverCursor,
       plugins: {
         legend: { display: true, position: 'top', labels: { font: { size: 11 } } },
         tooltip: {
@@ -5479,6 +5880,18 @@ function renderizarEvolucaoSellInMarca() {
     options: {
       responsive: true,
       interaction: { mode: 'index', intersect: false },
+      onClick: (event, elements) => {
+        if (!elements.length) return;
+        const marca = graficoEvolucaoSellInMarca.data.datasets[elements[0].datasetIndex]?.label;
+        const mes   = meses[elements[0].index];
+        if (marca && !marca.includes('ano ant.')) {
+          _aplicarFiltroDropdown('fdrop-marca', 'fbtn-marca', 'Marca', marca);
+          aplicarFiltroPeriodo(mes);
+        } else if (mes) {
+          aplicarFiltroPeriodo(mes);
+        }
+      },
+      onHover: _onHoverCursor,
       plugins: {
         legend: { display: true, position: 'top', labels: { font: { size: 11 } } },
         tooltip: {
@@ -6077,7 +6490,36 @@ function toggleBlocoSimul(ns) {
   if (icon) icon.textContent = isOpen ? '▼' : '▲';
 }
 
-function _blocoSimulHTML(ns, label, mesesFut, defaultSO, cobAlvoPerMes) {
+function atualizarPremissasBloco(ns) {
+  const sliderEl = document.getElementById(`${ns}-var-preco`);
+  const labelEl  = document.getElementById(`${ns}-var-preco-val`);
+  if (sliderEl && labelEl) {
+    const v = parseFloat(sliderEl.value);
+    labelEl.textContent = (v >= 0 ? '+' : '') + v + '%';
+  }
+  const b = _simulBlocosAtivos[ns];
+  if (!b) return;
+  const varPreco   = parseFloat(sliderEl?.value || '0');
+  const cenario    = document.getElementById(`${ns}-cenario-clima`)?.value || 'tipico';
+  const fatorPreco = 1 + (varPreco / 100) * (-0.4);
+  const { porMes, mesesFut, ehSazonal, categoria, taxaYoY, tA, tB, baseRegIdx } = b;
+  mesesFut.forEach((m, k) => {
+    const [, mesFut] = m.ch.split('|');
+    const fatorClima = ehSazonal ? _fatorClima(cenario, mesFut, categoria) : 1.0;
+    let base;
+    if (ehSazonal) {
+      const chAnt = _mesAvancar(m.ch, -12);
+      base = porMes[chAnt]?.so > 0 ? porMes[chAnt].so * taxaYoY : tA + tB * (baseRegIdx + k + 1);
+    } else {
+      base = tA + tB * (baseRegIdx + k + 1);
+    }
+    const inp = document.getElementById(`${ns}-so-${k}`);
+    if (inp) inp.value = Math.round(Math.max(0, base * fatorClima * fatorPreco));
+  });
+  recalcularSimulador(ns);
+}
+
+function _blocoSimulHTML(ns, label, mesesFut, defaultSO, cobAlvoPerMes, ehSazonal) {
   const isAll      = ns === 'scall';
   const hdrBg      = isAll ? '#f0fff4' : '#f7fafc';
   const hdrBorder  = isAll ? '2px solid #276749' : '1px solid #e2e8f0';
@@ -6086,37 +6528,66 @@ function _blocoSimulHTML(ns, label, mesesFut, defaultSO, cobAlvoPerMes) {
   const thBase = 'padding:.4rem .8rem;font-size:.74rem;font-weight:600;border-bottom:2px solid #e2e8f0;white-space:nowrap;text-align:right;';
   const tdBase = 'padding:.35rem .8rem;border-bottom:1px solid #f0f4f8;';
 
+  // Premissas só aparecem nos blocos de cliente (não no agregado)
+  const premissasHtml = isAll ? '' : `
+    <div style="display:flex;gap:1.5rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem;padding:.55rem .85rem;background:#f7fafc;border-radius:6px;border:1px solid #e2e8f0;font-size:.78rem;">
+      <div style="display:flex;align-items:center;gap:.5rem;">
+        <span style="color:#4a5568;white-space:nowrap;">Variação de preço:</span>
+        <input type="range" id="${ns}-var-preco" min="-30" max="30" step="1" value="0"
+               oninput="atualizarPremissasBloco('${ns}')"
+               style="width:100px;accent-color:#2b6cb0;cursor:pointer;">
+        <span id="${ns}-var-preco-val" style="color:#2b6cb0;font-weight:700;min-width:36px;text-align:right;">0%</span>
+      </div>
+      ${ehSazonal ? `
+      <div style="display:flex;align-items:center;gap:.5rem;">
+        <span style="color:#4a5568;white-space:nowrap;">Cenário climático:</span>
+        <select id="${ns}-cenario-clima" onchange="atualizarPremissasBloco('${ns}')"
+                style="font-size:.78rem;padding:.2rem .5rem;border:1px solid #cbd5e0;border-radius:4px;background:#fff;color:#2d3748;">
+          <option value="tipico">Típico</option>
+          <option value="frio">Inverno rigoroso</option>
+          <option value="quente">Inverno ameno</option>
+        </select>
+      </div>` : ''}
+    </div>`;
+
+  // No agregado: SO e Cob. alvo são displays estáticos (não inputs)
+  const tabelaRows = mesesFut.map((m, k) => {
+    const col2 = isAll
+      ? `<td id="${ns}-so-input-${k}" style="${tdBase}text-align:right;color:#2d3748;font-weight:500;">—</td>`
+      : `<td style="${tdBase}text-align:right;"><input type="number" id="${ns}-so-${k}" value="${defaultSO[k]}" min="0" step="100" style="width:90px;${inputStyle}" oninput="recalcularSimulador('${ns}')"></td>`;
+    const col3 = isAll
+      ? `<td style="${tdBase}text-align:right;color:#718096;">${Math.round(cobAlvoPerMes[k])} d</td>`
+      : `<td style="${tdBase}text-align:right;"><input type="number" id="${ns}-cob-${k}" value="${Math.round(cobAlvoPerMes[k])}" min="1" step="10" style="width:70px;${inputStyle}" oninput="recalcularSimulador('${ns}')"></td>`;
+    return `
+      <tr style="border-bottom:1px solid #f0f4f8;">
+        <td style="${tdBase}padding-left:.1rem;font-weight:600;color:#2d3748;white-space:nowrap;">${m.rotulo}</td>
+        ${col2}
+        ${col3}
+        <td id="${ns}-so-prev-${k}" style="${tdBase}text-align:right;color:#2d3748;border-left:2px solid #edf2f7;">—</td>
+        <td id="${ns}-si-proj-${k}" style="${tdBase}text-align:right;font-weight:700;color:#276749;">—</td>
+        <td id="${ns}-est-fim-${k}" style="${tdBase}text-align:right;color:#2d3748;">—</td>
+        <td id="${ns}-cob-r-${k}" style="${tdBase}text-align:right;font-weight:700;">—</td>
+        <td id="${ns}-cob-alvo-${k}" style="${tdBase}text-align:right;font-size:.78rem;color:#a0aec0;">—</td>
+      </tr>`;
+  }).join('');
+
+  const col2Lbl = isAll ? 'Sell-out prev. (un.) ∑' : 'Sell-out prev. (un.)';
+  const col3Lbl = isAll ? 'Cob. alvo (dias)' : 'Cob. alvo (dias)';
+
   const tabela = `
     <div style="overflow-x:auto;margin-bottom:1.2rem;">
       <table style="border-collapse:collapse;font-size:.82rem;">
         <thead><tr>
           <th style="${thBase}text-align:left;padding-left:.1rem;color:#718096;">Mês</th>
-          <th style="${thBase}color:#2b6cb0;">Sell-out prev. (un.)</th>
-          <th style="${thBase}color:#718096;" title="Cobertura de estoque alvo (dias)">Cob. alvo (dias)</th>
+          <th style="${thBase}color:#2b6cb0;">${col2Lbl}</th>
+          <th style="${thBase}color:#718096;" title="Cobertura de estoque alvo (dias)">${col3Lbl}</th>
           <th style="${thBase}color:#718096;border-left:2px solid #e2e8f0;">SO prev.</th>
           <th style="${thBase}color:#276749;">SI proj.</th>
           <th style="${thBase}color:#718096;">Estoque proj.</th>
           <th style="${thBase}color:#718096;" title="Cobertura = Estoque ÷ (SO/30)">Cob.</th>
           <th style="${thBase}color:#a0aec0;" title="Meta sazonal (ref. ano anterior)">Alvo</th>
         </tr></thead>
-        <tbody>${mesesFut.map((m, k) => `
-          <tr style="border-bottom:1px solid #f0f4f8;">
-            <td style="${tdBase}padding-left:.1rem;font-weight:600;color:#2d3748;white-space:nowrap;">${m.rotulo}</td>
-            <td style="${tdBase}text-align:right;">
-              <input type="number" id="${ns}-so-${k}" value="${defaultSO[k]}"
-                min="0" step="100" style="width:90px;${inputStyle}" oninput="recalcularSimulador('${ns}')">
-            </td>
-            <td style="${tdBase}text-align:right;">
-              <input type="number" id="${ns}-cob-${k}" value="${Math.round(cobAlvoPerMes[k])}"
-                min="1" step="10" style="width:70px;${inputStyle}" oninput="recalcularSimulador('${ns}')">
-            </td>
-            <td id="${ns}-so-prev-${k}" style="${tdBase}text-align:right;color:#2d3748;border-left:2px solid #edf2f7;">—</td>
-            <td id="${ns}-si-proj-${k}" style="${tdBase}text-align:right;font-weight:700;color:#276749;">—</td>
-            <td id="${ns}-est-fim-${k}" style="${tdBase}text-align:right;color:#2d3748;">—</td>
-            <td id="${ns}-cob-r-${k}" style="${tdBase}text-align:right;font-weight:700;">—</td>
-            <td id="${ns}-cob-alvo-${k}" style="${tdBase}text-align:right;font-size:.78rem;color:#a0aec0;">—</td>
-          </tr>`).join('')}
-        </tbody>
+        <tbody>${tabelaRows}</tbody>
       </table>
       <div id="${ns}-proj-legenda"></div>
     </div>`;
@@ -6124,16 +6595,19 @@ function _blocoSimulHTML(ns, label, mesesFut, defaultSO, cobAlvoPerMes) {
   return `
     <div id="bloco-${ns}" style="border:${hdrBorder};border-radius:8px;margin-bottom:.75rem;overflow:hidden;">
       <div onclick="toggleBlocoSimul('${ns}')"
-           style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;background:${hdrBg};padding:.6rem 1rem;user-select:none;">
-        <span style="font-weight:700;color:${labelColor};font-size:.92rem;">${label}</span>
-        <span id="bloco-icon-${ns}" style="color:#718096;font-size:.85rem;">▲</span>
+           style="cursor:pointer;background:${hdrBg};padding:.5rem 1rem;user-select:none;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-weight:700;color:${labelColor};font-size:.92rem;">${label}</span>
+          <span id="bloco-icon-${ns}" style="color:#718096;font-size:.85rem;flex-shrink:0;">▼</span>
+        </div>
+        <div id="sumario-${ns}" style="display:flex;gap:.35rem;flex-wrap:wrap;margin-top:.25rem;pointer-events:none;"></div>
       </div>
-      <div id="bloco-body-${ns}" style="padding:1rem 1.2rem;">
+      <div id="bloco-body-${ns}" style="padding:1rem 1.2rem;display:none;">
+        ${premissasHtml}
         ${tabela}
         <div id="tabela-hist-${ns}" style="margin-bottom:1.2rem;"></div>
         <canvas id="canvas-${ns}" style="min-height:420px;max-height:480px;"></canvas>
         <div id="kpis-${ns}" style="margin-top:1rem;"></div>
-        <div id="tabela-cob-${ns}" style="margin-top:1.4rem;"></div>
         <div id="info-${ns}" style="font-size:.82rem;color:#4a5568;line-height:1.9;margin-top:.75rem;"></div>
       </div>
     </div>`;
@@ -6150,15 +6624,20 @@ function carregarSimulador() {
   const categoria     = linhasSKU[0]['Categoria'] || '';
   const CATS_SAZONAIS = ['Manteiga de cacau', 'Protetor Labial'];
   const ehSazonal     = CATS_SAZONAIS.includes(categoria);
-  const premissas     = _premissasAtuais();
-  const fatorPreco    = 1 + (premissas.variacaoPreco / 100) * (-0.4);
   const todasCh       = _todasChavesGlobais();
 
   // Destruir gráficos anteriores
   Object.values(_simulBlocosAtivos).forEach(b => { if (b.grafico) b.grafico.destroy(); });
   _simulBlocosAtivos = {};
 
-  const clientes = [...new Set(linhasSKU.map(r => r['Cliente']).filter(Boolean))].sort();
+  // Ordenar clientes por sell-out total decrescente
+  const soTotalPorCli = {};
+  linhasSKU.forEach(r => {
+    const cli = r['Cliente'];
+    if (cli) soTotalPorCli[cli] = (soTotalPorCli[cli] || 0) + num(r['Quantidade Sell Out']);
+  });
+  const clientes = [...new Set(linhasSKU.map(r => r['Cliente']).filter(Boolean))]
+    .sort((a, b) => (soTotalPorCli[b] || 0) - (soTotalPorCli[a] || 0));
 
   function ordenarMeses(pm) {
     return Object.keys(pm)
@@ -6190,9 +6669,9 @@ function carregarSimulador() {
     const ult6 = mesesHist.slice(-6);
     const { a: tA, b: tB } = _regressaoLinear(ult6.map(ch => pm[ch].so));
     const baseRegIdx = ult6.length - 1;
-    return mesesFut.map((m, k) => {
+    const valores = mesesFut.map((m, k) => {
       const [, mesFut] = m.ch.split('|');
-      const fatorClima = ehSazonal ? _fatorClima(premissas.cenarioClimatico, mesFut, categoria) : 1.0;
+      const fatorClima = ehSazonal ? _fatorClima('tipico', mesFut, categoria) : 1.0;
       let base;
       if (ehSazonal) {
         const chAnt = _mesAvancar(m.ch, -12);
@@ -6200,8 +6679,9 @@ function carregarSimulador() {
       } else {
         base = tA + tB * (baseRegIdx + k + 1);
       }
-      return Math.round(Math.max(0, base * fatorClima * fatorPreco));
+      return Math.round(Math.max(0, base * fatorClima));
     });
+    return { valores, taxaYoY, tA, tB, baseRegIdx };
   }
 
   function makeMesesFut(ultimoMes) {
@@ -6251,10 +6731,13 @@ function carregarSimulador() {
       ? todosComDado.reduce((s, ch) => s + pm[ch].est * 30 / pm[ch].so, 0) / todosComDado.length : 30;
     const mesesFut       = makeMesesFut(ultimoMes);
     const cobAlvoPerMes  = calcCobAlvo(pm, mesesFut, cobFallback);
-    const defaultSO      = calcDefaultSO(pm, mesesHist, mesesFut);
+    const dso            = calcDefaultSO(pm, mesesHist, mesesFut);
     const ns             = _nsSimul(cli);
-    _simulBlocosAtivos[ns] = { porMes: pm, mesesHist, ultimoMes, cobAlvoPerMes, cobFallback, mesesFut, grafico: null };
-    htmlTudo += _blocoSimulHTML(ns, cli, mesesFut, defaultSO, cobAlvoPerMes);
+    _simulBlocosAtivos[ns] = {
+      porMes: pm, mesesHist, ultimoMes, cobAlvoPerMes, cobFallback, mesesFut, grafico: null,
+      ehSazonal, categoria, taxaYoY: dso.taxaYoY, tA: dso.tA, tB: dso.tB, baseRegIdx: dso.baseRegIdx
+    };
+    htmlTudo += _blocoSimulHTML(ns, cli, mesesFut, dso.valores, cobAlvoPerMes, ehSazonal);
     nsList.push(ns);
   });
 
@@ -6267,10 +6750,14 @@ function carregarSimulador() {
       ? todosComDadoAll.reduce((s, ch) => s + porMesAll[ch].est * 30 / porMesAll[ch].so, 0) / todosComDadoAll.length : 30;
     const mesesFutAll      = makeMesesFut(ultimoMesAll);
     const cobAlvoPerMesAll = calcCobAlvo(porMesAll, mesesFutAll, cobFallbackAll);
-    const defaultSOAll     = calcDefaultSO(porMesAll, mesesHistAll, mesesFutAll);
+    const dsoAll           = calcDefaultSO(porMesAll, mesesHistAll, mesesFutAll);
     const nsAll            = 'scall';
-    _simulBlocosAtivos[nsAll] = { porMes: porMesAll, mesesHist: mesesHistAll, ultimoMes: ultimoMesAll, cobAlvoPerMes: cobAlvoPerMesAll, cobFallback: cobFallbackAll, mesesFut: mesesFutAll, grafico: null };
-    htmlTudo += _blocoSimulHTML(nsAll, 'Todos os Clientes', mesesFutAll, defaultSOAll, cobAlvoPerMesAll);
+    _simulBlocosAtivos[nsAll] = {
+      porMes: porMesAll, mesesHist: mesesHistAll, ultimoMes: ultimoMesAll,
+      cobAlvoPerMes: cobAlvoPerMesAll, cobFallback: cobFallbackAll, mesesFut: mesesFutAll, grafico: null,
+      ehSazonal, categoria, taxaYoY: dsoAll.taxaYoY, tA: dsoAll.tA, tB: dsoAll.tB, baseRegIdx: dsoAll.baseRegIdx
+    };
+    htmlTudo += _blocoSimulHTML(nsAll, 'Todos os Clientes', mesesFutAll, dsoAll.valores, cobAlvoPerMesAll, ehSazonal);
     nsList.push(nsAll);
   }
 
@@ -6279,7 +6766,6 @@ function carregarSimulador() {
 
   nsList.forEach(ns => {
     const b = _simulBlocosAtivos[ns];
-    renderizarTabelaHistSimul(b.porMes, b.mesesHist, b.mesesFut, ns);
     recalcularSimulador(ns);
     const infoEl = document.getElementById(`info-${ns}`);
     if (infoEl) {
@@ -6297,14 +6783,159 @@ function carregarSimulador() {
   });
 }
 
+function renderizarTabelaHistCobSimul(porMes, mesesHist, mesesFut, projecoes, soSmooth, ns) {
+  const tabEl = document.getElementById(`tabela-hist-${ns}`);
+  if (!tabEl) return;
+
+  const ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const FULL  = MESES_NOMES_ARR;
+
+  // Mapa de cobertura (histórica + projetada)
+  const cobPorMes = {};
+  mesesHist.forEach((ch, i) => {
+    const est  = porMes[ch].est;
+    const soSm = soSmooth ? (soSmooth[i] || 0) : (porMes[ch].so || 0);
+    if (est > 0 && soSm > 0) cobPorMes[ch] = Math.round(est * 30 / soSm);
+  });
+  projecoes.forEach(p => { if (p.cobResult > 0) cobPorMes[p.ch] = Math.round(p.cobResult); });
+
+  // Mapa de SO projetado (sobrescreve colunas futuras)
+  const soProjMap = {};
+  projecoes.forEach(p => { soProjMap[p.ch] = Math.round(p.soProj); });
+
+  const futSet       = new Set(projecoes.map(p => p.ch));
+  const projMesNomes = new Set(projecoes.map(p => p.ch.split('|')[1]));
+  const anosSet      = new Set(mesesHist.map(ch => ch.split('|')[0]));
+  projecoes.forEach(p => anosSet.add(p.ch.split('|')[0]));
+  const anos = [...anosSet].sort();
+
+  const thBase = 'text-align:right;padding:.35rem .5rem;font-size:.73rem;font-weight:600;white-space:nowrap;min-width:56px;';
+  const tdBase = 'text-align:right;padding:.27rem .5rem;white-space:nowrap;min-width:56px;font-size:.8rem;';
+
+  const headers = FULL.map((mesNome, i) => {
+    const isProj = projMesNomes.has(mesNome);
+    const extra  = isProj ? 'background:#ebf8ff;color:#2b6cb0;' : 'color:#4a5568;';
+    return `<th style="${thBase}${extra}">${ABREV[i]}</th>`;
+  }).join('');
+
+  const rows = anos.flatMap(ano => {
+    // Linha SO
+    const soRow = FULL.map((mesNome, i) => {
+      const ch      = `${ano}|${mesNome}`;
+      const isFut   = futSet.has(ch);
+      const val     = isFut ? (soProjMap[ch] ?? 0) : (porMes[ch]?.so || 0);
+      const temDado = val > 0;
+      const display = temDado ? val.toLocaleString('pt-BR') : '—';
+      let extra = isFut && temDado ? 'background:#ebf8ff;color:#2b6cb0;font-weight:600;'
+                : !temDado         ? 'color:#cbd5e0;'
+                :                    'color:#2d3748;font-weight:500;';
+      return `<td style="${tdBase}${extra}">${display}</td>`;
+    }).join('');
+
+    // Linha Cobertura
+    const cobRow = FULL.map((mesNome, i) => {
+      const ch      = `${ano}|${mesNome}`;
+      const isFut   = futSet.has(ch);
+      const val     = cobPorMes[ch];
+      const temDado = val != null;
+      const display = temDado ? val + ' d' : '—';
+      let extra = isFut && temDado ? 'background:#ebf8ff;color:#2b6cb0;font-weight:600;'
+                : !temDado         ? 'color:#cbd5e0;'
+                :                    'color:' + cobCorSimul(val) + ';font-weight:500;';
+      return `<td style="${tdBase}${extra}">${display}</td>`;
+    }).join('');
+
+    return [
+      `<tr style="border-bottom:1px solid #f0f4f8;">
+        <td style="padding:.27rem .6rem .27rem .1rem;font-weight:700;color:#2d3748;white-space:nowrap;vertical-align:middle;" rowspan="2">${ano}</td>
+        <td style="padding:.27rem .35rem;font-size:.7rem;color:#718096;white-space:nowrap;">SO</td>
+        ${soRow}
+      </tr>`,
+      `<tr style="border-bottom:2px solid #e8edf2;">
+        <td style="padding:.27rem .35rem;font-size:.7rem;color:#718096;white-space:nowrap;">Cob.</td>
+        ${cobRow}
+      </tr>`
+    ];
+  }).join('');
+
+  tabEl.innerHTML = `
+    <div style="font-size:.71rem;color:#718096;margin-bottom:.4rem;">
+      Sell-out (un.) e Cobertura de estoque (dias) · Colunas azuis = projetado
+      · <span style="color:#c53030;font-weight:600;">■</span> &lt;30d crítica
+      · <span style="color:#dd6b20;font-weight:600;">■</span> 30–60d baixa
+      · <span style="color:#276749;font-weight:600;">■</span> 60–90d ideal
+      · <span style="color:#b7791f;font-weight:600;">■</span> 90–120d alta
+      · <span style="color:#2b6cb0;font-weight:600;">■</span> &gt;120d excesso
+    </div>
+    <div style="overflow-x:auto;">
+      <table style="border-collapse:collapse;font-size:.82rem;width:100%;">
+        <thead>
+          <tr style="border-bottom:2px solid #e2e8f0;">
+            <th style="text-align:left;padding:.35rem .5rem;min-width:40px;"></th>
+            <th style="min-width:32px;padding:.35rem .35rem;"></th>
+            ${headers}
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+function atualizarSumarioBloco(ns, soInputs, projecoes, porMes, mesesHist) {
+  const el = document.getElementById(`sumario-${ns}`);
+  if (!el) return;
+
+  const soHistVals = mesesHist.map(ch => porMes[ch]?.so || 0).filter(v => v > 0);
+  const soHistAvg  = soHistVals.length > 0 ? soHistVals.reduce((s, v) => s + v, 0) / soHistVals.length : 0;
+  const soProjAvg  = soInputs.length > 0 ? soInputs.reduce((s, v) => s + v, 0) / soInputs.length : 0;
+  const soVar      = soHistAvg > 0 ? ((soProjAvg - soHistAvg) / soHistAvg * 100) : null;
+
+  const cobVals = projecoes.map(p => p.cobResult).filter(v => v > 0);
+  const cobAvg  = cobVals.length > 0 ? cobVals.reduce((s, v) => s + v, 0) / cobVals.length : 0;
+
+  const siVals = projecoes.map(p => p.siProj).filter(v => v >= 0);
+  const siAvg  = siVals.length > 0 ? siVals.reduce((s, v) => s + v, 0) / siVals.length : 0;
+
+  const fmt    = v => Math.round(v).toLocaleString('pt-BR');
+  const fmtVar = v => v === null ? '' : ` (${v >= 0 ? '+' : ''}${v.toFixed(0)}%)`;
+  const corSO  = soVar === null ? '#4a5568' : soVar >= 3 ? '#276749' : soVar <= -3 ? '#c53030' : '#4a5568';
+  const corCob = cobAvg > 0 ? cobCorSimul(Math.round(cobAvg)) : '#718096';
+
+  el.innerHTML = [
+    { label: 'SO hist.',  val: fmt(soHistAvg) + ' un./mês',              cor: '#4a5568' },
+    { label: 'SO proj.',  val: fmt(soProjAvg) + ' un./mês' + fmtVar(soVar), cor: corSO },
+    { label: 'Cob. proj.',val: Math.round(cobAvg) + ' d',                cor: corCob },
+    { label: 'SI proj.',  val: fmt(siAvg) + ' un./mês',                  cor: '#276749' },
+  ].map(c => `
+    <span style="background:#edf2f7;border-radius:4px;padding:.1rem .45rem;font-size:.7rem;white-space:nowrap;">
+      <span style="color:#718096;">${c.label}:</span>
+      <span style="font-weight:700;color:${c.cor};">${c.val}</span>
+    </span>`).join('');
+}
+
 function recalcularSimulador(ns) {
   const b = _simulBlocosAtivos[ns];
   if (!b) return;
   const { porMes, mesesHist, ultimoMes, cobAlvoPerMes, mesesFut } = b;
+  const isAll = ns === 'scall';
 
-  const soInputs = mesesFut.map((_, k) =>
-    Math.max(0, parseFloat(document.getElementById(`${ns}-so-${k}`)?.value) || 0)
-  );
+  // Agregado: somar inputs de SO de todos os clientes; cliente: ler seus próprios inputs
+  let soInputs;
+  if (isAll) {
+    const clientNs = Object.keys(_simulBlocosAtivos).filter(k => k !== 'scall');
+    soInputs = mesesFut.map((_, k) =>
+      clientNs.reduce((sum, cns) =>
+        sum + Math.max(0, parseFloat(document.getElementById(`${cns}-so-${k}`)?.value) || 0), 0)
+    );
+    soInputs.forEach((val, k) => {
+      const disp = document.getElementById(`${ns}-so-input-${k}`);
+      if (disp) disp.textContent = Math.round(val).toLocaleString('pt-BR');
+    });
+  } else {
+    soInputs = mesesFut.map((_, k) =>
+      Math.max(0, parseFloat(document.getElementById(`${ns}-so-${k}`)?.value) || 0)
+    );
+  }
 
   const soHistArr = mesesHist.map(ch => porMes[ch].so);
   const soAll     = [...soHistArr, ...soInputs];
@@ -6314,25 +6945,47 @@ function recalcularSimulador(ns) {
     return vals.length > 0 ? vals.reduce((s, v) => s + v, 0) / vals.length : (soAll[i] || 0);
   });
 
-  let estAnt = porMes[ultimoMes].est || 0;
-  const projecoes = mesesFut.map((m, k) => {
-    const soProj   = soInputs[k];
-    const cobInput = parseFloat(document.getElementById(`${ns}-cob-${k}`)?.value);
-    const cob      = cobInput > 0 ? cobInput : (cobAlvoPerMes[k] > 0 ? cobAlvoPerMes[k] : 30);
-    const estAlvo  = cob * soProj / 30;
-    const siProj   = Math.max(0, estAlvo - estAnt + soProj);
-    const estFim   = Math.max(0, estAnt + siProj - soProj);
-    estAnt = estFim;
-    const soSm      = soSmooth[nHist + k] || soProj;
-    const cobResult = soSm > 0 ? estFim * 30 / soSm : 0;
-    return { ...m, soProj, siProj, estFim, cobAlvo: cob, cobResult };
-  });
+  let projecoes;
+  if (isAll) {
+    // Agregado: somar siProj e estFim de cada cliente (não re-computar a fórmula de SI)
+    const clientNs = Object.keys(_simulBlocosAtivos).filter(k => k !== 'scall');
+    projecoes = mesesFut.map((m, k) => {
+      const soProj    = soInputs[k];
+      const siProj    = clientNs.reduce((s, cns) => s + (_simulBlocosAtivos[cns]?.projecoes?.[k]?.siProj || 0), 0);
+      const estFim    = clientNs.reduce((s, cns) => s + (_simulBlocosAtivos[cns]?.projecoes?.[k]?.estFim || 0), 0);
+      const soSm      = soSmooth[nHist + k] || soProj;
+      const cobResult = soSm > 0 ? estFim * 30 / soSm : 0;
+      const cobAlvo   = cobAlvoPerMes[k] > 0 ? cobAlvoPerMes[k] : 30;
+      return { ...m, soProj, siProj, estFim, cobAlvo, cobResult };
+    });
+  } else {
+    let estAnt = porMes[ultimoMes].est || 0;
+    projecoes = mesesFut.map((m, k) => {
+      const soProj   = soInputs[k];
+      const cobInput = parseFloat(document.getElementById(`${ns}-cob-${k}`)?.value);
+      const cob      = cobInput > 0 ? cobInput : (cobAlvoPerMes[k] > 0 ? cobAlvoPerMes[k] : 30);
+      const estAlvo  = cob * soProj / 30;
+      const siProj   = Math.max(0, estAlvo - estAnt + soProj);
+      const estFim   = Math.max(0, estAnt + siProj - soProj);
+      estAnt = estFim;
+      const soSm      = soSmooth[nHist + k] || soProj;
+      const cobResult = soSm > 0 ? estFim * 30 / soSm : 0;
+      return { ...m, soProj, siProj, estFim, cobAlvo: cob, cobResult };
+    });
+    // Salvar projeções para o bloco agregado usar na soma
+    _simulBlocosAtivos[ns].projecoes = projecoes;
+  }
 
   renderizarKPIsSimulador(porMes, mesesHist, projecoes, ns);
   renderizarTabelaProjecaoSimul(projecoes, ns);
-  atualizarHistSimulComProjecoes(soInputs, mesesFut, ns);
-  renderizarTabelaCoberturaSimul(porMes, mesesHist, projecoes, soSmooth, ns);
+  renderizarTabelaHistCobSimul(porMes, mesesHist, mesesFut, projecoes, soSmooth, ns);
   renderizarSimulador(porMes, mesesHist, projecoes, soSmooth, ns);
+  atualizarSumarioBloco(ns, soInputs, projecoes, porMes, mesesHist);
+
+  // Manter bloco agregado sincronizado quando um cliente muda
+  if (!isAll && _simulBlocosAtivos['scall']) {
+    recalcularSimulador('scall');
+  }
 }
 
 function renderizarTabelaCoberturaSimul(porMes, mesesHist, projecoes, soSmooth, ns) {
