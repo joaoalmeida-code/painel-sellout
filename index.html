@@ -7311,10 +7311,26 @@ function renderizarYoYScore(porMes, mesesFut, projecoes, ns) {
 
 // ─── Previsões salvas ─────────────────────────────────────────────────────────
 
+function _migrarPrevisoes(hist) {
+  // Converte entradas antigas que têm 'Versão' para 'Responsável'
+  return hist.map(p => {
+    if ('Versão' in p && !('Responsável' in p)) {
+      const { 'Versão': _, ...resto } = p;
+      return { ...resto, 'Responsável': 'João Almeida' };
+    }
+    return p;
+  });
+}
+
 function atualizarContadorPrevisoes() {
-  const hist = JSON.parse(localStorage.getItem('previsoes_bravir') || '[]');
-  const el   = document.getElementById('previsao-contador');
-  if (el) el.textContent = hist.length === 1 ? '1 previsão salva' : `${hist.length} previsões salvas`;
+  let hist = JSON.parse(localStorage.getItem('previsoes_bravir') || '[]');
+  const migrado = _migrarPrevisoes(hist);
+  // Se houve migração, salvar de volta para o localStorage
+  if (migrado.some((p, i) => p !== hist[i])) {
+    localStorage.setItem('previsoes_bravir', JSON.stringify(migrado));
+  }
+  const el = document.getElementById('previsao-contador');
+  if (el) el.textContent = migrado.length === 1 ? '1 previsão salva' : `${migrado.length} previsões salvas`;
 }
 
 function salvarPrevisao() {
@@ -7434,7 +7450,7 @@ function salvarPrevisao() {
 }
 
 function exportarPrevisoes() {
-  const hist = JSON.parse(localStorage.getItem('previsoes_bravir') || '[]');
+  const hist = _migrarPrevisoes(JSON.parse(localStorage.getItem('previsoes_bravir') || '[]'));
   if (!hist.length) { alert('Nenhuma previsão salva ainda.'); return; }
 
   // Calcular linhas de média por SKU (apenas SKUs com ≥2 responsáveis distintos)
