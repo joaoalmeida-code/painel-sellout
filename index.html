@@ -5116,7 +5116,29 @@ function renderizarPrecoCategoria() {
           ticks: { callback: v => BRL(v) }
         }
       }
-    }
+    },
+    plugins: [{
+      id: 'rotulosPrecoCategoria',
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        chart.data.datasets.forEach((ds, di) => {
+          if (ds.label?.includes('ano ant.')) return;
+          const meta = chart.getDatasetMeta(di);
+          if (meta.hidden) return;
+          meta.data.forEach((point, i) => {
+            const v = ds.data[i];
+            if (v == null) return;
+            ctx.save();
+            ctx.fillStyle = ds.borderColor || '#4a5568';
+            ctx.font = 'bold 8px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText(BRL(v), point.x, point.y - 4);
+            ctx.restore();
+          });
+        });
+      }
+    }]
   });
 }
 
