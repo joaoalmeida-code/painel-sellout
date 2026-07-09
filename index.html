@@ -6617,8 +6617,21 @@ function _blocoSimulHTML(ns, label, mesesFut, defaultSO, cobAlvoPerMes, ehSazona
   const thBase = 'padding:.4rem .8rem;font-size:.74rem;font-weight:600;border-bottom:2px solid #e2e8f0;white-space:nowrap;text-align:right;';
   const tdBase = 'padding:.35rem .8rem;border-bottom:1px solid #f0f4f8;';
 
+  const _btnCobStyle = (ativo) => ativo
+    ? 'font-size:.75rem;padding:.25rem .7rem;border-radius:5px;border:none;cursor:pointer;background:#2b6cb0;color:#fff;font-weight:700;white-space:nowrap;'
+    : 'font-size:.75rem;padding:.25rem .7rem;border-radius:5px;border:1px solid #cbd5e0;cursor:pointer;background:#edf2f7;color:#4a5568;font-weight:600;white-space:nowrap;';
+  const cobBtnHtml = `
+    <div style="display:flex;align-items:center;gap:.5rem;">
+      <span style="color:#4a5568;white-space:nowrap;">Cobertura alvo:</span>
+      <button id="${ns}-btn-cob-modo" onclick="toggleCobModo('${ns}')"
+              style="${_btnCobStyle(false)}">Sazonalizada</button>
+      <span id="${ns}-cob-modo-label" style="font-size:.72rem;color:#718096;"></span>
+    </div>`;
+
   // Premissas só aparecem nos blocos de cliente (não no agregado)
-  const premissasHtml = isAll ? '' : `
+  const premissasHtml = isAll
+    ? `<div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;margin-bottom:.75rem;padding:.45rem .85rem;background:#f0fff4;border-radius:6px;border:1px solid #c6f6d5;font-size:.78rem;">${cobBtnHtml}</div>`
+    : `
     <div style="display:flex;gap:1.5rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem;padding:.55rem .85rem;background:#f7fafc;border-radius:6px;border:1px solid #e2e8f0;font-size:.78rem;">
       <div style="display:flex;align-items:center;gap:.5rem;">
         <span style="color:#4a5568;white-space:nowrap;">Variação de preço:</span>
@@ -6637,6 +6650,7 @@ function _blocoSimulHTML(ns, label, mesesFut, defaultSO, cobAlvoPerMes, ehSazona
           <option value="quente">Inverno ameno</option>
         </select>
       </div>` : ''}
+      ${cobBtnHtml}
     </div>`;
 
   // No agregado: SO e Cob. alvo são displays estáticos (não inputs)
@@ -6645,7 +6659,7 @@ function _blocoSimulHTML(ns, label, mesesFut, defaultSO, cobAlvoPerMes, ehSazona
       ? `<td id="${ns}-so-input-${k}" style="${tdBase}text-align:right;color:#2d3748;font-weight:500;">—</td>`
       : `<td style="${tdBase}text-align:right;"><input type="number" id="${ns}-so-${k}" value="${defaultSO[k]}" min="0" step="100" style="width:90px;${inputStyle}" oninput="recalcularSimulador('${ns}')"></td>`;
     const col3 = isAll
-      ? `<td style="${tdBase}text-align:right;color:#718096;">${Math.round(cobAlvoPerMes[k])} d</td>`
+      ? `<td id="${ns}-cob-alvo-disp-${k}" style="${tdBase}text-align:right;color:#718096;">${Math.round(cobAlvoPerMes[k])} d</td>`
       : `<td style="${tdBase}text-align:right;"><input type="number" id="${ns}-cob-${k}" value="${Math.round(cobAlvoPerMes[k])}" min="1" step="10" style="width:70px;${inputStyle}" oninput="recalcularSimulador('${ns}')"></td>`;
     return `
       <tr style="border-bottom:1px solid #f0f4f8;">
@@ -6834,7 +6848,8 @@ function carregarSimulador() {
     _simulBlocosAtivos[ns] = {
       porMes: pm, mesesHist, ultimoMes, cobAlvoPerMes, cobFallback, mesesFut, grafico: null,
       ehSazonal, categoria, cliente: cli,
-      taxaYoY: dso.taxaYoY, tA: dso.tA, tB: dso.tB, baseRegIdx: dso.baseRegIdx
+      taxaYoY: dso.taxaYoY, tA: dso.tA, tB: dso.tB, baseRegIdx: dso.baseRegIdx,
+      cobModo: 'sazonalizada', cobFixaVal: null
     };
     htmlTudo += _blocoSimulHTML(ns, cli, mesesFut, dso.valores, cobAlvoPerMes, ehSazonal);
     nsList.push(ns);
@@ -6854,7 +6869,8 @@ function carregarSimulador() {
     _simulBlocosAtivos[nsAll] = {
       porMes: porMesAll, mesesHist: mesesHistAll, ultimoMes: ultimoMesAll,
       cobAlvoPerMes: cobAlvoPerMesAll, cobFallback: cobFallbackAll, mesesFut: mesesFutAll, grafico: null,
-      ehSazonal, categoria, taxaYoY: dsoAll.taxaYoY, tA: dsoAll.tA, tB: dsoAll.tB, baseRegIdx: dsoAll.baseRegIdx
+      ehSazonal, categoria, taxaYoY: dsoAll.taxaYoY, tA: dsoAll.tA, tB: dsoAll.tB, baseRegIdx: dsoAll.baseRegIdx,
+      cobModo: 'sazonalizada', cobFixaVal: null
     };
     htmlTudo += _blocoSimulHTML(nsAll, 'Todos os Clientes', mesesFutAll, dsoAll.valores, cobAlvoPerMesAll, ehSazonal);
     nsList.push(nsAll);
@@ -7012,6 +7028,53 @@ function atualizarSumarioBloco(ns, soInputs, projecoes, porMes, mesesHist) {
     </span>`).join('');
 }
 
+function _calcCobFixa(porMes, mesesHist) {
+  const ultimos3 = [...mesesHist].reverse()
+    .filter(ch => (porMes[ch]?.so || 0) > 0 && (porMes[ch]?.est || 0) > 0)
+    .slice(0, 3);
+  if (!ultimos3.length) return 30;
+  return ultimos3.reduce((s, ch) => s + porMes[ch].est * 30 / porMes[ch].so, 0) / ultimos3.length;
+}
+
+function toggleCobModo(ns) {
+  const b = _simulBlocosAtivos[ns];
+  if (!b) return;
+  const novoModo = b.cobModo === 'fixa' ? 'sazonalizada' : 'fixa';
+  b.cobModo = novoModo;
+
+  const isFixa = novoModo === 'fixa';
+  const btn = document.getElementById(`${ns}-btn-cob-modo`);
+  if (btn) {
+    btn.textContent = isFixa ? 'Fixa (últ. 3m)' : 'Sazonalizada';
+    btn.style.cssText = isFixa
+      ? 'font-size:.75rem;padding:.25rem .7rem;border-radius:5px;border:none;cursor:pointer;background:#2b6cb0;color:#fff;font-weight:700;white-space:nowrap;'
+      : 'font-size:.75rem;padding:.25rem .7rem;border-radius:5px;border:1px solid #cbd5e0;cursor:pointer;background:#edf2f7;color:#4a5568;font-weight:600;white-space:nowrap;';
+  }
+
+  if (isFixa) {
+    b.cobFixaVal = _calcCobFixa(b.porMes, b.mesesHist);
+    const label = document.getElementById(`${ns}-cob-modo-label`);
+    if (label) label.textContent = `(média: ${Math.round(b.cobFixaVal)} d)`;
+  } else {
+    b.cobFixaVal = null;
+    const label = document.getElementById(`${ns}-cob-modo-label`);
+    if (label) label.textContent = '';
+  }
+
+  // Para blocos de cliente: atualizar inputs com o novo valor
+  if (ns !== 'scall') {
+    b.mesesFut.forEach((_, k) => {
+      const inp = document.getElementById(`${ns}-cob-${k}`);
+      if (!inp) return;
+      inp.value = isFixa
+        ? Math.round(b.cobFixaVal)
+        : Math.round(b.cobAlvoPerMes[k]);
+    });
+  }
+
+  recalcularSimulador(ns);
+}
+
 function recalcularSimulador(ns) {
   const b = _simulBlocosAtivos[ns];
   if (!b) return;
@@ -7044,6 +7107,12 @@ function recalcularSimulador(ns) {
     return vals.length > 0 ? vals.reduce((s, v) => s + v, 0) / vals.length : (soAll[i] || 0);
   });
 
+  // Cobertura alvo efetiva: fixa (média últ. 3m) ou sazonalizada
+  const cobFixaAll = (b.cobModo === 'fixa')
+    ? (b.cobFixaVal ?? _calcCobFixa(porMes, mesesHist))
+    : null;
+  if (b.cobModo === 'fixa' && cobFixaAll != null) b.cobFixaVal = cobFixaAll;
+
   let projecoes;
   if (isAll) {
     // Agregado: somar siProj e estFim de cada cliente (não re-computar a fórmula de SI)
@@ -7054,7 +7123,12 @@ function recalcularSimulador(ns) {
       const estFim    = clientNs.reduce((s, cns) => s + (_simulBlocosAtivos[cns]?.projecoes?.[k]?.estFim || 0), 0);
       const soSm      = soSmooth[nHist + k] || soProj;
       const cobResult = soSm > 0 ? estFim * 30 / soSm : 0;
-      const cobAlvo   = cobAlvoPerMes[k] > 0 ? cobAlvoPerMes[k] : 30;
+      const cobAlvo   = cobFixaAll ?? (cobAlvoPerMes[k] > 0 ? cobAlvoPerMes[k] : 30);
+      // Atualizar display da célula de cob alvo no agregado quando em modo fixa
+      if (cobFixaAll != null) {
+        const dispEl = document.getElementById(`${ns}-cob-alvo-disp-${k}`);
+        if (dispEl) dispEl.textContent = Math.round(cobAlvo) + ' d';
+      }
       return { ...m, soProj, siProj, estFim, cobAlvo, cobResult };
     });
     // Salvar projeções do agregado para uso no salvarPrevisao()
