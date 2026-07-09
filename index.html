@@ -6659,9 +6659,7 @@ function _blocoSimulHTML(ns, label, mesesFut, defaultSO, cobAlvoPerMes, ehSazona
     </div>`;
 
   // Premissas só aparecem nos blocos de cliente (não no agregado)
-  const premissasHtml = isAll
-    ? `<div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;margin-bottom:.75rem;padding:.45rem .85rem;background:#f0fff4;border-radius:6px;border:1px solid #c6f6d5;font-size:.78rem;">${cobBtnHtml}</div>`
-    : `
+  const premissasHtml = isAll ? '' : `
     <div style="display:flex;gap:1.5rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem;padding:.55rem .85rem;background:#f7fafc;border-radius:6px;border:1px solid #e2e8f0;font-size:.78rem;">
       <div style="display:flex;align-items:center;gap:.5rem;">
         <span style="color:#4a5568;white-space:nowrap;">Variação de preço:</span>
