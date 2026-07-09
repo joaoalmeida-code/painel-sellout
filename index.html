@@ -2253,12 +2253,20 @@ async function buscarTemperaturaRegiao(regiao) {
   return result;
 }
 
-const MESES_TEMP = [
-  '2025|Janeiro','2025|Fevereiro','2025|Março','2025|Abril','2025|Maio',
-  '2025|Junho','2025|Julho','2025|Agosto','2025|Setembro','2025|Outubro',
-  '2025|Novembro','2025|Dezembro',
-  '2026|Janeiro','2026|Fevereiro','2026|Março','2026|Abril','2026|Maio'
-];
+// Gerado dinamicamente até o mês atual para sempre incluir o mês corrente
+const MESES_TEMP = (() => {
+  const NOMES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                 'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const hoje  = new Date();
+  const anoFim = hoje.getFullYear();
+  const mesFim = hoje.getMonth(); // 0-indexed
+  const result = [];
+  for (let ano = 2025; ano <= anoFim; ano++) {
+    const fim = ano < anoFim ? 11 : mesFim;
+    for (let m = 0; m <= fim; m++) result.push(`${ano}|${NOMES[m]}`);
+  }
+  return result;
+})();
 
 // Retorna array de regiões para o cliente (suporta múltiplas regiões → temperatura média)
 function regioesDe(nome) {
@@ -5361,7 +5369,29 @@ function renderizarEvolucaoPreco() {
           ticks: { callback: v => BRL(v) }
         }
       }
-    }
+    },
+    plugins: [{
+      id: 'rotulosEvolucaoPreco',
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        chart.data.datasets.forEach((ds, di) => {
+          if (ds.label?.includes('ano ant.')) return;
+          const meta = chart.getDatasetMeta(di);
+          if (meta.hidden) return;
+          meta.data.forEach((point, i) => {
+            const v = ds.data[i];
+            if (v == null) return;
+            ctx.save();
+            ctx.fillStyle = ds.borderColor || '#4a5568';
+            ctx.font = 'bold 8px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText(BRL(v), point.x, point.y - 4);
+            ctx.restore();
+          });
+        });
+      }
+    }]
   });
 }
 
