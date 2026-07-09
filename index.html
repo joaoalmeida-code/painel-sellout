@@ -6685,7 +6685,7 @@ function _blocoSimulHTML(ns, label, mesesFut, defaultSO, cobAlvoPerMes, ehSazona
   const tabelaRows = mesesFut.map((m, k) => {
     const col2 = isAll
       ? `<td id="${ns}-so-input-${k}" style="${tdBase}text-align:right;color:#2d3748;font-weight:500;">—</td>`
-      : `<td style="${tdBase}text-align:right;"><input type="number" id="${ns}-so-${k}" value="${defaultSO[k]}" min="0" step="100" style="width:90px;${inputStyle}" oninput="recalcularSimulador('${ns}')"></td>`;
+      : `<td style="${tdBase}text-align:right;"><input type="number" id="${ns}-so-${k}" value="${defaultSO[k]}" min="0" step="100" style="width:90px;${inputStyle}" oninput="_soInputStep(this,'${ns}')"></td>`;
     const col3 = isAll
       ? `<td id="${ns}-cob-alvo-disp-${k}" style="${tdBase}text-align:right;color:#718096;">${Math.round(cobAlvoPerMes[k])} d</td>`
       : `<td style="${tdBase}text-align:right;"><input type="number" id="${ns}-cob-${k}" value="${Math.round(cobAlvoPerMes[k])}" min="1" step="10" style="width:70px;${inputStyle}" oninput="recalcularSimulador('${ns}')"></td>`;
@@ -7062,6 +7062,18 @@ function _calcCobFixa(porMes, mesesHist) {
     .slice(0, 3);
   if (!ultimos3.length) return 30;
   return ultimos3.reduce((s, ch) => s + porMes[ch].est * 30 / porMes[ch].so, 0) / ultimos3.length;
+}
+
+function _soInputStep(el, ns) {
+  const curr = Math.max(0, parseFloat(el.value) || 0);
+  const prev = el.dataset.prev !== undefined ? (parseFloat(el.dataset.prev) || 0) : curr;
+  const diff = curr - prev;
+  // Detecta clique na setinha (diff == step 100) e aplica ±5% em vez de ±100
+  if (Math.abs(diff) === 100) {
+    el.value = prev === 0 ? 100 : Math.max(0, Math.round(diff > 0 ? prev * 1.05 : prev * 0.95));
+  }
+  el.dataset.prev = el.value;
+  recalcularSimulador(ns);
 }
 
 function toggleCobModo(ns) {
