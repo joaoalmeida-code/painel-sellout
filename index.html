@@ -592,11 +592,17 @@
   <!-- Faturamento por cliente + tabela -->
   <div class="card" id="area-grafico">
     <div id="titulo-grafico"></div>
-    <div class="subtitulo">Faturamento sell-out total · Barras ordenadas do maior para o menor · A tabela abaixo detalha volume, margem e preços por linha</div>
-    <div class="como-analisar">Este gráfico mostra quanto cada rede varejista faturou em sell-out no período selecionado. Identifique quais clientes sustentam o negócio e se há concentração excessiva — quando um único cliente representa mais de 40% do faturamento, qualquer problema comercial com ele impacta fortemente o resultado. A tabela abaixo permite comparar preço médio, volume e margem lado a lado.</div>
-    <canvas id="grafico"></canvas>
+    <div class="subtitulo">Faturamento sell-out total · A tabela abaixo detalha volume, margem e preços por linha</div>
+    <div class="como-analisar">Identifique quais clientes sustentam o negócio e se há concentração excessiva — quando um único cliente representa mais de 40% do faturamento, qualquer problema comercial com ele impacta fortemente o resultado.</div>
     <div id="total-mes"></div>
     <div id="tabela-container"></div>
+  </div>
+
+  <!-- Top 15 SKUs — Últimos 12 meses -->
+  <div class="card" id="area-top15-skus" style="display:none;">
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Top 15 SKUs — Sell-out Últimos 12 Meses</div>
+    <div class="subtitulo">Quantidade vendida (sell-out) nos últimos 12 meses · Comparação com mesmo período do ano anterior</div>
+    <div id="tabela-top15-skus" style="overflow-x:auto;margin-top:.6rem;"></div>
   </div>
 
   <!-- Evolução sell-out + margem Bravir (empilhado) -->
@@ -1211,6 +1217,7 @@ document.getElementById('input-arquivo').addEventListener('change', function (e)
       document.getElementById('area-kpis').style.display                = 'block';
       document.getElementById('area-tabela-clientes').style.display     = 'block';
       document.getElementById('area-grafico').style.display             = 'block';
+      document.getElementById('area-top15-skus').style.display          = 'block';
       document.getElementById('area-evolucao').style.display            = 'block';
 
       // Seção 2 — Clientes
@@ -1714,67 +1721,7 @@ function atualizarGrafico() {
   carregarSimulador();
   ocultarCardsIrrelevantes();
 
-  // Destroi gráfico anterior para não acumular
-  if (graficoAtual) graficoAtual.destroy();
-
-  graficoAtual = new Chart(document.getElementById('grafico'), {
-    type: 'bar',
-    data: {
-      labels: clientes,
-      datasets: [
-        {
-          label: 'Valor Sell In',
-          data: valoresIn,
-          backgroundColor: '#a0aec0cc',
-          borderColor:     '#a0aec0',
-          borderWidth: 1,
-          borderRadius: 4,
-        },
-        {
-          label: 'Valor Sell Out',
-          data: valores,
-          backgroundColor: '#2b6cb0cc',
-          borderColor:     '#2b6cb0',
-          borderWidth: 1,
-          borderRadius: 4,
-        },
-      ]
-    },
-    options: {
-      responsive: true,
-      onClick: (event, elements) => {
-        if (!elements.length) return;
-        aplicarFiltroCliente(clientes[elements[0].index]);
-      },
-      onHover: (event, elements) => {
-        const el = event.native?.target;
-        if (el) el.style.cursor = elements.length ? 'pointer' : 'default';
-      },
-      plugins: {
-        legend: { display: true, position: 'top' },
-        tooltip: {
-          callbacks: {
-            label: ctx => `  ${ctx.dataset.label}: ${BRL(ctx.parsed.y)}`
-          }
-        }
-      },
-      scales: {
-        x: {
-          ticks: { font: { size: 12 } }
-        },
-        y: {
-          beginAtZero: true,
-          ticks: {
-            callback: v => {
-              if (v >= 1_000_000) return 'R$ ' + (v / 1_000_000).toFixed(1) + 'M';
-              if (v >= 1_000)     return 'R$ ' + (v / 1_000).toFixed(0) + 'k';
-              return 'R$ ' + v;
-            }
-          }
-        }
-      }
-    }
-  });
+  renderizarTop15SKUs();
 }
 
 // ─── Oculta cards sem sentido com os filtros atuais ──────────────────────────
@@ -2121,6 +2068,79 @@ function renderizarEvolucao() {
       }
     }
   });
+}
+
+// ─── Top 15 SKUs — últimos 12 meses ──────────────────────────────────────────
+
+function renderizarTop15SKUs() {
+  const cont = document.getElementById('tabela-top15-skus');
+  if (!cont) return;
+
+  // Determina os 12 meses mais recentes com dados
+  const todasCh = _todasChavesGlobais();
+  const ult12   = todasCh.slice(-12);
+  const ant12   = ult12.map(ch => _mesAvancar(ch, -12));
+
+  const porSKU = {};
+  dadosGlobais.forEach(r => {
+    const sku = r['SKU']; if (!sku) return;
+    const ch  = `${r['Ano']}|${r['Mês']}`;
+    const q   = num(r['Quantidade Sell Out']); if (q <= 0) return;
+    if (!porSKU[sku]) porSKU[sku] = {
+      cat: r['Categoria'] || '', marca: r['Marca'] || '',
+      so12: 0, soAnt: 0
+    };
+    if (ult12.includes(ch))  porSKU[sku].so12  += q;
+    if (ant12.includes(ch))  porSKU[sku].soAnt += q;
+  });
+
+  const ranking = Object.entries(porSKU)
+    .filter(([, v]) => v.so12 > 0)
+    .sort((a, b) => b[1].so12 - a[1].so12)
+    .slice(0, 15);
+
+  const fmt = v => Math.round(v).toLocaleString('pt-BR');
+  const corDelta = pct => pct >= 5 ? '#276749' : pct <= -5 ? '#c53030' : '#b7791f';
+
+  const thS = 'padding:.4rem .75rem;font-size:.74rem;font-weight:600;color:#718096;border-bottom:2px solid #e2e8f0;white-space:nowrap;';
+  const tdS = 'padding:.32rem .75rem;font-size:.8rem;border-bottom:1px solid #f0f4f8;white-space:nowrap;';
+
+  const linhas = ranking.map(([sku, v], i) => {
+    const delta = v.soAnt > 0 ? (v.so12 - v.soAnt) / v.soAnt * 100 : null;
+    const deltaStr = delta !== null
+      ? `<span style="font-weight:700;color:${corDelta(delta)};">${delta >= 0 ? '+' : ''}${delta.toFixed(0)}%</span>`
+      : '<span style="color:#a0aec0;">N/D</span>';
+    const antStr = v.soAnt > 0 ? fmt(v.soAnt) : '<span style="color:#a0aec0;">—</span>';
+    return `<tr>
+      <td style="${tdS}text-align:center;color:#718096;font-weight:600;">${i + 1}</td>
+      <td style="${tdS}font-weight:600;color:#2d3748;">${sku}</td>
+      <td style="${tdS}color:#4a5568;">${v.cat}</td>
+      <td style="${tdS}color:#4a5568;">${v.marca}</td>
+      <td style="${tdS}text-align:right;font-weight:700;color:#2b6cb0;">${fmt(v.so12)}</td>
+      <td style="${tdS}text-align:right;color:#718096;">${antStr}</td>
+      <td style="${tdS}text-align:right;">${deltaStr}</td>
+    </tr>`;
+  }).join('');
+
+  const labelDe  = ult12[0]  ? ult12[0].split('|').reverse().join('/')  : '';
+  const labelAte = ult12[11] ? ult12[11].split('|').reverse().join('/') : '';
+
+  cont.innerHTML = `
+    <div style="font-size:.72rem;color:#718096;margin-bottom:.5rem;">
+      Período: ${labelDe} a ${labelAte} · Ano anterior: mesmo intervalo de 12 meses
+    </div>
+    <table style="border-collapse:collapse;width:100%;">
+      <thead><tr>
+        <th style="${thS}text-align:center;">#</th>
+        <th style="${thS}">SKU</th>
+        <th style="${thS}">Categoria</th>
+        <th style="${thS}">Marca</th>
+        <th style="${thS}text-align:right;">SO últ. 12m (un.)</th>
+        <th style="${thS}text-align:right;">Mesmo per. ano ant.</th>
+        <th style="${thS}text-align:right;">Δ YoY</th>
+      </tr></thead>
+      <tbody>${linhas}</tbody>
+    </table>`;
 }
 
 // ─── Tabela de clientes ───────────────────────────────────────────────────────
