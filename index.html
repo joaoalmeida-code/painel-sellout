@@ -732,6 +732,40 @@
     <canvas id="grafico-ranking-marcas" style="max-height:380px;"></canvas>
   </div>
 
+  <!-- ─── Bravir vs Terceiros: Evolução SO por Cliente ─── -->
+  <div class="card" id="area-bravir-terc-cliente" style="display:none;">
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Evolução SO — Bravir vs Terceiros por Cliente</div>
+    <div class="subtitulo">Faturamento sell-out mensal (R$) · Barras agrupadas · Verde = marcas Bravir · Azul = marcas Terceiros</div>
+    <div class="como-analisar">Compara a evolução do sell-out das marcas próprias (Bravir) com o white label (Terceiros) nos clientes selecionados. Um crescimento de Bravir mais rápido que Terceiros indica ganho de espaço de marca própria — objetivo estratégico da empresa. Use os filtros para isolar um ou mais clientes e comparar comportamentos distintos.</div>
+    <div id="chk-clientes-bravir-terc" style="margin-bottom:.6rem;display:flex;flex-wrap:wrap;gap:.15rem;"></div>
+    <canvas id="grafico-bravir-terc-cliente" style="max-height:360px;"></canvas>
+  </div>
+
+  <!-- ─── Bravir vs Terceiros: Evolução SO por Categoria ─── -->
+  <div class="card" id="area-bravir-terc-categoria" style="display:none;">
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Evolução SO — Bravir vs Terceiros por Categoria</div>
+    <div class="subtitulo">Faturamento sell-out mensal (R$) · Barras agrupadas · Verde = marcas Bravir · Azul = marcas Terceiros</div>
+    <div class="como-analisar">Dentro de cada categoria, mostra quanto vem de marcas próprias e quanto vem de white label ao longo do tempo. Categorias onde o Terceiros domina indicam onde a Bravir ainda não tem uma marca própria forte — pode ser uma oportunidade de desenvolvimento de produto ou de reposicionamento do portfólio.</div>
+    <div id="chk-cat-bravir-terc" style="margin-bottom:.6rem;display:flex;flex-wrap:wrap;gap:.15rem;"></div>
+    <canvas id="grafico-bravir-terc-categoria" style="max-height:360px;"></canvas>
+  </div>
+
+  <!-- ─── Mix Bravir × Terceiros por Cliente ─── -->
+  <div class="card" id="area-mix-bravir-terc-cliente" style="display:none;">
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Mix Bravir × Terceiros por Cliente</div>
+    <div class="subtitulo">Participação % do faturamento sell-out · Barras 100% empilhadas horizontais · Verde = Bravir · Azul = Terceiros</div>
+    <div class="como-analisar">Mostra de forma direta a proporção entre marcas próprias e white label no sell-out de cada cliente. Clientes com alta participação de Terceiros são candidatos a ações de desenvolvimento de marcas próprias. O tooltip exibe também o valor absoluto em R$ para contextualizar o tamanho do cliente.</div>
+    <canvas id="grafico-mix-bravir-terc-cliente" style="max-height:320px;"></canvas>
+  </div>
+
+  <!-- ─── Evolução % Margem Bravir vs Terceiros ─── -->
+  <div class="card" id="area-margem-bravir-terc" style="display:none;">
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Evolução do % de Margem — Bravir vs Terceiros</div>
+    <div class="subtitulo">Margem ponderada (%) = Σ Margem (R$) ÷ Σ Faturamento Sell-out · Verde = Bravir · Azul = Terceiros</div>
+    <div class="como-analisar">Acompanha a rentabilidade média ponderada das marcas próprias e do white label ao longo do tempo. Usa margem ponderada pelo faturamento, não média simples — SKUs maiores têm mais peso. Uma queda na linha Bravir pode sinalizar pressão de custo ou descontos crescentes. Uma linha Terceiros acima de Bravir indica que o white label está sendo mais lucrativo por real faturado.</div>
+    <canvas id="grafico-margem-bravir-terc" style="max-height:320px;"></canvas>
+  </div>
+
   <!-- Evolução Sell In por Marca (empilhado) -->
   <div class="card" id="area-evolucao-sellin-marca" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Evolução do Sell In por Marca</div>
@@ -1203,6 +1237,10 @@ let graficoMixMarcaCliente        = null;
 let graficoEvolucaoMarcas         = null;
 let graficoMargemMarca            = null;
 let graficoRankingMarcas          = null;
+let graficoBravirTercCliente      = null;
+let graficoBravirTercCategoria    = null;
+let graficoMixBravirTercCliente   = null;
+let graficoMargemBravirTerc       = null;
 let graficoEvolucaoSellInCliente  = null;
 let graficoEvolucaoSellInMarca    = null;
 let _simulBlocosAtivos            = {};
@@ -1274,6 +1312,10 @@ document.getElementById('input-arquivo').addEventListener('change', function (e)
       document.getElementById('area-evolucao-marca').style.display      = 'block';
       document.getElementById('area-margem-marca').style.display        = 'block';
       document.getElementById('area-ranking-marcas').style.display      = 'block';
+      document.getElementById('area-bravir-terc-cliente').style.display    = 'block';
+      document.getElementById('area-bravir-terc-categoria').style.display  = 'block';
+      document.getElementById('area-mix-bravir-terc-cliente').style.display = 'block';
+      document.getElementById('area-margem-bravir-terc').style.display     = 'block';
 
       // Seção 4 — SKUs / Produtos
       document.getElementById('sec-skus').style.display                 = 'block';
@@ -1758,6 +1800,10 @@ function atualizarGrafico() {
   renderizarEvolucaoMarcas();
   renderizarMargemMarca();
   renderizarRankingMarcas();
+  renderizarEvoluBravirTercCliente();
+  renderizarEvoluBravirTercCategoria();
+  renderizarMixBravirTercCliente();
+  renderizarMargemBravirTerc();
   popularSeletorSimulador();
   carregarSimulador();
   ocultarCardsIrrelevantes();
@@ -1827,7 +1873,7 @@ function ocultarCardsIrrelevantes() {
 
   // Oculta cabeçalho de seção se todos os seus cards estiverem ocultos
   const secoes = [
-    { hdr: 'sec-marcas',     cards: ['area-heatmap-marcas','area-mix-marca-cliente','area-evolucao-marca','area-margem-marca','area-ranking-marcas','area-evolucao-sellin-marca'] },
+    { hdr: 'sec-marcas',     cards: ['area-heatmap-marcas','area-mix-marca-cliente','area-evolucao-marca','area-margem-marca','area-ranking-marcas','area-evolucao-sellin-marca','area-bravir-terc-cliente','area-bravir-terc-categoria','area-mix-bravir-terc-cliente','area-margem-bravir-terc'] },
     { hdr: 'sec-clientes',   cards: ['area-sell-in-out','area-evolucao-sellin-cliente','area-venda-pdv','area-margem-comp','area-evolucao-qtd'] },
     { hdr: 'sec-skus',       cards: ['area-top-skus','area-top5-evolucao','area-ranking-margem-skus','area-scatter-margem-bravir'] },
     { hdr: 'sec-categorias', cards: ['area-donut-cat','area-evolucao-cat','area-margem-cat'] },
@@ -6106,6 +6152,259 @@ function renderizarRankingMarcas() {
         ctx.restore();
       }
     }]
+  });
+}
+
+// ─── Bravir vs Terceiros ──────────────────────────────────────────────────────
+
+const _abrevMes = {Janeiro:'Jan',Fevereiro:'Fev',Março:'Mar',Abril:'Abr',Maio:'Mai',Junho:'Jun',
+                   Julho:'Jul',Agosto:'Ago',Setembro:'Set',Outubro:'Out',Novembro:'Nov',Dezembro:'Dez'};
+const _lblCh = ch => { const [a, m] = ch.split('|'); return (_abrevMes[m] || m) + '/' + String(a).slice(-2); };
+
+function renderizarEvoluBravirTercCliente() {
+  const canvas = document.getElementById('grafico-bravir-terc-cliente');
+  if (!canvas) return;
+
+  const dados = filtrarDados();
+  const todasCh = _todasChavesGlobais();
+
+  // Clientes ordenados por faturamento total
+  const fatCli = {};
+  dados.forEach(r => { const c = r['Cliente']; if (c) fatCli[c] = (fatCli[c] || 0) + num(r['Valor (R$) Sell Out']); });
+  const clientes = Object.entries(fatCli).sort((a, b) => b[1] - a[1]).map(([c]) => c);
+
+  // Checkboxes (preserva seleção ao refiltrar, top 3 na primeira vez)
+  const chkDiv = document.getElementById('chk-clientes-bravir-terc');
+  if (chkDiv) {
+    const prev = new Set([...chkDiv.querySelectorAll('input:checked')].map(i => i.value));
+    const isFirst = !chkDiv.dataset.built;
+    const sel = isFirst ? new Set(clientes.slice(0, 3)) : prev;
+    chkDiv.dataset.built = '1';
+    chkDiv.innerHTML = clientes.map(c =>
+      `<label style="font-size:.78rem;color:#4a5568;display:inline-flex;align-items:center;gap:.3rem;
+        padding:.2rem .5rem;border:1px solid #e2e8f0;border-radius:4px;cursor:pointer;
+        background:${sel.has(c) ? '#f0fdf4' : '#fff'}">
+        <input type="checkbox" value="${c}" ${sel.has(c) ? 'checked' : ''}
+          onchange="this.closest('label').style.background=this.checked?'#f0fdf4':'#fff';renderizarEvoluBravirTercCliente()">
+        ${c}</label>`
+    ).join('');
+  }
+
+  const selecionados = chkDiv
+    ? new Set([...chkDiv.querySelectorAll('input:checked')].map(i => i.value))
+    : new Set(clientes.slice(0, 3));
+
+  // Agregação por mês
+  const por = {};
+  todasCh.forEach(ch => { por[ch] = { b: 0, t: 0 }; });
+  dados.forEach(r => {
+    if (!selecionados.has(r['Cliente'])) return;
+    const ch = `${r['Ano']}|${r['Mês']}`;
+    if (!por[ch]) return;
+    const v = num(r['Valor (R$) Sell Out']);
+    if (r['Bravir / Terceiros'] === 'Bravir') por[ch].b += v; else por[ch].t += v;
+  });
+
+  const meses = todasCh.filter(ch => por[ch].b + por[ch].t > 0);
+
+  if (graficoBravirTercCliente) graficoBravirTercCliente.destroy();
+  graficoBravirTercCliente = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: meses.map(_lblCh),
+      datasets: [
+        { label: 'Bravir',    data: meses.map(ch => por[ch].b), backgroundColor: 'rgba(39,103,73,0.82)',  borderRadius: 3 },
+        { label: 'Terceiros', data: meses.map(ch => por[ch].t), backgroundColor: 'rgba(66,153,225,0.82)', borderRadius: 3 }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'top' },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${BRL(ctx.raw)}` } }
+      },
+      scales: {
+        x: { ticks: { font: { size: 10 } } },
+        y: { beginAtZero: true, title: { display: true, text: 'Faturamento Sell-out (R$)' }, ticks: { callback: v => BRL(v) } }
+      }
+    }
+  });
+}
+
+function renderizarEvoluBravirTercCategoria() {
+  const canvas = document.getElementById('grafico-bravir-terc-categoria');
+  if (!canvas) return;
+
+  const dados = filtrarDados();
+  const todasCh = _todasChavesGlobais();
+
+  // Categorias ordenadas por faturamento total
+  const fatCat = {};
+  dados.forEach(r => { const c = r['Categoria']; if (c) fatCat[c] = (fatCat[c] || 0) + num(r['Valor (R$) Sell Out']); });
+  const categorias = Object.entries(fatCat).sort((a, b) => b[1] - a[1]).map(([c]) => c);
+
+  // Checkboxes (top 3 default)
+  const chkDiv = document.getElementById('chk-cat-bravir-terc');
+  if (chkDiv) {
+    const prev = new Set([...chkDiv.querySelectorAll('input:checked')].map(i => i.value));
+    const isFirst = !chkDiv.dataset.built;
+    const sel = isFirst ? new Set(categorias.slice(0, 3)) : prev;
+    chkDiv.dataset.built = '1';
+    chkDiv.innerHTML = categorias.map(c =>
+      `<label style="font-size:.78rem;color:#4a5568;display:inline-flex;align-items:center;gap:.3rem;
+        padding:.2rem .5rem;border:1px solid #e2e8f0;border-radius:4px;cursor:pointer;
+        background:${sel.has(c) ? '#f0fdf4' : '#fff'}">
+        <input type="checkbox" value="${c}" ${sel.has(c) ? 'checked' : ''}
+          onchange="this.closest('label').style.background=this.checked?'#f0fdf4':'#fff';renderizarEvoluBravirTercCategoria()">
+        ${c}</label>`
+    ).join('');
+  }
+
+  const selecionadas = chkDiv
+    ? new Set([...chkDiv.querySelectorAll('input:checked')].map(i => i.value))
+    : new Set(categorias.slice(0, 3));
+
+  const por = {};
+  todasCh.forEach(ch => { por[ch] = { b: 0, t: 0 }; });
+  dados.forEach(r => {
+    if (!selecionadas.has(r['Categoria'])) return;
+    const ch = `${r['Ano']}|${r['Mês']}`;
+    if (!por[ch]) return;
+    const v = num(r['Valor (R$) Sell Out']);
+    if (r['Bravir / Terceiros'] === 'Bravir') por[ch].b += v; else por[ch].t += v;
+  });
+
+  const meses = todasCh.filter(ch => por[ch].b + por[ch].t > 0);
+
+  if (graficoBravirTercCategoria) graficoBravirTercCategoria.destroy();
+  graficoBravirTercCategoria = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: meses.map(_lblCh),
+      datasets: [
+        { label: 'Bravir',    data: meses.map(ch => por[ch].b), backgroundColor: 'rgba(39,103,73,0.82)',  borderRadius: 3 },
+        { label: 'Terceiros', data: meses.map(ch => por[ch].t), backgroundColor: 'rgba(66,153,225,0.82)', borderRadius: 3 }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'top' },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${BRL(ctx.raw)}` } }
+      },
+      scales: {
+        x: { ticks: { font: { size: 10 } } },
+        y: { beginAtZero: true, title: { display: true, text: 'Faturamento Sell-out (R$)' }, ticks: { callback: v => BRL(v) } }
+      }
+    }
+  });
+}
+
+function renderizarMixBravirTercCliente() {
+  const canvas = document.getElementById('grafico-mix-bravir-terc-cliente');
+  if (!canvas) return;
+
+  const dados = filtrarDados();
+  const por = {};
+  dados.forEach(r => {
+    const c = r['Cliente']; if (!c) return;
+    if (!por[c]) por[c] = { b: 0, t: 0 };
+    const v = num(r['Valor (R$) Sell Out']);
+    if (r['Bravir / Terceiros'] === 'Bravir') por[c].b += v; else por[c].t += v;
+  });
+
+  const clientes = Object.entries(por).sort((a, b) => (b[1].b + b[1].t) - (a[1].b + a[1].t));
+  const labels  = clientes.map(([c]) => c);
+  const totais  = clientes.map(([, v]) => v.b + v.t);
+  const pctB    = clientes.map(([, v], i) => totais[i] > 0 ? parseFloat((v.b / totais[i] * 100).toFixed(1)) : 0);
+  const pctT    = clientes.map(([, v], i) => totais[i] > 0 ? parseFloat((v.t / totais[i] * 100).toFixed(1)) : 0);
+
+  if (graficoMixBravirTercCliente) graficoMixBravirTercCliente.destroy();
+  graficoMixBravirTercCliente = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Bravir',    data: pctB, backgroundColor: 'rgba(39,103,73,0.82)',  borderRadius: 3 },
+        { label: 'Terceiros', data: pctT, backgroundColor: 'rgba(66,153,225,0.82)', borderRadius: 3 }
+      ]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: {
+        legend: { position: 'top' },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const c = ctx.label;
+              const val = ctx.dataset.label === 'Bravir' ? por[c]?.b : por[c]?.t;
+              return ` ${ctx.dataset.label}: ${ctx.raw}% (${BRL(val || 0)})`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { stacked: true, min: 0, max: 100, ticks: { callback: v => v + '%' } },
+        y: { stacked: true, ticks: { font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+function renderizarMargemBravirTerc() {
+  const canvas = document.getElementById('grafico-margem-bravir-terc');
+  if (!canvas) return;
+
+  const dados = filtrarDados();
+  const todasCh = _todasChavesGlobais();
+
+  const por = {};
+  todasCh.forEach(ch => { por[ch] = { bMb: 0, bSo: 0, tMb: 0, tSo: 0 }; });
+  dados.forEach(r => {
+    const ch = `${r['Ano']}|${r['Mês']}`; if (!por[ch]) return;
+    const mb = num(r['Margem Cliente (R$)']);
+    const so = num(r['Valor (R$) Sell Out']); if (so <= 0) return;
+    if (r['Bravir / Terceiros'] === 'Bravir') { por[ch].bMb += mb; por[ch].bSo += so; }
+    else                                        { por[ch].tMb += mb; por[ch].tSo += so; }
+  });
+
+  const meses = todasCh.filter(ch => por[ch].bSo + por[ch].tSo > 0);
+  const pctB  = meses.map(ch => por[ch].bSo > 0 ? parseFloat((por[ch].bMb / por[ch].bSo * 100).toFixed(1)) : null);
+  const pctT  = meses.map(ch => por[ch].tSo > 0 ? parseFloat((por[ch].tMb / por[ch].tSo * 100).toFixed(1)) : null);
+
+  if (graficoMargemBravirTerc) graficoMargemBravirTerc.destroy();
+  graficoMargemBravirTerc = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: meses.map(_lblCh),
+      datasets: [
+        {
+          label: 'Bravir', data: pctB,
+          borderColor: '#276749', backgroundColor: 'rgba(39,103,73,0.08)',
+          tension: 0.3, fill: true, pointRadius: 3, spanGaps: true
+        },
+        {
+          label: 'Terceiros', data: pctT,
+          borderColor: '#3182ce', backgroundColor: 'rgba(49,130,206,0.08)',
+          tension: 0.3, fill: true, pointRadius: 3, spanGaps: true
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'top' },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.raw != null ? ctx.raw.toFixed(1) : '—'}%` } }
+      },
+      scales: {
+        x: { ticks: { font: { size: 10 } } },
+        y: {
+          title: { display: true, text: 'Margem % ponderada' },
+          ticks: { callback: v => v + '%' }
+        }
+      }
+    }
   });
 }
 
