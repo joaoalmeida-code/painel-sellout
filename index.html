@@ -9,6 +9,9 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <!-- Chart.js: gráficos -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- Firebase: sync de previsões entre usuários -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1063,11 +1066,19 @@
         <option value="João Wanderley">João Wanderley</option>
       </select>
       <span id="previsao-feedback" style="font-size:.8rem;font-weight:600;min-width:120px;"></span>
+      <span id="firebase-status" style="font-size:.76rem;color:#718096;"></span>
       <div style="margin-left:auto;display:flex;align-items:center;gap:.5rem;">
         <span id="previsao-contador" style="font-size:.78rem;color:#718096;white-space:nowrap;">0 previsões salvas</span>
         <button onclick="exportarPrevisoes()" style="padding:.3rem .65rem;font-size:.78rem;border-radius:5px;border:1px solid #2b6cb0;background:#ebf4ff;color:#2b6cb0;cursor:pointer;font-weight:600;">📥 Exportar Excel</button>
         <button onclick="limparPrevisoes()" style="padding:.3rem .65rem;font-size:.78rem;border-radius:5px;border:1px solid #e53e3e;background:#fff5f5;color:#c53030;cursor:pointer;font-weight:600;">🗑 Limpar</button>
       </div>
+    </div>
+
+    <!-- Ranking de Acurácia de Previsão -->
+    <div id="area-acuracia-previsao" style="display:none;margin-bottom:1.2rem;padding:1rem;background:#f7fafc;border:1px solid #e2e8f0;border-radius:7px;">
+      <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">🎯 Ranking de Acurácia de Previsão</div>
+      <div class="subtitulo">Sell-in previsto vs realizado · Só meses já disponíveis na base · M+0 válido apenas até dia 10</div>
+      <div id="dashboard-acuracia" style="margin-top:.75rem;"></div>
     </div>
 
     <div id="simulador-blocos"></div>
@@ -1106,6 +1117,26 @@
 </div>
 
 <script>
+// ─── CONFIGURAÇÃO FIREBASE ────────────────────────────────────────────────────
+// Preencha com os dados do seu projeto Firebase (console.firebase.google.com)
+const FIREBASE_CONFIG = {
+  apiKey:            "PREENCHER",
+  authDomain:        "PREENCHER",
+  projectId:         "PREENCHER",
+  storageBucket:     "PREENCHER",
+  messagingSenderId: "PREENCHER",
+  appId:             "PREENCHER"
+};
+
+let db = null;
+const FIREBASE_OK = FIREBASE_CONFIG.apiKey !== "PREENCHER";
+if (FIREBASE_OK) {
+  try {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.firestore();
+  } catch(e) { console.warn('Firebase init error:', e); }
+}
+
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
 const MESES_ORDEM = {
@@ -1275,9 +1306,12 @@ document.getElementById('input-arquivo').addEventListener('change', function (e)
       // Seção 9 — Previsão de Vendas
       document.getElementById('sec-previsao').style.display             = 'block';
       document.getElementById('area-previsao-simulador').style.display  = 'block';
+      document.getElementById('area-acuracia-previsao').style.display   = 'block';
 
       popularSKUs();
       atualizarContadorPrevisoes();
+      sincronizarFirestoreParaLocal();
+      renderizarDashboardAcuracia();
       popularClienteTemperatura();
       popularSKUPreco();
       popularScatterPrecoPDV();
@@ -1722,6 +1756,9 @@ function atualizarGrafico() {
   ocultarCardsIrrelevantes();
 
   renderizarTop15SKUs();
+
+  // Avaliar acurácia de previsões salvas (só quando Firebase está configurado)
+  if (FIREBASE_OK && db) avaliarPrevisoes();
 }
 
 // ─── Oculta cards sem sentido com os filtros atuais ──────────────────────────
@@ -7484,14 +7521,33 @@ function _migrarPrevisoes(hist) {
 }
 
 function atualizarContadorPrevisoes() {
-  let hist = JSON.parse(localStorage.getItem('previsoes_bravir') || '[]');
-  const migrado = _migrarPrevisoes(hist);
-  // Se houve migração, salvar de volta para o localStorage
-  if (migrado.some((p, i) => p !== hist[i])) {
-    localStorage.setItem('previsoes_bravir', JSON.stringify(migrado));
+  // Atualizar badge de status do Firebase
+  const fsEl = document.getElementById('firebase-status');
+  if (fsEl) {
+    fsEl.textContent = FIREBASE_OK ? '🟢 Firebase conectado' : '🔴 Firebase não configurado — previsões salvas apenas localmente';
+    fsEl.style.color = FIREBASE_OK ? '#276749' : '#718096';
   }
-  const el = document.getElementById('previsao-contador');
-  if (el) el.textContent = migrado.length === 1 ? '1 previsão salva' : `${migrado.length} previsões salvas`;
+
+  if (FIREBASE_OK && db) {
+    db.collection('previsoes').get().then(snap => {
+      const n = snap.size;
+      const el = document.getElementById('previsao-contador');
+      if (el) el.textContent = n === 1 ? '1 previsão salva' : `${n} previsões salvas`;
+    }).catch(() => {
+      // Fallback para localStorage em caso de erro
+      const hist = _migrarPrevisoes(JSON.parse(localStorage.getItem('previsoes_bravir') || '[]'));
+      const el = document.getElementById('previsao-contador');
+      if (el) el.textContent = hist.length === 1 ? '1 previsão salva' : `${hist.length} previsões salvas`;
+    });
+  } else {
+    let hist = JSON.parse(localStorage.getItem('previsoes_bravir') || '[]');
+    const migrado = _migrarPrevisoes(hist);
+    if (migrado.some((p, i) => p !== hist[i])) {
+      localStorage.setItem('previsoes_bravir', JSON.stringify(migrado));
+    }
+    const el = document.getElementById('previsao-contador');
+    if (el) el.textContent = migrado.length === 1 ? '1 previsão salva' : `${migrado.length} previsões salvas`;
+  }
 }
 
 function salvarPrevisao() {
@@ -7508,12 +7564,9 @@ function salvarPrevisao() {
 
   const agora       = new Date();
   const tsStr       = agora.toLocaleString('pt-BR');
+  const tsISO       = agora.toISOString();
   const mesRef      = `${agora.getFullYear()}/${String(agora.getMonth() + 1).padStart(2, '0')}`;
   const responsavel = document.getElementById('sel-responsavel')?.value || 'João Almeida';
-
-  // Deduplicar: apagar entrada anterior do mesmo responsável para este SKU
-  let historico = JSON.parse(localStorage.getItem('previsoes_bravir') || '[]');
-  historico = historico.filter(p => !(p['SKU'] === sku && p['Responsável'] === responsavel));
 
   // Histórico — últimos 3 meses (agregado)
   const mH3   = bAll.mesesHist.slice(-3);
@@ -7547,6 +7600,14 @@ function salvarPrevisao() {
     return s + (bAll.porMes[chAnt]?.so || 0);
   }, 0);
 
+  // Array de meses para Firestore (estruturado)
+  const meses = mesesFut.map((m, k) => ({
+    rotulo: m.rotulo,
+    si: Math.round(projecoes[k]?.siProj || 0),
+    so: Math.round(projecoes[k]?.soProj || 0)
+  }));
+
+  // Objeto flat (compatível com exportação Excel)
   const rec = {
     'Timestamp':               tsStr,
     'Mês Referência':          mesRef,
@@ -7598,22 +7659,97 @@ function salvarPrevisao() {
       : '0.0%';
   });
 
-  historico.push(rec);
-  localStorage.setItem('previsoes_bravir', JSON.stringify(historico));
-  atualizarContadorPrevisoes();
-
-  const fbEl = document.getElementById('previsao-feedback');
-  if (fbEl) {
-    fbEl.textContent = `✓ Previsão de ${responsavel} salva`;
-    fbEl.style.color = '#276749';
-    setTimeout(() => { fbEl.textContent = ''; }, 4000);
+  if (FIREBASE_OK && db) {
+    // Firestore: deduplicar + salvar
+    const docFirestore = {
+      ...rec,
+      responsavel,
+      sku,
+      mesReferencia: mesRef,
+      timestamp: tsISO,
+      categoria,
+      marca,
+      bravir: bravTer,
+      meses
+    };
+    db.collection('previsoes')
+      .where('responsavel', '==', responsavel)
+      .where('sku', '==', sku)
+      .get()
+      .then(snap => {
+        const batch = db.batch();
+        snap.forEach(d => batch.delete(d.ref));
+        return batch.commit();
+      })
+      .then(() => db.collection('previsoes').add(docFirestore))
+      .then(() => {
+        // Espelhar no localStorage para export imediato
+        let historico = _migrarPrevisoes(JSON.parse(localStorage.getItem('previsoes_bravir') || '[]'));
+        historico = historico.filter(p => !(p['SKU'] === sku && p['Responsável'] === responsavel));
+        historico.push(rec);
+        localStorage.setItem('previsoes_bravir', JSON.stringify(historico));
+        atualizarContadorPrevisoes();
+        const fbEl = document.getElementById('previsao-feedback');
+        if (fbEl) {
+          fbEl.textContent = `✓ Previsão de ${responsavel} salva (Firebase)`;
+          fbEl.style.color = '#276749';
+          setTimeout(() => { fbEl.textContent = ''; }, 4000);
+        }
+      })
+      .catch(err => {
+        console.error('Erro ao salvar no Firebase:', err);
+        // Fallback para localStorage
+        let historico = _migrarPrevisoes(JSON.parse(localStorage.getItem('previsoes_bravir') || '[]'));
+        historico = historico.filter(p => !(p['SKU'] === sku && p['Responsável'] === responsavel));
+        historico.push(rec);
+        localStorage.setItem('previsoes_bravir', JSON.stringify(historico));
+        atualizarContadorPrevisoes();
+        const fbEl = document.getElementById('previsao-feedback');
+        if (fbEl) { fbEl.textContent = '⚠ Erro Firebase — salvo localmente'; fbEl.style.color = '#c53030'; setTimeout(() => { fbEl.textContent = ''; }, 4000); }
+      });
+  } else {
+    // Sem Firebase: só localStorage
+    let historico = _migrarPrevisoes(JSON.parse(localStorage.getItem('previsoes_bravir') || '[]'));
+    historico = historico.filter(p => !(p['SKU'] === sku && p['Responsável'] === responsavel));
+    historico.push(rec);
+    localStorage.setItem('previsoes_bravir', JSON.stringify(historico));
+    atualizarContadorPrevisoes();
+    const fbEl = document.getElementById('previsao-feedback');
+    if (fbEl) {
+      fbEl.textContent = `✓ Previsão de ${responsavel} salva`;
+      fbEl.style.color = '#276749';
+      setTimeout(() => { fbEl.textContent = ''; }, 4000);
+    }
   }
 }
 
 function exportarPrevisoes() {
-  const hist = _migrarPrevisoes(JSON.parse(localStorage.getItem('previsoes_bravir') || '[]'));
-  if (!hist.length) { alert('Nenhuma previsão salva ainda.'); return; }
+  if (FIREBASE_OK && db) {
+    db.collection('previsoes').get().then(snap => {
+      const docs = [];
+      snap.forEach(d => {
+        const data = d.data();
+        // Extrair apenas os campos flat (remover campos específicos do Firestore)
+        const { responsavel: _r, sku: _s, mesReferencia: _mr, timestamp: _ts,
+                categoria: _cat, marca: _m, bravir: _b, meses: _mes, ...flat } = data;
+        docs.push(flat);
+      });
+      if (!docs.length) { alert('Nenhuma previsão salva ainda.'); return; }
+      _gerarExcelPrevisoes(docs);
+    }).catch(err => {
+      console.error('Erro ao ler Firebase para exportação:', err);
+      const hist = _migrarPrevisoes(JSON.parse(localStorage.getItem('previsoes_bravir') || '[]'));
+      if (!hist.length) { alert('Nenhuma previsão salva ainda.'); return; }
+      _gerarExcelPrevisoes(hist);
+    });
+  } else {
+    const hist = _migrarPrevisoes(JSON.parse(localStorage.getItem('previsoes_bravir') || '[]'));
+    if (!hist.length) { alert('Nenhuma previsão salva ainda.'); return; }
+    _gerarExcelPrevisoes(hist);
+  }
+}
 
+function _gerarExcelPrevisoes(hist) {
   // Calcular linhas de média por SKU (apenas SKUs com ≥2 responsáveis distintos)
   const porSku = {};
   hist.forEach(p => {
@@ -7687,12 +7823,247 @@ function exportarPrevisoes() {
   XLSX.writeFile(wb, 'previsoes_bravir.xlsx');
 }
 
+// ─── FIREBASE: sincronização e avaliação de acurácia ─────────────────────────
+
+// Sincroniza coleção 'previsoes' do Firestore para o localStorage (espelho local para export)
+function sincronizarFirestoreParaLocal() {
+  if (!FIREBASE_OK || !db) return;
+  db.collection('previsoes').get().then(snap => {
+    const docs = [];
+    snap.forEach(d => {
+      const data = d.data();
+      const { responsavel: _r, sku: _s, mesReferencia: _mr, timestamp: _ts,
+              categoria: _cat, marca: _m, bravir: _b, meses: _mes, ...flat } = data;
+      docs.push(flat);
+    });
+    localStorage.setItem('previsoes_bravir', JSON.stringify(docs));
+    atualizarContadorPrevisoes();
+  }).catch(err => console.warn('Erro ao sincronizar Firestore→local:', err));
+}
+
+// Converte rótulo de mês ("Jul/2026") para chave interna ("2026|Julho")
+function _rotuloParaCh(rotulo) {
+  if (!rotulo) return null;
+  const [abbr, ano] = rotulo.split('/');
+  const mesFull = MESES_NOMES_ARR.find(n => n.slice(0, 3) === abbr);
+  return mesFull ? `${ano}|${mesFull}` : null;
+}
+
+// Avalia acurácia de todas as previsões salvas contra os dados carregados
+async function avaliarPrevisoes() {
+  if (!FIREBASE_OK || !db || !dadosGlobais.length) return;
+  try {
+    // Carregar previsões
+    const prevSnap = await db.collection('previsoes').get();
+    if (prevSnap.empty) return;
+
+    // Carregar avaliações já feitas para deduplicação
+    const acurSnap = await db.collection('acuracidade').get();
+    const jaAvaliados = new Set();
+    acurSnap.forEach(d => {
+      const { responsavel, sku, mesReferencia, posicao } = d.data();
+      jaAvaliados.add(`${responsavel}|${sku}|${mesReferencia}|${posicao}`);
+    });
+
+    const novosRegistros = [];
+
+    prevSnap.forEach(docSnap => {
+      const prev = docSnap.data();
+      if (!prev.meses || !Array.isArray(prev.meses)) return;
+      const { responsavel, sku, mesReferencia, timestamp } = prev;
+      if (!responsavel || !sku || !mesReferencia) return;
+
+      // Dia da previsão (para regra M+0)
+      let diaPrevisao = 0;
+      if (timestamp) {
+        try { diaPrevisao = new Date(timestamp).getDate(); } catch(e) {}
+      }
+
+      prev.meses.forEach((mes, posicao) => {
+        // Regra M+0: só válido se a previsão foi feita até dia 10
+        if (posicao === 0 && diaPrevisao > 10) return;
+
+        const chave = _rotuloParaCh(mes.rotulo);
+        if (!chave) return;
+
+        // Verificar se já foi avaliado
+        const chaveDedup = `${responsavel}|${sku}|${mesReferencia}|${posicao}`;
+        if (jaAvaliados.has(chaveDedup)) return;
+
+        // Buscar dados reais na base
+        const [anoStr, mesNome] = chave.split('|');
+        const linhas = dadosGlobais.filter(r =>
+          r['SKU'] === sku &&
+          String(r['Ano']) === anoStr &&
+          r['Mês'] === mesNome
+        );
+        if (!linhas.length) return; // dado ainda não disponível
+
+        const realSI = linhas.reduce((s, r) => s + (parseFloat(r['Quantidade Sell in'])  || 0), 0);
+        const realSO = linhas.reduce((s, r) => s + (parseFloat(r['Quantidade Sell Out']) || 0), 0);
+
+        if (realSI <= 0) return; // sem dado de SI realizado, não avaliar
+
+        const prevSI = mes.si || 0;
+        const prevSO = mes.so || 0;
+        const acuraciaSI = Math.max(0, 100 - Math.abs(realSI - prevSI) / realSI * 100);
+        const acuraciaSO = realSO > 0 ? Math.max(0, 100 - Math.abs(realSO - prevSO) / realSO * 100) : null;
+
+        novosRegistros.push({
+          responsavel,
+          sku,
+          posicao,
+          mesReferencia,
+          mesPrevisto: mes.rotulo,
+          timestampPrevisao: timestamp || '',
+          prevSI,
+          realSI,
+          acuraciaSI,
+          prevSO,
+          realSO,
+          acuraciaSO,
+          avaliadoEm: new Date().toISOString()
+        });
+
+        // Marcar como já avaliado para não duplicar dentro desta rodada
+        jaAvaliados.add(chaveDedup);
+      });
+    });
+
+    // Escrever novos registros no Firestore
+    for (const reg of novosRegistros) {
+      await db.collection('acuracidade').add(reg);
+    }
+
+    if (novosRegistros.length > 0) {
+      renderizarDashboardAcuracia();
+    }
+  } catch(err) {
+    console.warn('Erro ao avaliar previsões:', err);
+  }
+}
+
+// Renderiza o dashboard de ranking de acurácia
+function renderizarDashboardAcuracia() {
+  const container = document.getElementById('dashboard-acuracia');
+  if (!container) return;
+
+  function _celulaCor(val) {
+    if (val === null || val === undefined) return { txt: '—', bg: '#e2e8f0', color: '#718096' };
+    const v = parseFloat(val);
+    if (isNaN(v)) return { txt: '—', bg: '#e2e8f0', color: '#718096' };
+    if (v >= 80) return { txt: v.toFixed(1) + '%', bg: '#c6f6d5', color: '#276749' };
+    if (v >= 60) return { txt: v.toFixed(1) + '%', bg: '#fefcbf', color: '#b7791f' };
+    return { txt: v.toFixed(1) + '%', bg: '#fed7d7', color: '#c53030' };
+  }
+
+  function _renderTabela(registros) {
+    if (!registros.length) {
+      container.innerHTML = '<div style="color:#718096;font-size:.82rem;padding:.5rem 0;">Sem dados avaliados ainda. Os meses futuros serão avaliados automaticamente quando os dados realizados estiverem disponíveis na base.</div>';
+      return;
+    }
+
+    // Agregar por responsável
+    const porResp = {};
+    registros.forEach(r => {
+      if (!porResp[r.responsavel]) {
+        porResp[r.responsavel] = { si: [], so: [], porPos: Array.from({length:6}, () => []) };
+      }
+      const ag = porResp[r.responsavel];
+      ag.si.push(r.acuraciaSI);
+      if (r.acuraciaSO !== null && r.acuraciaSO !== undefined) ag.so.push(r.acuraciaSO);
+      if (r.posicao >= 0 && r.posicao <= 5) ag.porPos[r.posicao].push(r.acuraciaSI);
+    });
+
+    const media = arr => arr.length ? arr.reduce((s,v) => s+v, 0) / arr.length : null;
+
+    const linhas = Object.entries(porResp).map(([resp, ag]) => ({
+      responsavel: resp,
+      siGeral: media(ag.si),
+      soGeral: media(ag.so),
+      porPos: ag.porPos.map(arr => media(arr)),
+      count: ag.si.length
+    })).sort((a, b) => (b.siGeral || 0) - (a.siGeral || 0));
+
+    let html = `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:.78rem;">
+      <thead>
+        <tr style="background:#edf2f7;">
+          <th style="text-align:left;padding:.4rem .6rem;white-space:nowrap;">Responsável</th>
+          <th style="padding:.4rem .5rem;white-space:nowrap;">SI Geral</th>
+          <th style="padding:.4rem .5rem;white-space:nowrap;color:#4a5568;">M+0</th>
+          <th style="padding:.4rem .5rem;white-space:nowrap;color:#4a5568;">M+1</th>
+          <th style="padding:.4rem .5rem;white-space:nowrap;color:#4a5568;">M+2</th>
+          <th style="padding:.4rem .5rem;white-space:nowrap;color:#4a5568;">M+3</th>
+          <th style="padding:.4rem .5rem;white-space:nowrap;color:#4a5568;">M+4</th>
+          <th style="padding:.4rem .5rem;white-space:nowrap;color:#4a5568;">M+5</th>
+          <th style="padding:.4rem .5rem;white-space:nowrap;">SO Geral</th>
+          <th style="padding:.4rem .5rem;white-space:nowrap;">Avaliações</th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+    linhas.forEach((l, i) => {
+      const siG  = _celulaCor(l.siGeral);
+      const soG  = _celulaCor(l.soGeral);
+      const posCells = l.porPos.map(v => _celulaCor(v));
+      const bg = i % 2 === 0 ? '#fff' : '#f7fafc';
+      html += `<tr style="background:${bg};">
+        <td style="padding:.4rem .6rem;font-weight:600;">${l.responsavel}</td>
+        <td style="padding:.4rem .5rem;text-align:center;background:${siG.bg};color:${siG.color};font-weight:700;">${siG.txt}</td>
+        ${posCells.map(c => `<td style="padding:.4rem .5rem;text-align:center;background:${c.bg};color:${c.color};">${c.txt}</td>`).join('')}
+        <td style="padding:.4rem .5rem;text-align:center;background:${soG.bg};color:${soG.color};">${soG.txt}</td>
+        <td style="padding:.4rem .5rem;text-align:center;color:#4a5568;">${l.count}</td>
+      </tr>`;
+    });
+
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+  }
+
+  if (FIREBASE_OK && db) {
+    db.collection('acuracidade').get().then(snap => {
+      const registros = [];
+      snap.forEach(d => registros.push(d.data()));
+      _renderTabela(registros);
+    }).catch(err => {
+      console.warn('Erro ao ler acuracidade:', err);
+      // Fallback localStorage
+      const local = JSON.parse(localStorage.getItem('acuracidade_bravir') || '[]');
+      _renderTabela(local);
+    });
+  } else {
+    const local = JSON.parse(localStorage.getItem('acuracidade_bravir') || '[]');
+    if (!local.length) {
+      container.innerHTML = '<div style="color:#718096;font-size:.82rem;padding:.5rem 0;">Configure o Firebase para ver o ranking compartilhado entre usuários.</div>';
+      return;
+    }
+    _renderTabela(local);
+  }
+}
+
 function limparPrevisoes() {
   if (!confirm('Apagar todas as previsões salvas? Essa ação não pode ser desfeita.')) return;
   localStorage.removeItem('previsoes_bravir');
-  atualizarContadorPrevisoes();
-  const fbEl = document.getElementById('previsao-feedback');
-  if (fbEl) { fbEl.textContent = 'Histórico limpo.'; fbEl.style.color = '#c53030'; setTimeout(() => { fbEl.textContent = ''; }, 3000); }
+  if (FIREBASE_OK && db) {
+    db.collection('previsoes').get().then(snap => {
+      const batch = db.batch();
+      snap.forEach(d => batch.delete(d.ref));
+      return batch.commit();
+    }).then(() => {
+      atualizarContadorPrevisoes();
+      const fbEl = document.getElementById('previsao-feedback');
+      if (fbEl) { fbEl.textContent = 'Histórico limpo (Firebase + local).'; fbEl.style.color = '#c53030'; setTimeout(() => { fbEl.textContent = ''; }, 3000); }
+    }).catch(err => {
+      console.error('Erro ao limpar Firebase:', err);
+      atualizarContadorPrevisoes();
+      const fbEl = document.getElementById('previsao-feedback');
+      if (fbEl) { fbEl.textContent = 'Histórico local limpo (erro no Firebase).'; fbEl.style.color = '#c53030'; setTimeout(() => { fbEl.textContent = ''; }, 3000); }
+    });
+  } else {
+    atualizarContadorPrevisoes();
+    const fbEl = document.getElementById('previsao-feedback');
+    if (fbEl) { fbEl.textContent = 'Histórico limpo.'; fbEl.style.color = '#c53030'; setTimeout(() => { fbEl.textContent = ''; }, 3000); }
+  }
 }
 </script>
 
