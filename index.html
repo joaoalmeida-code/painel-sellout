@@ -796,7 +796,8 @@
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.4rem;">Evolução Mensal — Top 5 SKUs por Faturamento</div>
     <div class="subtitulo">Sell Out em R$ mês a mês · Top 5 determinados pelo faturamento total no período filtrado</div>
     <div class="como-analisar">Acompanhe a trajetória dos 5 produtos mais vendidos ao longo do tempo. Um produto em queda consistente pode estar perdendo espaço para concorrentes ou sofrendo com rupturas recorrentes. Picos pontuais geralmente indicam ações promocionais ou sazonalidade. Use este gráfico para identificar padrões sazonais por produto e planejar com antecedência o calendário de produção, sell-in e ações de trade.</div>
-    <div style="margin-bottom:.6rem;">
+    <div id="chk-top5-skus" style="margin-bottom:.5rem;display:flex;flex-wrap:wrap;gap:.35rem;"></div>
+    <div style="margin-bottom:.5rem;">
       <label style="font-size:.8rem;color:#4a5568;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;">
         <input type="checkbox" id="chk-yoy-top5" onchange="renderizarTop5SKUsEvolucao(filtrarDados())">
         Comparar com ano anterior
@@ -2482,26 +2483,41 @@ function renderizarDonutCategorias(dados) {
     plugins: [{
       id: 'rotulosFatia',
       afterDatasetsDraw(chart) {
-        const ctx = chart.ctx;
+        const { ctx, data } = chart;
         const meta = chart.getDatasetMeta(0);
-        const tot  = chart.data.datasets[0].data.reduce((s, v) => s + v, 0);
+        const tot  = data.datasets[0].data.reduce((s, v) => s + v, 0);
+        if (!tot) return;
+        ctx.save();
         meta.data.forEach((arc, j) => {
-          const value = chart.data.datasets[0].data[j];
-          if (!value || tot === 0) return;
+          const value = data.datasets[0].data[j];
+          if (!value) return;
           const pct = value / tot * 100;
-          if (pct < 5) return;
+          if (pct < 2) return;
           const midAngle = (arc.startAngle + arc.endAngle) / 2;
-          const r = (arc.innerRadius + arc.outerRadius) / 2;
-          const x = arc.x + r * Math.cos(midAngle);
-          const y = arc.y + r * Math.sin(midAngle);
-          ctx.save();
-          ctx.fillStyle = '#fff';
-          ctx.font = 'bold 12px sans-serif';
-          ctx.textAlign = 'center';
+          const outerR   = arc.outerRadius;
+          const lineLen  = pct < 7 ? 32 : 22;
+          // Linha de ligação
+          const x0 = arc.x + (outerR - 2) * Math.cos(midAngle);
+          const y0 = arc.y + (outerR - 2) * Math.sin(midAngle);
+          const x1 = arc.x + (outerR + lineLen) * Math.cos(midAngle);
+          const y1 = arc.y + (outerR + lineLen) * Math.sin(midAngle);
+          ctx.beginPath();
+          ctx.moveTo(x0, y0);
+          ctx.lineTo(x1, y1);
+          ctx.strokeStyle = data.datasets[0].borderColor[j] || '#718096';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+          // Rótulo: nome + %
+          const isRight = Math.cos(midAngle) >= 0;
+          const lx = x1 + (isRight ? 6 : -6);
+          const ly = y1;
+          ctx.fillStyle = '#2d3748';
+          ctx.font = 'bold 11px sans-serif';
+          ctx.textAlign = isRight ? 'left' : 'right';
           ctx.textBaseline = 'middle';
-          ctx.fillText(pct.toFixed(1) + '%', x, y);
-          ctx.restore();
+          ctx.fillText(`${data.labels[j]}  ${pct.toFixed(1)}%`, lx, ly);
         });
+        ctx.restore();
       }
     }],
     data: {
@@ -2515,13 +2531,14 @@ function renderizarDonutCategorias(dados) {
     },
     options: {
       responsive: true,
+      layout: { padding: { top: 20, bottom: 20, left: 110, right: 110 } },
       onClick: (event, elements) => {
         if (!elements.length) return;
         aplicarFiltroCategoria(cats[elements[0].index]);
       },
       onHover: _onHoverCursor,
       plugins: {
-        legend: { display: true, position: 'right' },
+        legend: { display: false },
         tooltip: {
           callbacks: {
             label: ctx => {
@@ -3054,6 +3071,29 @@ function renderizarTop5SKUsEvolucao(dados) {
   const top5 = Object.keys(fat).sort((a, b) => fat[b] - fat[a]).slice(0, 5);
   if (!top5.length) return;
 
+  // Checkboxes de seleção de SKUs (todos marcados por padrão)
+  const CORES_5 = ['#2b6cb0','#276749','#744210','#702459','#2c7a7b'];
+  const chkDiv = document.getElementById('chk-top5-skus');
+  if (chkDiv) {
+    const prev = new Set([...chkDiv.querySelectorAll('input:checked')].map(i => i.value));
+    const isFirst = !chkDiv.dataset.built;
+    chkDiv.dataset.built = '1';
+    chkDiv.innerHTML = top5.map((sku, i) => {
+      const checked = isFirst || prev.has(sku);
+      const label = sku.length > 32 ? sku.slice(0, 32) + '…' : sku;
+      return `<label style="font-size:.78rem;color:#4a5568;display:inline-flex;align-items:center;gap:.3rem;
+        padding:.2rem .5rem;border:1px solid #e2e8f0;border-radius:4px;cursor:pointer;
+        border-left:3px solid ${CORES_5[i]}; background:${checked ? '#f7fafc' : '#fff'}">
+        <input type="checkbox" value="${sku}" ${checked ? 'checked' : ''}
+          onchange="this.closest('label').style.background=this.checked?'#f7fafc':'#fff';renderizarTop5SKUsEvolucao(filtrarDados())">
+        ${label}</label>`;
+    }).join('');
+  }
+
+  const selecionados = chkDiv
+    ? new Set([...chkDiv.querySelectorAll('input:checked')].map(i => i.value))
+    : new Set(top5);
+
   // Agrega por mês × SKU
   const porMesSKU = {};
   const mesesSet  = new Set();
@@ -3072,8 +3112,9 @@ function renderizarTop5SKUsEvolucao(dados) {
   });
   const rotulos = meses.map(m => { const [a, ms] = m.split('|'); return `${ms.slice(0,3)}/${a}`; });
 
-  const CORES_5 = ['#2b6cb0','#276749','#744210','#702459','#2c7a7b'];
-  const datasets = top5.map((sku, i) => ({
+  const datasets = top5.filter(sku => selecionados.has(sku)).map((sku, _i) => {
+    const i = top5.indexOf(sku); // mantém a cor original mesmo com SKUs desmarcados
+    return {
     label: sku.length > 30 ? sku.slice(0, 30) + '…' : sku,
     data:  meses.map(m => porMesSKU[m]?.[sku] ?? null),
     borderColor:     CORES_5[i],
@@ -3084,11 +3125,12 @@ function renderizarTop5SKUsEvolucao(dados) {
     fill: false,
     tension: 0.3,
     spanGaps: false,
-  }));
+  }; });
 
   if (document.getElementById('chk-yoy-top5')?.checked && meses.length) {
     const todasCh = _todasChavesGlobais();
-    top5.forEach((sku, i) => {
+    top5.filter(sku => selecionados.has(sku)).forEach((sku) => {
+      const i = top5.indexOf(sku);
       const soG = _soGlobalPorMes('Valor (R$) Sell Out', r => r['SKU'] === sku);
       const ds = _dsYoYLine(
         (sku.length > 25 ? sku.slice(0, 25) + '…' : sku) + ' (ano ant.)',
@@ -6441,9 +6483,9 @@ function renderizarEvolucaoSellInCliente() {
   const datasets = clientes.map((cli, i) => ({
     label: cli,
     data: meses.map(m => por[cli]?.[m] || 0),
-    backgroundColor: CORES[i % CORES.length] + 'cc',
-    borderColor:     CORES[i % CORES.length],
-    borderWidth: 1,
+    backgroundColor: CORES[i % CORES.length] + 'dd',
+    borderColor:     '#fff',
+    borderWidth: { top: 2, right: 0, bottom: 0, left: 0 },
     stack: 'total',
   }));
 
@@ -6483,7 +6525,7 @@ function renderizarEvolucaoSellInCliente() {
         }
       },
       scales: {
-        x: { stacked: true, ticks: { font: { size: 11 } } },
+        x: { stacked: true, ticks: { font: { size: 11 } }, barPercentage: 0.7, categoryPercentage: 0.75 },
         y: {
           stacked: true, beginAtZero: true,
           title: { display: true, text: 'Sell In (R$)' },
@@ -6537,9 +6579,9 @@ function renderizarEvolucaoSellInMarca() {
   const datasets = marcas.map((marca, i) => ({
     label: marca,
     data: meses.map(m => por[marca]?.[m] || 0),
-    backgroundColor: CORES_M[i % CORES_M.length] + 'cc',
-    borderColor:     CORES_M[i % CORES_M.length],
-    borderWidth: 1,
+    backgroundColor: CORES_M[i % CORES_M.length] + 'dd',
+    borderColor:     '#fff',
+    borderWidth: { top: 2, right: 0, bottom: 0, left: 0 },
     stack: 'total',
   }));
 
@@ -6579,7 +6621,7 @@ function renderizarEvolucaoSellInMarca() {
         }
       },
       scales: {
-        x: { stacked: true, ticks: { font: { size: 11 } } },
+        x: { stacked: true, ticks: { font: { size: 11 } }, barPercentage: 0.7, categoryPercentage: 0.75 },
         y: {
           stacked: true, beginAtZero: true,
           title: { display: true, text: 'Sell In (R$)' },
