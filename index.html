@@ -2104,7 +2104,44 @@ function renderizarEvolucao() {
           }
         }
       }
-    }
+    },
+    plugins: [{
+      id: 'rotulosEvolucao',
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        chart.data.datasets.forEach((ds, di) => {
+          const meta = chart.getDatasetMeta(di);
+          if (meta.hidden) return;
+          if (ds.type === 'line') {
+            meta.data.forEach((point, i) => {
+              const v = ds.data[i];
+              if (v == null || v === 0) return;
+              ctx.save();
+              ctx.fillStyle = ds.borderColor || '#a0aec0';
+              ctx.font = 'bold 8px sans-serif';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'bottom';
+              ctx.fillText(BRL(v), point.x, point.y - 4);
+              ctx.restore();
+            });
+          } else {
+            meta.data.forEach((bar, i) => {
+              const v = ds.data[i];
+              if (v == null || v === 0) return;
+              const segH = Math.abs(bar.base - bar.y);
+              if (segH < 16) return;
+              ctx.save();
+              ctx.fillStyle = '#fff';
+              ctx.font = 'bold 8px sans-serif';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(BRL(v), bar.x, (bar.y + bar.base) / 2);
+              ctx.restore();
+            });
+          }
+        });
+      }
+    }]
   });
 }
 
@@ -2594,7 +2631,30 @@ function renderizarEvolucaoPorCategoria() {
           }
         }
       }
-    }
+    },
+    plugins: [{
+      id: 'rotulosEvolucaoCat',
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        chart.data.datasets.forEach((ds, di) => {
+          if (ds.label && ds.label.includes('ano ant.')) return;
+          const meta = chart.getDatasetMeta(di);
+          if (meta.hidden) return;
+          meta.data.forEach((point, i) => {
+            const v = ds.data[i];
+            if (v == null || v === 0) return;
+            const lbl = v >= 1e6 ? 'R$ '+(v/1e6).toFixed(1)+'M' : v >= 1e3 ? 'R$ '+(v/1e3).toFixed(0)+'k' : 'R$ '+v;
+            ctx.save();
+            ctx.fillStyle = ds.borderColor || '#4a5568';
+            ctx.font = 'bold 8px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText(lbl, point.x, point.y - 4);
+            ctx.restore();
+          });
+        });
+      }
+    }]
   });
 }
 
@@ -3108,7 +3168,29 @@ function renderizarEvolucaoQtd() {
           ticks: { callback: v => N(v) + ' un.' }
         }
       }
-    }
+    },
+    plugins: [{
+      id: 'rotulosEvolucaoQtd',
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        chart.data.datasets.forEach((ds, di) => {
+          if (ds.label && ds.label.includes('ano ant.')) return;
+          const meta = chart.getDatasetMeta(di);
+          if (meta.hidden) return;
+          meta.data.forEach((point, i) => {
+            const v = ds.data[i];
+            if (v == null || v === 0) return;
+            ctx.save();
+            ctx.fillStyle = ds.borderColor || '#4a5568';
+            ctx.font = 'bold 8px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText(N(v), point.x, point.y - 4);
+            ctx.restore();
+          });
+        });
+      }
+    }]
   });
 }
 
@@ -3172,7 +3254,28 @@ function renderizarSellInVsSellOut(dados) {
           ticks: { callback: v => N(v) + ' un.' }
         }
       }
-    }
+    },
+    plugins: [{
+      id: 'rotulosSellInOut',
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        chart.data.datasets.forEach((ds, di) => {
+          const meta = chart.getDatasetMeta(di);
+          if (meta.hidden) return;
+          meta.data.forEach((bar, i) => {
+            const v = ds.data[i];
+            if (v == null || v === 0) return;
+            ctx.save();
+            ctx.fillStyle = ds.borderColor || '#4a5568';
+            ctx.font = 'bold 8px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText(N(v), bar.x, bar.y - 3);
+            ctx.restore();
+          });
+        });
+      }
+    }]
   });
 }
 
@@ -3375,7 +3478,29 @@ function renderizarCobertura() {
           ticks: { callback: v => v + ' d' }
         }
       }
-    }
+    },
+    plugins: [{
+      id: 'rotulosCobertura',
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        chart.data.datasets.forEach((ds, di) => {
+          if (ds.label && ds.label.includes('ano ant.')) return;
+          const meta = chart.getDatasetMeta(di);
+          if (meta.hidden) return;
+          meta.data.forEach((point, i) => {
+            const v = ds.data[i];
+            if (v == null || v === 0) return;
+            ctx.save();
+            ctx.fillStyle = ds.borderColor || '#4a5568';
+            ctx.font = 'bold 8px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText(v.toFixed(0) + ' d', point.x, point.y - 4);
+            ctx.restore();
+          });
+        });
+      }
+    }]
   });
 }
 
@@ -4883,7 +5008,28 @@ function renderizarScatterPrecoPDV() {
         x: { beginAtZero: false, title: { display: true, text: 'Preço sell-out médio (R$)' }, ticks: { callback: v => BRL(v) } },
         y: { beginAtZero: true, title: { display: true, text: 'Qtd/PDV/mês (un./loja)' } }
       }
-    }
+    },
+    plugins: [{
+      id: 'rotulosScatterPrecoPDV',
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        chart.data.datasets.forEach((ds, di) => {
+          const meta = chart.getDatasetMeta(di);
+          if (meta.hidden) return;
+          meta.data.forEach((point, i) => {
+            const nome = ds.label;
+            if (!nome) return;
+            ctx.save();
+            ctx.fillStyle = '#4a5568';
+            ctx.font = '9px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(nome, point.x + 10, point.y);
+            ctx.restore();
+          });
+        });
+      }
+    }]
   });
 }
 
@@ -5584,7 +5730,32 @@ function renderizarMixMarcaCliente() {
         x: { stacked: true, min: 0, max: 100, ticks: { callback: v => v + '%' } },
         y: { stacked: true }
       }
-    }
+    },
+    plugins: [{
+      id: 'rotulosMixMarca',
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        chart.data.datasets.forEach((ds, di) => {
+          const meta = chart.getDatasetMeta(di);
+          if (meta.hidden) return;
+          meta.data.forEach((bar, i) => {
+            const v = ds.data[i];
+            if (v == null || v < 5) return;
+            const segW = Math.abs(bar.x - bar.base);
+            if (segW < 20) return;
+            const cx = (bar.x + bar.base) / 2;
+            const lbl = v < 10 ? v.toFixed(1) + '%' : Math.round(v) + '%';
+            ctx.save();
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 8px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(lbl, cx, bar.y);
+            ctx.restore();
+          });
+        });
+      }
+    }]
   });
 }
 
