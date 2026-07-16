@@ -587,8 +587,8 @@
 
   <!-- Tabela resumo por cliente -->
   <div class="card" id="area-tabela-clientes" style="display:none;">
-    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Resumo por Cliente</div>
-    <div class="subtitulo">Todos os clientes no período filtrado · Ordenados por sell-out · ↑↓ = variação vs mês anterior</div>
+    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Faturamento Sell-out por Cliente</div>
+    <div class="subtitulo">Todos os clientes no período filtrado · Clique no título de qualquer coluna para ordenar · Ordem inicial: maior Margem Bravir (R$)</div>
     <div id="tabela-resumo-clientes" style="overflow-x:auto;margin-top:.6rem;"></div>
   </div>
 
@@ -1223,6 +1223,8 @@ let graficoTop5Evolucao   = null;
 let graficoElasticidade   = null;
 let graficoTemperatura    = null;
 let filtroMarca = ''; // controlado pelos botões Bravir / Terceiros
+let _resumoSortCol = 'mg';   // coluna inicial: Margem Bravir R$
+let _resumoSortAsc = false;  // decrescente por padrão
 let graficoEvolucaoMargem      = null;
 let graficoCobertura           = null;
 let graficoPrecoCategoria      = null;
@@ -1293,7 +1295,6 @@ document.getElementById('input-arquivo').addEventListener('change', function (e)
       document.getElementById('sec-visao-geral').style.display          = 'block';
       document.getElementById('area-kpis').style.display                = 'block';
       document.getElementById('area-tabela-clientes').style.display     = 'block';
-      document.getElementById('area-grafico').style.display             = 'block';
       document.getElementById('area-top15-skus').style.display          = 'block';
       document.getElementById('area-evolucao').style.display            = 'block';
 
@@ -3965,20 +3966,28 @@ async function renderizarTemperatura() {
 
 // ─── Tabela resumo por cliente ────────────────────────────────────────────────
 
+function _resumoSort(col) {
+  if (_resumoSortCol === col) {
+    _resumoSortAsc = !_resumoSortAsc;
+  } else {
+    _resumoSortCol = col;
+    _resumoSortAsc = false;
+  }
+  renderizarTabelaResumoClientes();
+}
+
 function renderizarTabelaResumoClientes() {
   const dados = filtrarDados();
   const cont  = document.getElementById('tabela-resumo-clientes');
   if (!cont) return;
 
-  // Obtém todas as chaves cronológicas de dadosGlobais
+  // Chaves cronológicas para encontrar período de comparação
   const setChaves = new Set();
   dadosGlobais.forEach(r => { if (r['Ano'] && r['Mês']) setChaves.add(`${r['Ano']}|${r['Mês']}`); });
   const todasChaves = [...setChaves].sort((a, b) => {
     const [anoA, mesA] = a.split('|'), [anoB, mesB] = b.split('|');
     return (parseInt(anoA)*100+(MESES_ORDEM[mesA]||0)) - (parseInt(anoB)*100+(MESES_ORDEM[mesB]||0));
   });
-
-  // Meses do período filtrado → período de comparação = mesmos meses deslocados -1 na sequência global
   const chavesNoDados = new Set(dados.map(r => r['Ano'] && r['Mês'] ? `${r['Ano']}|${r['Mês']}` : null).filter(Boolean));
   const chavesComparacao = new Set();
   chavesNoDados.forEach(ch => {
@@ -3986,18 +3995,20 @@ function renderizarTabelaResumoClientes() {
     if (idx > 0) chavesComparacao.add(todasChaves[idx - 1]);
   });
 
-  // Agrega por cliente no período filtrado
+  // Agrega por cliente — período filtrado
   const mapa = {};
   dados.forEach(r => {
     const cli = r['Cliente'] || '(sem cliente)';
-    if (!mapa[cli]) mapa[cli] = { so: 0, si: 0, mg: 0, qtd: 0 };
-    mapa[cli].so  += num(r['Valor (R$) Sell Out']);
-    mapa[cli].si  += num(r['Valor (R$) Sell in']);
-    mapa[cli].mg  += vazio(r['Margem Contribuição Bravir (R$)']) ? 0 : num(r['Margem Contribuição Bravir (R$)']);
-    mapa[cli].qtd += num(r['Quantidade Sell Out']);
+    if (!mapa[cli]) mapa[cli] = { so: 0, si: 0, mg: 0, mgCli: 0, qtdSO: 0, qtdSI: 0 };
+    mapa[cli].so    += num(r['Valor (R$) Sell Out']);
+    mapa[cli].si    += num(r['Valor (R$) Sell in']);
+    mapa[cli].mg    += vazio(r['Margem Contribuição Bravir (R$)']) ? 0 : num(r['Margem Contribuição Bravir (R$)']);
+    mapa[cli].mgCli += vazio(r['Margem Cliente (R$)'])             ? 0 : num(r['Margem Cliente (R$)']);
+    mapa[cli].qtdSO += num(r['Quantidade Sell Out']);
+    mapa[cli].qtdSI += num(r['Quantidade Sell in']);
   });
 
-  // Agrega período de comparação (mesmo nº de meses, deslocado -1) com mesmos filtros não-temporais
+  // Período de comparação para Var. Sell-out
   const clisSel  = obterSelecionados('fdrop-cliente');
   const catsSel  = obterSelecionados('fdrop-categoria');
   const marcsSel = obterSelecionados('fdrop-marca');
@@ -4019,44 +4030,94 @@ function renderizarTabelaResumoClientes() {
   }
 
   const totalSO = Object.values(mapa).reduce((s, v) => s + v.so, 0);
-  const clientes = Object.keys(mapa).sort((a, b) => mapa[b].so - mapa[a].so);
 
-  if (!clientes.length) { cont.innerHTML = '<p style="color:#a0aec0;font-size:.8rem;">Sem dados no período.</p>'; return; }
-
-  let html = `<table>
-    <thead><tr>
-      <th>Cliente</th>
-      <th>Sell-out (R$)</th>
-      <th>Part. %</th>
-      <th title="Compara o período selecionado com o mesmo número de meses imediatamente anterior">Var. período ant.</th>
-      <th>Sell-in (R$)</th>
-      <th>Margem Bravir (R$)</th>
-      <th>Qtd. (un.)</th>
-    </tr></thead><tbody>`;
-
-  clientes.forEach(cli => {
+  // Pré-computa todos os valores derivados para ordenação
+  const linhas = Object.keys(mapa).map(cli => {
     const d   = mapa[cli];
     const ant = mapaAnt[cli];
-    const part = totalSO > 0 ? (d.so / totalSO * 100) : 0;
+    const part   = totalSO > 0 ? d.so / totalSO * 100 : 0;
+    const delta  = (ant && ant.so > 0) ? (d.so - ant.so) / ant.so * 100 : null;
+    const pSO    = d.qtdSO > 0 ? d.so / d.qtdSO : 0;
+    const pSI    = d.qtdSI > 0 ? d.si / d.qtdSI : 0;
+    const mgCliPct = d.so > 0 ? d.mgCli / d.so * 100 : 0;
+    const mgPct    = d.si > 0 ? d.mg    / d.si  * 100 : 0;
+    return { cli, ...d, part, delta, pSO, pSI, mgCliPct, mgPct };
+  });
+
+  // Ordenação
+  const valSort = r => {
+    switch (_resumoSortCol) {
+      case 'cli':      return r.cli.toLowerCase();
+      case 'so':       return r.so;
+      case 'part':     return r.so;
+      case 'var':      return r.delta ?? -Infinity;
+      case 'qtdSO':    return r.qtdSO;
+      case 'pSO':      return r.pSO;
+      case 'mgCliPct': return r.mgCliPct;
+      case 'si':       return r.si;
+      case 'qtdSI':    return r.qtdSI;
+      case 'pSI':      return r.pSI;
+      case 'mg':       return r.mg;
+      case 'mgPct':    return r.mgPct;
+      default:         return r.mg;
+    }
+  };
+  linhas.sort((a, b) => {
+    const va = valSort(a), vb = valSort(b);
+    if (typeof va === 'string') return _resumoSortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+    return _resumoSortAsc ? va - vb : vb - va;
+  });
+
+  if (!linhas.length) { cont.innerHTML = '<p style="color:#a0aec0;font-size:.8rem;">Sem dados no período.</p>'; return; }
+
+  const seta = col => col === _resumoSortCol ? (_resumoSortAsc ? ' ▲' : ' ▼') : '';
+  const thS  = 'cursor:pointer;user-select:none;white-space:nowrap;';
+  const th   = (col, label, title = '') =>
+    `<th style="${thS}" onclick="_resumoSort('${col}')" title="${title}">${label}${seta(col)}</th>`;
+
+  const PCT  = v => v.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
+  const N    = v => Math.round(v).toLocaleString('pt-BR');
+
+  let html = `<div style="overflow-x:auto;"><table>
+    <thead><tr>
+      ${th('cli',      'Cliente')}
+      ${th('so',       'Sell-out (R$)')}
+      ${th('part',     'Part. %')}
+      ${th('var',      'Var. período ant.', 'Compara com mesmo número de meses imediatamente anterior')}
+      ${th('qtdSO',    'Qtd Sell Out')}
+      ${th('pSO',      'Preço Médio SO')}
+      ${th('mgCliPct', 'Margem Cliente %', 'Σ Margem Cliente (R$) ÷ Σ Sell-out — ponderada')}
+      ${th('si',       'Sell-in (R$)')}
+      ${th('qtdSI',    'Qtd Sell In')}
+      ${th('pSI',      'Preço Médio SI')}
+      ${th('mg',       'Margem Bravir (R$)')}
+      ${th('mgPct',    'Margem Bravir %', 'Σ Margem Bravir (R$) ÷ Σ Sell-in')}
+    </tr></thead><tbody>`;
+
+  linhas.forEach(r => {
     let varHtml = '<span class="var-neu">—</span>';
-    if (ant && ant.so > 0) {
-      const delta = (d.so - ant.so) / ant.so * 100;
-      const sinal = delta > 0 ? '+' : '';
-      const cls   = delta > 0 ? 'var-pos' : delta < 0 ? 'var-neg' : 'var-neu';
-      varHtml = `<span class="${cls}">${sinal}${delta.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}%</span>`;
+    if (r.delta !== null) {
+      const sinal = r.delta > 0 ? '+' : '';
+      const cls   = r.delta > 0 ? 'var-pos' : r.delta < 0 ? 'var-neg' : 'var-neu';
+      varHtml = `<span class="${cls}">${sinal}${r.delta.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}%</span>`;
     }
     html += `<tr>
-      <td>${cli}</td>
-      <td>${BRL(d.so)}</td>
-      <td>${part.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}%</td>
+      <td>${r.cli}</td>
+      <td>${BRL(r.so)}</td>
+      <td>${PCT(r.part)}</td>
       <td>${varHtml}</td>
-      <td>${BRL(d.si)}</td>
-      <td>${BRL(d.mg)}</td>
-      <td>${d.qtd.toLocaleString('pt-BR')}</td>
+      <td>${N(r.qtdSO)}</td>
+      <td>${BRL(r.pSO)}</td>
+      <td>${PCT(r.mgCliPct)}</td>
+      <td>${BRL(r.si)}</td>
+      <td>${N(r.qtdSI)}</td>
+      <td>${BRL(r.pSI)}</td>
+      <td>${BRL(r.mg)}</td>
+      <td>${PCT(r.mgPct)}</td>
     </tr>`;
   });
 
-  html += '</tbody></table>';
+  html += '</tbody></table></div>';
   cont.innerHTML = html;
 }
 
