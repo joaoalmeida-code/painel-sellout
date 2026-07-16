@@ -1152,7 +1152,13 @@ function prioridadeMarca(nome) {
   if (n.includes('LABY'))    return 0;
   if (n.includes('BENDITA')) return 1;
   if (n.includes('BRAVIR'))  return 2;
-  return 3; // white label (terceiros)
+  if (n.includes('ALIVIK'))  return 3;
+  return 4; // white label (terceiros)
+}
+
+function isMarcaBravir(nome) {
+  const n = (nome || '').toUpperCase();
+  return n.includes('LABY') || n.includes('BENDITA') || n.includes('BRAVIR') || n.includes('ALIVIK');
 }
 
 // Cores fixas para os clientes — usando módulo para suportar qualquer número de clientes
@@ -2151,71 +2157,88 @@ function renderizarTop15SKUs() {
   const cont = document.getElementById('tabela-top15-skus');
   if (!cont) return;
 
-  // Determina os 12 meses mais recentes com dados
   const todasCh = _todasChavesGlobais();
   const ult12   = todasCh.slice(-12);
-  const ant12   = ult12.map(ch => _mesAvancar(ch, -12));
 
+  // Acumula SO por SKU por mês (todos os meses com dados)
   const porSKU = {};
   dadosGlobais.forEach(r => {
     const sku = r['SKU']; if (!sku) return;
     const ch  = `${r['Ano']}|${r['Mês']}`;
     const q   = num(r['Quantidade Sell Out']); if (q <= 0) return;
-    if (!porSKU[sku]) porSKU[sku] = {
-      cat: r['Categoria'] || '', marca: r['Marca'] || '',
-      so12: 0, soAnt: 0
-    };
-    if (ult12.includes(ch))  porSKU[sku].so12  += q;
-    if (ant12.includes(ch))  porSKU[sku].soAnt += q;
+    if (!porSKU[sku]) porSKU[sku] = {};
+    porSKU[sku][ch] = (porSKU[sku][ch] || 0) + q;
   });
 
+  // Ranking pelos últimos 12m
   const ranking = Object.entries(porSKU)
+    .map(([sku, meses]) => {
+      const so12 = ult12.reduce((s, ch) => s + (meses[ch] || 0), 0);
+      return [sku, { meses, so12 }];
+    })
     .filter(([, v]) => v.so12 > 0)
     .sort((a, b) => b[1].so12 - a[1].so12)
     .slice(0, 15);
 
-  const fmt = v => Math.round(v).toLocaleString('pt-BR');
-  const corDelta = pct => pct >= 5 ? '#276749' : pct <= -5 ? '#c53030' : '#b7791f';
+  // YTD: meses do ano corrente (até o mais recente) vs mesmo período do ano anterior
+  const anoAtual = ult12.length ? parseInt(ult12[ult12.length - 1].split('|')[0]) : new Date().getFullYear();
+  const ytdMeses = todasCh.filter(ch => ch.startsWith(anoAtual + '|'));
+  const ytdAntMeses = ytdMeses.map(ch => _mesAvancar(ch, -12));
 
-  const thS = 'padding:.4rem .75rem;font-size:.74rem;font-weight:600;color:#718096;border-bottom:2px solid #e2e8f0;white-space:nowrap;';
-  const tdS = 'padding:.32rem .75rem;font-size:.8rem;border-bottom:1px solid #f0f4f8;white-space:nowrap;';
+  const fmtN = v => Math.round(v).toLocaleString('pt-BR');
+  const corD = pct => pct >= 5 ? '#276749' : pct <= -5 ? '#c53030' : '#b7791f';
+
+  const abrev = {Janeiro:'Jan',Fevereiro:'Fev',Março:'Mar',Abril:'Abr',Maio:'Mai',Junho:'Jun',
+                 Julho:'Jul',Agosto:'Ago',Setembro:'Set',Outubro:'Out',Novembro:'Nov',Dezembro:'Dez'};
+  const fmtCh = ch => { const [a, m] = ch.split('|'); return (abrev[m] || m) + '/' + String(a).slice(-2); };
+
+  const thS = 'padding:.4rem .6rem;font-size:.72rem;font-weight:600;color:#718096;border-bottom:2px solid #e2e8f0;white-space:nowrap;text-align:right;';
+  const tdS = 'padding:.28rem .6rem;font-size:.78rem;border-bottom:1px solid #f0f4f8;white-space:nowrap;text-align:right;';
+
+  const thMeses = ult12.map(ch =>
+    `<th style="${thS}">${fmtCh(ch)}</th>`
+  ).join('');
 
   const linhas = ranking.map(([sku, v], i) => {
-    const delta = v.soAnt > 0 ? (v.so12 - v.soAnt) / v.soAnt * 100 : null;
+    const tdMes = ult12.map(ch => {
+      const q = v.meses[ch] || 0;
+      return `<td style="${tdS}color:#2d3748;">${q > 0 ? fmtN(q) : '<span style="color:#cbd5e0;">—</span>'}</td>`;
+    }).join('');
+
+    const ytd    = ytdMeses.reduce((s, ch) => s + (v.meses[ch] || 0), 0);
+    const ytdAnt = ytdAntMeses.reduce((s, ch) => s + (v.meses[ch] || 0), 0);
+    const delta  = ytdAnt > 0 ? (ytd - ytdAnt) / ytdAnt * 100 : null;
     const deltaStr = delta !== null
-      ? `<span style="font-weight:700;color:${corDelta(delta)};">${delta >= 0 ? '+' : ''}${delta.toFixed(0)}%</span>`
+      ? `<span style="font-weight:700;color:${corD(delta)};">${delta >= 0 ? '+' : ''}${delta.toFixed(0)}%</span>`
       : '<span style="color:#a0aec0;">N/D</span>';
-    const antStr = v.soAnt > 0 ? fmt(v.soAnt) : '<span style="color:#a0aec0;">—</span>';
+
     return `<tr>
       <td style="${tdS}text-align:center;color:#718096;font-weight:600;">${i + 1}</td>
-      <td style="${tdS}font-weight:600;color:#2d3748;">${sku}</td>
-      <td style="${tdS}color:#4a5568;">${v.cat}</td>
-      <td style="${tdS}color:#4a5568;">${v.marca}</td>
-      <td style="${tdS}text-align:right;font-weight:700;color:#2b6cb0;">${fmt(v.so12)}</td>
-      <td style="${tdS}text-align:right;color:#718096;">${antStr}</td>
-      <td style="${tdS}text-align:right;">${deltaStr}</td>
+      <td style="${tdS}text-align:left;font-weight:600;color:#2d3748;white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis;">${sku}</td>
+      ${tdMes}
+      <td style="${tdS}">${deltaStr}</td>
     </tr>`;
   }).join('');
 
-  const labelDe  = ult12[0]  ? ult12[0].split('|').reverse().join('/')  : '';
-  const labelAte = ult12[11] ? ult12[11].split('|').reverse().join('/') : '';
+  const periodoYTD = ytdMeses.length
+    ? `Jan/${String(anoAtual).slice(-2)} – ${fmtCh(ytdMeses[ytdMeses.length - 1])}`
+    : '';
 
   cont.innerHTML = `
     <div style="font-size:.72rem;color:#718096;margin-bottom:.5rem;">
-      Período: ${labelDe} a ${labelAte} · Ano anterior: mesmo intervalo de 12 meses
+      Últimos 12 meses · Δ YTD = ${periodoYTD} vs mesmo período ${anoAtual - 1}
     </div>
-    <table style="border-collapse:collapse;width:100%;">
+    <div style="overflow-x:auto;">
+    <table style="border-collapse:collapse;width:100%;min-width:900px;">
       <thead><tr>
         <th style="${thS}text-align:center;">#</th>
-        <th style="${thS}">SKU</th>
-        <th style="${thS}">Categoria</th>
-        <th style="${thS}">Marca</th>
-        <th style="${thS}text-align:right;">SO últ. 12m (un.)</th>
-        <th style="${thS}text-align:right;">Mesmo per. ano ant.</th>
-        <th style="${thS}text-align:right;">Δ YoY</th>
+        <th style="${thS}text-align:left;">SKU</th>
+        ${thMeses}
+        <th style="${thS}">Δ YTD</th>
       </tr></thead>
       <tbody>${linhas}</tbody>
-    </table>`;
+    </table>
+    </div>`;
 }
 
 // ─── Tabela de clientes ───────────────────────────────────────────────────────
@@ -5988,6 +6011,9 @@ function renderizarRankingMarcas() {
   const siExMb = m => Math.max(0, por[m].si - mbVal(m));
   const soExSi = m => Math.max(0, por[m].fat - por[m].si);
 
+  // Índice do primeiro terceiro (para o separador visual)
+  const idxPrimeiroTerceiro = marcas.findIndex(m => !isMarcaBravir(m));
+
   if (graficoRankingMarcas) graficoRankingMarcas.destroy();
   graficoRankingMarcas = new Chart(document.getElementById('grafico-ranking-marcas'), {
     type: 'bar',
@@ -6045,7 +6071,41 @@ function renderizarRankingMarcas() {
           ticks: { callback: v => BRL(v) }
         }
       }
-    }
+    },
+    plugins: [{
+      id: 'separadorBravir',
+      beforeDraw(chart) {
+        if (idxPrimeiroTerceiro <= 0) return;
+        const { ctx, chartArea: { top, bottom, left }, scales: { x } } = chart;
+        // Fundo verde-claro na região das marcas Bravir
+        const xA = x.getPixelForValue(idxPrimeiroTerceiro - 1);
+        const xB = x.getPixelForValue(idxPrimeiroTerceiro);
+        const xFim = (xA + xB) / 2;
+        ctx.save();
+        ctx.fillStyle = 'rgba(39,103,73,0.06)';
+        ctx.fillRect(left, top, xFim - left, bottom - top);
+        // Linha vertical tracejada
+        ctx.beginPath();
+        ctx.setLineDash([5, 4]);
+        ctx.strokeStyle = '#276749';
+        ctx.lineWidth = 1.5;
+        ctx.moveTo(xFim, top);
+        ctx.lineTo(xFim, bottom);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        // Rótulo "Bravir"
+        ctx.fillStyle = '#276749';
+        ctx.font = 'bold 10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('← Bravir', left + (xFim - left) / 2, top + 12);
+        // Rótulo "Terceiros"
+        ctx.fillStyle = '#718096';
+        ctx.font = 'bold 10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Terceiros →', xFim + (chart.chartArea.right - xFim) / 2, top + 12);
+        ctx.restore();
+      }
+    }]
   });
 }
 
