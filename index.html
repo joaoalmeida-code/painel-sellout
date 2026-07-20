@@ -754,8 +754,8 @@
   <!-- ─── Evolução % Margem Bravir vs Terceiros ─── -->
   <div class="card" id="area-margem-bravir-terc" style="display:none;">
     <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Evolução do % de Margem — Bravir vs Terceiros</div>
-    <div class="subtitulo">Margem ponderada (%) = Σ Margem (R$) ÷ Σ Faturamento Sell-out · Verde = Bravir · Azul = Terceiros</div>
-    <div class="como-analisar">Acompanha a rentabilidade média ponderada das marcas próprias e do white label ao longo do tempo. Usa margem ponderada pelo faturamento, não média simples — SKUs maiores têm mais peso. Uma queda na linha Bravir pode sinalizar pressão de custo ou descontos crescentes. Uma linha Terceiros acima de Bravir indica que o white label está sendo mais lucrativo por real faturado.</div>
+    <div class="subtitulo">Verde escuro / Azul escuro = Margem Interna (Contribuição Bravir ÷ Sell-in) · Verde claro / Azul claro = Margem do Cliente (Margem Cliente ÷ Sell-out)</div>
+    <div class="como-analisar">Quatro visões de rentabilidade ponderada pelo faturamento. Verde = marcas Bravir · Azul = marcas Terceiros (white label). Linha escura = o quanto a Bravir fica de cada real de sell-in. Linha clara = o quanto o varejista fica de cada real de sell-out. Comparar interno vs. cliente mostra como o canal se apropria da margem na cadeia.</div>
     <canvas id="grafico-margem-bravir-terc" style="max-height:320px;"></canvas>
   </div>
 
@@ -6440,18 +6440,27 @@ function renderizarMargemBravirTerc() {
   const todasCh = _todasChavesGlobais();
 
   const por = {};
-  todasCh.forEach(ch => { por[ch] = { bMb: 0, bSi: 0, tMb: 0, tSi: 0 }; });
+  todasCh.forEach(ch => { por[ch] = { bMb: 0, bSi: 0, bMgCli: 0, bSo: 0, tMb: 0, tSi: 0, tMgCli: 0, tSo: 0 }; });
   dados.forEach(r => {
     const ch = `${r['Ano']}|${r['Mês']}`; if (!por[ch]) return;
-    const mb = num(r['Margem Contribuição Bravir (R$)']);
-    const si = num(r['Valor (R$) Sell in']); if (si <= 0) return;
-    if (r['Bravir / Terceiros'] === 'Bravir') { por[ch].bMb += mb; por[ch].bSi += si; }
-    else                                        { por[ch].tMb += mb; por[ch].tSi += si; }
+    const mb    = num(r['Margem Contribuição Bravir (R$)']);
+    const si    = num(r['Valor (R$) Sell in']);
+    const mgCli = num(r['Margem Cliente (R$)']);
+    const so    = num(r['Valor (R$) Sell Out']);
+    if (r['Bravir / Terceiros'] === 'Bravir') {
+      por[ch].bMb    += mb;    por[ch].bSi    += si;
+      por[ch].bMgCli += mgCli; por[ch].bSo    += so;
+    } else {
+      por[ch].tMb    += mb;    por[ch].tSi    += si;
+      por[ch].tMgCli += mgCli; por[ch].tSo    += so;
+    }
   });
 
-  const meses = todasCh.filter(ch => por[ch].bSi + por[ch].tSi > 0);
-  const pctB  = meses.map(ch => por[ch].bSi > 0 ? parseFloat((por[ch].bMb / por[ch].bSi * 100).toFixed(1)) : null);
-  const pctT  = meses.map(ch => por[ch].tSi > 0 ? parseFloat((por[ch].tMb / por[ch].tSi * 100).toFixed(1)) : null);
+  const meses     = todasCh.filter(ch => por[ch].bSi + por[ch].tSi + por[ch].bSo + por[ch].tSo > 0);
+  const pctBInt   = meses.map(ch => por[ch].bSi > 0 ? parseFloat((por[ch].bMb    / por[ch].bSi * 100).toFixed(1)) : null);
+  const pctBCli   = meses.map(ch => por[ch].bSo > 0 ? parseFloat((por[ch].bMgCli / por[ch].bSo * 100).toFixed(1)) : null);
+  const pctTInt   = meses.map(ch => por[ch].tSi > 0 ? parseFloat((por[ch].tMb    / por[ch].tSi * 100).toFixed(1)) : null);
+  const pctTCli   = meses.map(ch => por[ch].tSo > 0 ? parseFloat((por[ch].tMgCli / por[ch].tSo * 100).toFixed(1)) : null);
 
   if (graficoMargemBravirTerc) graficoMargemBravirTerc.destroy();
   graficoMargemBravirTerc = new Chart(canvas, {
@@ -6460,9 +6469,11 @@ function renderizarMargemBravirTerc() {
       id: 'rotulosMargemTerc',
       afterDatasetsDraw(chart) {
         const ctx = chart.ctx;
+        // Linhas escuras (índice 0 e 2) → rótulo acima; claras (1 e 3) → abaixo
         chart.data.datasets.forEach((ds, di) => {
           const meta = chart.getDatasetMeta(di);
           if (meta.hidden) return;
+          const acima = di === 0 || di === 2;
           meta.data.forEach((point, i) => {
             const v = ds.data[i];
             if (v == null) return;
@@ -6470,8 +6481,13 @@ function renderizarMargemBravirTerc() {
             ctx.fillStyle = ds.borderColor || '#4a5568';
             ctx.font = 'bold 9px sans-serif';
             ctx.textAlign = 'center';
-            ctx.textBaseline = 'bottom';
-            ctx.fillText(v.toFixed(1) + '%', point.x, point.y - 4);
+            if (acima) {
+              ctx.textBaseline = 'bottom';
+              ctx.fillText(v.toFixed(1) + '%', point.x, point.y - 4);
+            } else {
+              ctx.textBaseline = 'top';
+              ctx.fillText(v.toFixed(1) + '%', point.x, point.y + 4);
+            }
             ctx.restore();
           });
         });
@@ -6481,14 +6497,24 @@ function renderizarMargemBravirTerc() {
       labels: meses.map(_lblCh),
       datasets: [
         {
-          label: 'Bravir', data: pctB,
-          borderColor: '#276749', backgroundColor: 'rgba(39,103,73,0.08)',
-          tension: 0.3, fill: true, pointRadius: 3, spanGaps: true
+          label: 'Bravir — Interno (÷ SI)', data: pctBInt,
+          borderColor: '#276749', backgroundColor: 'transparent',
+          borderWidth: 2, tension: 0.3, pointRadius: 3, spanGaps: true, fill: false
         },
         {
-          label: 'Terceiros', data: pctT,
-          borderColor: '#3182ce', backgroundColor: 'rgba(49,130,206,0.08)',
-          tension: 0.3, fill: true, pointRadius: 3, spanGaps: true
+          label: 'Bravir — Cliente (÷ SO)', data: pctBCli,
+          borderColor: '#68d391', backgroundColor: 'transparent',
+          borderWidth: 2, borderDash: [5, 4], tension: 0.3, pointRadius: 3, spanGaps: true, fill: false
+        },
+        {
+          label: 'Terceiros — Interno (÷ SI)', data: pctTInt,
+          borderColor: '#2b6cb0', backgroundColor: 'transparent',
+          borderWidth: 2, tension: 0.3, pointRadius: 3, spanGaps: true, fill: false
+        },
+        {
+          label: 'Terceiros — Cliente (÷ SO)', data: pctTCli,
+          borderColor: '#63b3ed', backgroundColor: 'transparent',
+          borderWidth: 2, borderDash: [5, 4], tension: 0.3, pointRadius: 3, spanGaps: true, fill: false
         }
       ]
     },
@@ -6501,7 +6527,8 @@ function renderizarMargemBravirTerc() {
       scales: {
         x: { ticks: { font: { size: 10 } } },
         y: {
-          title: { display: true, text: 'Margem Bravir % sobre Sell-in' },
+          beginAtZero: true,
+          title: { display: true, text: 'Margem % ponderada' },
           ticks: { callback: v => v + '%' }
         }
       }
