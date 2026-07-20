@@ -724,13 +724,6 @@
     <canvas id="grafico-margem-marca" style="max-height:260px;"></canvas>
   </div>
 
-  <!-- E: Ranking de marcas — barras empilhadas decompostas -->
-  <div class="card" id="area-ranking-marcas" style="display:none;">
-    <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Ranking de Marcas — Decomposição do Faturamento Sell-out</div>
-    <div class="subtitulo">Altura total da barra = Faturamento Sell-out · Verde = Margem Bravir · Cinza = Custo Bravir (Sell-in − Margem) · Azul = Markup Varejista (Sell-out − Sell-in)</div>
-    <div class="como-analisar">Para cada marca, decompõe o faturamento sell-out em três partes: o que fica com a Bravir (margem, em verde), o custo da Bravir repassado ao varejista (cinza) e o que o varejista ganha por vender o produto (markup, em azul). Marcas onde o azul domina indicam que o varejista ganha proporcionalmente mais do que a Bravir na cadeia — avalie se o preço de sell-in está adequado. Marcas com verde maior são as mais rentáveis para a Bravir. Passe o mouse em cada segmento para ver os valores detalhados.</div>
-    <canvas id="grafico-ranking-marcas" style="max-height:380px;"></canvas>
-  </div>
 
   <!-- ─── Bravir vs Terceiros: Evolução SO por Cliente ─── -->
   <div class="card" id="area-bravir-terc-cliente" style="display:none;">
@@ -1313,7 +1306,6 @@ document.getElementById('input-arquivo').addEventListener('change', function (e)
       document.getElementById('area-mix-marca-cliente').style.display   = 'block';
       document.getElementById('area-evolucao-marca').style.display      = 'block';
       document.getElementById('area-margem-marca').style.display        = 'block';
-      document.getElementById('area-ranking-marcas').style.display      = 'block';
       document.getElementById('area-bravir-terc-cliente').style.display    = 'block';
       document.getElementById('area-bravir-terc-categoria').style.display  = 'block';
       document.getElementById('area-mix-bravir-terc-cliente').style.display = 'block';
@@ -1801,7 +1793,6 @@ function atualizarGrafico() {
   renderizarMixMarcaCliente();
   renderizarEvolucaoMarcas();
   renderizarMargemMarca();
-  renderizarRankingMarcas();
   renderizarEvoluBravirTercCliente();
   renderizarEvoluBravirTercCategoria();
   renderizarMixBravirTercCliente();
@@ -1841,7 +1832,6 @@ function ocultarCardsIrrelevantes() {
     ['area-mix-marca-cliente',       nMar  <= 1],
     ['area-evolucao-marca',          nMar  <= 1],
     ['area-margem-marca',            nMar  <= 1],
-    ['area-ranking-marcas',          nMar  <= 1],
     ['area-evolucao-sellin-marca',   nMar  <= 1],
     // Seção 4 — rankings e comparações entre SKUs
     ['area-top-skus',                nSKU  <= 1],
@@ -1875,7 +1865,7 @@ function ocultarCardsIrrelevantes() {
 
   // Oculta cabeçalho de seção se todos os seus cards estiverem ocultos
   const secoes = [
-    { hdr: 'sec-marcas',     cards: ['area-heatmap-marcas','area-mix-marca-cliente','area-evolucao-marca','area-margem-marca','area-ranking-marcas','area-evolucao-sellin-marca','area-bravir-terc-cliente','area-bravir-terc-categoria','area-mix-bravir-terc-cliente','area-margem-bravir-terc'] },
+    { hdr: 'sec-marcas',     cards: ['area-heatmap-marcas','area-mix-marca-cliente','area-evolucao-marca','area-margem-marca','area-evolucao-sellin-marca','area-bravir-terc-cliente','area-bravir-terc-categoria','area-mix-bravir-terc-cliente','area-margem-bravir-terc'] },
     { hdr: 'sec-clientes',   cards: ['area-sell-in-out','area-evolucao-sellin-cliente','area-venda-pdv','area-margem-comp','area-evolucao-qtd'] },
     { hdr: 'sec-skus',       cards: ['area-top-skus','area-top5-evolucao','area-ranking-margem-skus','area-scatter-margem-bravir'] },
     { hdr: 'sec-categorias', cards: ['area-donut-cat','area-evolucao-cat','area-margem-cat'] },
@@ -3882,8 +3872,13 @@ async function renderizarTemperatura() {
     const ch = `${r['Ano']}|${r['Mês']}`;
     porMes[ch] = (porMes[ch] || 0) + num(r['Quantidade Sell Out']);
   });
-  const rotulos = MESES_TEMP.map(m => { const [a, ms] = m.split('|'); return `${ms.slice(0,3)}/${a}`; });
-  const sellOut = MESES_TEMP.map(m => porMes[m] || 0);
+
+  // Usa só meses com sell-out > 0 (evita barra vazia do mês atual sem dados)
+  const ultimoComSO = MESES_TEMP.reduce((last, m, i) => (porMes[m] > 0 ? i : last), -1);
+  const mesesEfetivos = ultimoComSO >= 0 ? MESES_TEMP.slice(0, ultimoComSO + 1) : MESES_TEMP;
+
+  const rotulos = mesesEfetivos.map(m => { const [a, ms] = m.split('|'); return `${ms.slice(0,3)}/${a}`; });
+  const sellOut = mesesEfetivos.map(m => porMes[m] || 0);
 
   // Busca temperatura histórica real (média entre regiões quando há mais de uma)
   let temps = null;
@@ -3899,11 +3894,21 @@ async function renderizarTemperatura() {
     tituloEl.textContent = `${cli} — Sell Out (região não mapeada)`;
   }
 
-  const datasetsTemp = temps ? [
+  // Fatia a temperatura para coincidir com os meses efetivos (sem o mês atual sem dados)
+  let tempsEfetivas = null;
+  if (temps) {
+    const indices = mesesEfetivos.map(m => MESES_TEMP.indexOf(m));
+    tempsEfetivas = {
+      mean: indices.map(i => temps.mean[i] ?? null),
+      min:  indices.map(i => temps.min[i]  ?? null),
+    };
+  }
+
+  const datasetsTemp = tempsEfetivas ? [
     {
       type: 'line',
       label: 'Temp. média (°C)',
-      data: temps.mean,
+      data: tempsEfetivas.mean,
       borderColor: '#e53e3e',
       backgroundColor: '#e53e3e22',
       borderWidth: 2,
@@ -3917,7 +3922,7 @@ async function renderizarTemperatura() {
     {
       type: 'line',
       label: 'Média das mínimas (°C)',
-      data: temps.min,
+      data: tempsEfetivas.min,
       borderColor: '#fc8181',
       borderDash: [5, 4],
       borderWidth: 1.5,
@@ -6145,133 +6150,6 @@ function renderizarMargemMarca() {
   });
 }
 
-function renderizarRankingMarcas() {
-  const dados = filtrarDados();
-  const por = {};
-
-  dados.forEach(r => {
-    const marca = r['Marca'];
-    if (!marca) return;
-    if (!por[marca]) por[marca] = { fat: 0, qtd: 0, mb: 0, si: 0, temMb: false };
-    por[marca].fat += num(r['Valor (R$) Sell Out']);
-    por[marca].qtd += num(r['Quantidade Sell Out']);
-    por[marca].si  += num(r['Valor (R$) Sell in']);
-    const mb = r['Margem Contribuição Bravir (R$)'];
-    if (!vazio(mb)) { por[marca].mb += num(mb); por[marca].temMb = true; }
-  });
-
-  const marcas = Object.keys(por).sort((a, b) => {
-    const pA = prioridadeMarca(a), pB = prioridadeMarca(b);
-    if (pA !== pB) return pA - pB;
-    return por[b].fat - por[a].fat;
-  });
-
-  // Decompõe Sell Out em 3 partes empilhadas:
-  // Baixo (verde)  = Margem Bravir (R$)
-  // Meio (cinza)   = Sell In − Margem Bravir  ("custo Bravir ao varejista")
-  // Cima (azul)    = Sell Out − Sell In        ("markup do varejista")
-  // Total da barra = Sell Out (R$)
-  const mbVal  = m => por[m].temMb ? Math.max(0, por[m].mb) : 0;
-  const siExMb = m => Math.max(0, por[m].si - mbVal(m));
-  const soExSi = m => Math.max(0, por[m].fat - por[m].si);
-
-  // Índice do primeiro terceiro (para o separador visual)
-  const idxPrimeiroTerceiro = marcas.findIndex(m => !isMarcaBravir(m));
-
-  if (graficoRankingMarcas) graficoRankingMarcas.destroy();
-  graficoRankingMarcas = new Chart(document.getElementById('grafico-ranking-marcas'), {
-    type: 'bar',
-    data: {
-      labels: marcas,
-      datasets: [
-        {
-          label: 'Margem Bravir (R$)',
-          data: marcas.map(mbVal),
-          backgroundColor: '#276749cc', borderColor: '#276749', borderWidth: 1,
-          stack: 'total',
-        },
-        {
-          label: 'Sell In excl. Margem (R$)',
-          data: marcas.map(siExMb),
-          backgroundColor: '#a0aec0cc', borderColor: '#a0aec0', borderWidth: 1,
-          stack: 'total',
-        },
-        {
-          label: 'Markup Varejista (R$)',
-          data: marcas.map(soExSi),
-          backgroundColor: '#2b6cb0cc', borderColor: '#2b6cb0', borderWidth: 1,
-          stack: 'total',
-        },
-      ]
-    },
-    options: {
-      responsive: true,
-      onClick: (event, elements) => {
-        if (!elements.length) return;
-        aplicarFiltroMarca(marcas[elements[0].index]);
-      },
-      onHover: _onHoverCursor,
-      plugins: {
-        legend: { display: true, position: 'top' },
-        tooltip: {
-          callbacks: {
-            label: ctx => {
-              const v = ctx.parsed.y;
-              if (!v) return null;
-              return `  ${ctx.dataset.label}: ${BRL(v)}`;
-            },
-            footer: ctxs => {
-              const total = ctxs.reduce((s, c) => s + (c.parsed.y || 0), 0);
-              return `  Sell Out total: ${BRL(total)}`;
-            }
-          }
-        }
-      },
-      scales: {
-        x: { stacked: true, ticks: { font: { size: 11 } } },
-        y: {
-          stacked: true, beginAtZero: true,
-          title: { display: true, text: 'Valor (R$)' },
-          ticks: { callback: v => BRL(v) }
-        }
-      }
-    },
-    plugins: [{
-      id: 'separadorBravir',
-      beforeDraw(chart) {
-        if (idxPrimeiroTerceiro <= 0) return;
-        const { ctx, chartArea: { top, bottom, left }, scales: { x } } = chart;
-        // Fundo verde-claro na região das marcas Bravir
-        const xA = x.getPixelForValue(idxPrimeiroTerceiro - 1);
-        const xB = x.getPixelForValue(idxPrimeiroTerceiro);
-        const xFim = (xA + xB) / 2;
-        ctx.save();
-        ctx.fillStyle = 'rgba(39,103,73,0.06)';
-        ctx.fillRect(left, top, xFim - left, bottom - top);
-        // Linha vertical tracejada
-        ctx.beginPath();
-        ctx.setLineDash([5, 4]);
-        ctx.strokeStyle = '#276749';
-        ctx.lineWidth = 1.5;
-        ctx.moveTo(xFim, top);
-        ctx.lineTo(xFim, bottom);
-        ctx.stroke();
-        ctx.setLineDash([]);
-        // Rótulo "Bravir"
-        ctx.fillStyle = '#276749';
-        ctx.font = 'bold 10px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('← Bravir', left + (xFim - left) / 2, top + 12);
-        // Rótulo "Terceiros"
-        ctx.fillStyle = '#718096';
-        ctx.font = 'bold 10px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('Terceiros →', xFim + (chart.chartArea.right - xFim) / 2, top + 12);
-        ctx.restore();
-      }
-    }]
-  });
-}
 
 // ─── Bravir vs Terceiros ──────────────────────────────────────────────────────
 
@@ -6448,6 +6326,28 @@ function renderizarMixBravirTercCliente() {
   if (graficoMixBravirTercCliente) graficoMixBravirTercCliente.destroy();
   graficoMixBravirTercCliente = new Chart(canvas, {
     type: 'bar',
+    plugins: [{
+      id: 'rotulosMix',
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        chart.data.datasets.forEach((ds, di) => {
+          const meta = chart.getDatasetMeta(di);
+          meta.data.forEach((bar, i) => {
+            const v = ds.data[i];
+            if (!v || v < 5) return;
+            const barW = Math.abs(bar.base - bar.x);
+            if (barW < 28) return;
+            ctx.save();
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 10px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(v.toFixed(1) + '%', (bar.base + bar.x) / 2, bar.y);
+            ctx.restore();
+          });
+        });
+      }
+    }],
     data: {
       labels,
       datasets: [
@@ -6505,6 +6405,27 @@ function renderizarMargemBravirTerc() {
   if (graficoMargemBravirTerc) graficoMargemBravirTerc.destroy();
   graficoMargemBravirTerc = new Chart(canvas, {
     type: 'line',
+    plugins: [{
+      id: 'rotulosMargemTerc',
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        chart.data.datasets.forEach((ds, di) => {
+          const meta = chart.getDatasetMeta(di);
+          if (meta.hidden) return;
+          meta.data.forEach((point, i) => {
+            const v = ds.data[i];
+            if (v == null) return;
+            ctx.save();
+            ctx.fillStyle = ds.borderColor || '#4a5568';
+            ctx.font = 'bold 9px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText(v.toFixed(1) + '%', point.x, point.y - 4);
+            ctx.restore();
+          });
+        });
+      }
+    }],
     data: {
       labels: meses.map(_lblCh),
       datasets: [
