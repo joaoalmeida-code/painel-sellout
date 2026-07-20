@@ -2371,18 +2371,25 @@ const COORDS_REGIAO = {
   'Curitiba (PR)':       { lat: -25.43, lon: -49.27 }, // Curitiba
 };
 
-// Cache para não re-buscar a mesma região
+// Cache por região; chave inclui o mês de referência para invalidar ao virar o mês
+const _mesRefTemp = (() => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth()}`; })();
 const cacheTemperaturas = {};
 
 async function buscarTemperaturaRegiao(regiao) {
-  if (cacheTemperaturas[regiao]) return cacheTemperaturas[regiao];
+  const chaveCache = `${regiao}|${_mesRefTemp}`;
+  if (cacheTemperaturas[chaveCache]) return cacheTemperaturas[chaveCache];
 
   const c = COORDS_REGIAO[regiao];
   if (!c) return null;
 
+  // Último dia do mês anterior (garante dados completos; mês atual pode estar incompleto)
+  const _hoje = new Date();
+  const _fim  = new Date(_hoje.getFullYear(), _hoje.getMonth(), 0); // dia 0 = último dia do mês anterior
+  const endDate = `${_fim.getFullYear()}-${String(_fim.getMonth()+1).padStart(2,'0')}-${String(_fim.getDate()).padStart(2,'0')}`;
+
   const url = `https://archive-api.open-meteo.com/v1/archive?` +
     `latitude=${c.lat}&longitude=${c.lon}` +
-    `&start_date=2025-01-01&end_date=2026-05-31` +
+    `&start_date=2025-01-01&end_date=${endDate}` +
     `&daily=temperature_2m_mean,temperature_2m_min` +
     `&timezone=America%2FSao_Paulo`;
 
@@ -2409,7 +2416,7 @@ async function buscarTemperaturaRegiao(regiao) {
   });
 
   const result = { mean: mapear('somaMed', 'cntMed'), min: mapear('somaMin', 'cntMin') };
-  cacheTemperaturas[regiao] = result;
+  cacheTemperaturas[chaveCache] = result;
   return result;
 }
 
@@ -6155,6 +6162,31 @@ function renderizarMargemMarca() {
 
 const _abrevMes = {Janeiro:'Jan',Fevereiro:'Fev',Março:'Mar',Abril:'Abr',Maio:'Mai',Junho:'Jun',
                    Julho:'Jul',Agosto:'Ago',Setembro:'Set',Outubro:'Out',Novembro:'Nov',Dezembro:'Dez'};
+
+// Plugin reutilizável: rótulo acima de cada barra com valor em k (÷1000)
+const _pluginRotulosKBT = {
+  id: 'rotulosKBT',
+  afterDatasetsDraw(chart) {
+    const ctx = chart.ctx;
+    const fmtK = v => v >= 1000 ? (v / 1000).toFixed(0) + 'k' : Math.round(v).toLocaleString('pt-BR');
+    chart.data.datasets.forEach((ds, di) => {
+      const meta = chart.getDatasetMeta(di);
+      if (meta.hidden) return;
+      meta.data.forEach((bar, i) => {
+        const v = ds.data[i];
+        if (!v) return;
+        ctx.save();
+        ctx.fillStyle = '#2d3748';
+        ctx.font = 'bold 9px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(fmtK(v), bar.x, bar.y - 2);
+        ctx.restore();
+      });
+    });
+  }
+};
+
 const _lblCh = ch => { const [a, m] = ch.split('|'); return (_abrevMes[m] || m) + '/' + String(a).slice(-2); };
 
 function renderizarEvoluBravirTercCliente() {
@@ -6206,6 +6238,7 @@ function renderizarEvoluBravirTercCliente() {
   if (graficoBravirTercCliente) graficoBravirTercCliente.destroy();
   graficoBravirTercCliente = new Chart(canvas, {
     type: 'bar',
+    plugins: [_pluginRotulosKBT],
     data: {
       labels: meses.map(_lblCh),
       datasets: [
@@ -6275,6 +6308,7 @@ function renderizarEvoluBravirTercCategoria() {
   if (graficoBravirTercCategoria) graficoBravirTercCategoria.destroy();
   graficoBravirTercCategoria = new Chart(canvas, {
     type: 'bar',
+    plugins: [_pluginRotulosKBT],
     data: {
       labels: meses.map(_lblCh),
       datasets: [
