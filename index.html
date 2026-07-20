@@ -2013,10 +2013,10 @@ function renderizarEvolucao() {
     return (parseInt(anoA)*100+(MESES_ORDEM[mesA]||0)) - (parseInt(anoB)*100+(MESES_ORDEM[mesB]||0));
   });
 
-  const rotulos       = mesesOrdenados.map(m => { const [a,ms]=m.split('|'); return `${ms.slice(0,3)}/${a}`; });
-  const dsMargem      = mesesOrdenados.map(m => porMes[m].mb);
-  const dsCustoBravir = mesesOrdenados.map(m => Math.max(0, porMes[m].sellIn - porMes[m].mb));
-  const dsMarkup      = mesesOrdenados.map(m => Math.max(0, porMes[m].fat - porMes[m].sellIn));
+  const rotulos  = mesesOrdenados.map(m => { const [a,ms]=m.split('|'); return `${ms.slice(0,3)}/${a}`; });
+  const dsSO     = mesesOrdenados.map(m => porMes[m].fat);
+  const dsSI     = mesesOrdenados.map(m => porMes[m].sellIn);
+  const dsMargem = mesesOrdenados.map(m => porMes[m].mb);
 
   const chaveDE  = document.getElementById('sel-periodo-de').value;
   const chaveATE = document.getElementById('sel-periodo-ate').value;
@@ -2081,31 +2081,34 @@ function renderizarEvolucao() {
 
   const datasets = [
     {
-      label: 'Margem Bravir (R$)',
-      data: dsMargem,
-      backgroundColor: '#276749cc',
-      borderColor: '#276749',
-      borderWidth: 1,
-      borderRadius: { topLeft: 0, topRight: 0, bottomLeft: 4, bottomRight: 4 },
-      stack: 'evolucao',
-    },
-    {
-      label: 'Custo Bravir (Sell-in − Margem)',
-      data: dsCustoBravir,
-      backgroundColor: '#a0aec0cc',
-      borderColor: '#a0aec0',
-      borderWidth: 1,
-      borderRadius: 0,
-      stack: 'evolucao',
-    },
-    {
-      label: 'Markup varejista (Sell-out − Sell-in)',
-      data: dsMarkup,
-      backgroundColor: '#2b6cb0aa',
+      label: 'Sell-out (R$)',
+      data: dsSO,
+      backgroundColor: '#2b6cb0bb',
       borderColor: '#2b6cb0',
       borderWidth: 1,
-      borderRadius: { topLeft: 4, topRight: 4, bottomLeft: 0, bottomRight: 0 },
-      stack: 'evolucao',
+      borderRadius: 3,
+      order: 2,
+    },
+    {
+      label: 'Sell-in (R$)',
+      data: dsSI,
+      backgroundColor: '#a0aec0bb',
+      borderColor: '#718096',
+      borderWidth: 1,
+      borderRadius: 3,
+      order: 2,
+    },
+    {
+      label: 'Margem Bravir (R$)',
+      type: 'line',
+      data: dsMargem,
+      borderColor: '#276749',
+      backgroundColor: 'rgba(39,103,73,0.08)',
+      borderWidth: 2,
+      pointRadius: 3,
+      fill: false,
+      tension: 0.3,
+      order: 1,
     }
   ];
   if (dsYoY) datasets.push(dsYoY);
@@ -2145,10 +2148,10 @@ function renderizarEvolucao() {
         }
       },
       scales: {
-        x: { stacked: true, ticks: { font: { size: 11 } } },
+        x: { ticks: { font: { size: 11 } } },
         y: {
-          stacked: true,
           beginAtZero: true,
+          title: { display: true, text: 'R$ (em milhares)' },
           ticks: {
             callback: v => {
               if (v >= 1_000_000) return 'R$ ' + (v / 1_000_000).toFixed(1) + 'M';
@@ -2163,6 +2166,7 @@ function renderizarEvolucao() {
       id: 'rotulosEvolucao',
       afterDatasetsDraw(chart) {
         const ctx = chart.ctx;
+        const fmtK = v => v >= 1000 ? (v / 1000).toFixed(0) + 'k' : Math.round(v).toLocaleString('pt-BR');
         chart.data.datasets.forEach((ds, di) => {
           const meta = chart.getDatasetMeta(di);
           if (meta.hidden) return;
@@ -2171,25 +2175,25 @@ function renderizarEvolucao() {
               const v = ds.data[i];
               if (v == null || v === 0) return;
               ctx.save();
-              ctx.fillStyle = ds.borderColor || '#a0aec0';
+              ctx.fillStyle = '#276749';
               ctx.font = 'bold 8px sans-serif';
               ctx.textAlign = 'center';
               ctx.textBaseline = 'bottom';
-              ctx.fillText(BRL(v), point.x, point.y - 4);
+              ctx.fillText(fmtK(v), point.x, point.y - 4);
               ctx.restore();
             });
           } else {
             meta.data.forEach((bar, i) => {
               const v = ds.data[i];
               if (v == null || v === 0) return;
-              const segH = Math.abs(bar.base - bar.y);
-              if (segH < 16) return;
+              const barH = Math.abs(bar.base - bar.y);
+              if (barH < 14) return;
               ctx.save();
               ctx.fillStyle = '#fff';
               ctx.font = 'bold 8px sans-serif';
               ctx.textAlign = 'center';
               ctx.textBaseline = 'middle';
-              ctx.fillText(BRL(v), bar.x, (bar.y + bar.base) / 2);
+              ctx.fillText(fmtK(v), bar.x, (bar.y + bar.base) / 2);
               ctx.restore();
             });
           }
@@ -2208,9 +2212,9 @@ function renderizarTop15SKUs() {
   const todasCh = _todasChavesGlobais();
   const ult12   = todasCh.slice(-12);
 
-  // Acumula SO por SKU por mês (todos os meses com dados)
+  // Acumula SO por SKU por mês — usa filtros ativos (exceto período, para ter dados do ano anterior no YTD)
   const porSKU = {};
-  dadosGlobais.forEach(r => {
+  dadosFiltradosSemPeriodo().forEach(r => {
     const sku = r['SKU']; if (!sku) return;
     const ch  = `${r['Ano']}|${r['Mês']}`;
     const q   = num(r['Quantidade Sell Out']); if (q <= 0) return;
@@ -2748,7 +2752,7 @@ function renderizarEvolucaoPorCategoria() {
 // ─── Venda por PDV por cliente ───────────────────────────────────────────────
 
 function _agruparPDV(dados) {
-  // Retorna agr[cli] = { soVal, margemVal, pdvSO } onde pdvSO só conta meses com SO > 0
+  // Retorna agr[cli] = { soVal, margemVal, pdvSO, skus } onde pdvSO só conta meses com SO > 0
   const agr = {};
   dados.forEach(r => {
     const cli  = r['Cliente'];
@@ -2757,9 +2761,11 @@ function _agruparPDV(dados) {
     const soVal  = num(r['Valor (R$) Sell Out']);
     const margem = num(r['Margem Cliente (R$)']);
     const ch     = `${r['Ano']}|${r['Mês']}`;
-    if (!agr[cli]) agr[cli] = { soVal: 0, margemVal: 0, pdvSO: {} };
+    const sku    = r['SKU'] || r['COD SKU'];
+    if (!agr[cli]) agr[cli] = { soVal: 0, margemVal: 0, pdvSO: {}, skus: new Set() };
     agr[cli].soVal    += soVal;
     agr[cli].margemVal += margem;
+    if (soVal > 0 && sku) agr[cli].skus.add(sku);
     // Denominador compartilhado: meses com SO > 0 (clientes novos não são penalizados)
     if (pdvs > 0 && soVal > 0) agr[cli].pdvSO[ch] = Math.max(agr[cli].pdvSO[ch] || 0, pdvs);
   });
@@ -2818,9 +2824,11 @@ function renderizarVendaPorPDV(dados) {
     .filter(([, d]) => Object.keys(d.pdvSO).length > 0)
     .map(([nome, d]) => {
       const tot = Object.values(d.pdvSO).reduce((s, v) => s + v, 0);
-      return { nome, vpdv: tot > 0 ? d.soVal / tot : 0 };
+      return { nome, vpdv: tot > 0 ? d.soVal / tot : 0, mix: d.skus.size };
     })
     .sort((a, b) => b.vpdv - a.vpdv);
+
+  const mixPorCliente = Object.fromEntries(clientes.map(c => [c.nome, c.mix]));
 
   if (graficoVendaPDV) graficoVendaPDV.destroy();
   graficoVendaPDV = new Chart(document.getElementById('grafico-venda-pdv'), {
@@ -2831,14 +2839,18 @@ function renderizarVendaPorPDV(dados) {
         const ctx  = chart.ctx;
         const meta = chart.getDatasetMeta(0);
         meta.data.forEach((bar, j) => {
-          const v = chart.data.datasets[0].data[j];
+          const v   = chart.data.datasets[0].data[j];
+          const lbl = chart.data.labels[j];
           if (!v) return;
           ctx.save();
           ctx.fillStyle = '#2d3748';
           ctx.font = 'bold 11px sans-serif';
           ctx.textAlign = 'left';
           ctx.textBaseline = 'middle';
-          ctx.fillText(BRL(v), bar.x + 5, bar.y);
+          ctx.fillText(BRL(v), bar.x + 5, bar.y - 6);
+          ctx.fillStyle = '#718096';
+          ctx.font = '10px sans-serif';
+          ctx.fillText('Mix: ' + (mixPorCliente[lbl] || 0) + ' SKUs', bar.x + 5, bar.y + 7);
           ctx.restore();
         });
       }
@@ -2918,8 +2930,11 @@ function renderizarEstoque() {
     if (!cli || vazio(est)) return;
     const chave = `${r['Ano']}|${r['Mês']}`;
     if (!porMesCli[chave]) porMesCli[chave] = {};
-    porMesCli[chave][cli] = (porMesCli[chave][cli] || 0) + num(est);
-    totCli[cli] = (totCli[cli] || 0) + num(est);
+    // Estoque é total do cliente, repetido em cada linha do SKU — usa só a primeira ocorrência
+    if (!porMesCli[chave][cli]) {
+      porMesCli[chave][cli] = num(est);
+      totCli[cli] = (totCli[cli] || 0) + num(est);
+    }
     mesesSet.add(chave);
   });
 
@@ -6417,10 +6432,18 @@ function renderizarMixBravirTercCliente() {
   });
 
   const clientes = Object.entries(por).sort((a, b) => (b[1].b + b[1].t) - (a[1].b + a[1].t));
-  const labels  = clientes.map(([c]) => c);
+
+  // Agrega total geral
+  const totalB = Object.values(por).reduce((s, v) => s + v.b, 0);
+  const totalT = Object.values(por).reduce((s, v) => s + v.t, 0);
+  const totalGeral = totalB + totalT;
+  const totalPctB  = totalGeral > 0 ? parseFloat((totalB / totalGeral * 100).toFixed(1)) : 0;
+  const totalPctT  = totalGeral > 0 ? parseFloat((totalT / totalGeral * 100).toFixed(1)) : 0;
+
+  const labels  = ['▶ Total geral', ...clientes.map(([c]) => c)];
   const totais  = clientes.map(([, v]) => v.b + v.t);
-  const pctB    = clientes.map(([, v], i) => totais[i] > 0 ? parseFloat((v.b / totais[i] * 100).toFixed(1)) : 0);
-  const pctT    = clientes.map(([, v], i) => totais[i] > 0 ? parseFloat((v.t / totais[i] * 100).toFixed(1)) : 0);
+  const pctB    = [totalPctB, ...clientes.map(([, v], i) => totais[i] > 0 ? parseFloat((v.b / totais[i] * 100).toFixed(1)) : 0)];
+  const pctT    = [totalPctT, ...clientes.map(([, v], i) => totais[i] > 0 ? parseFloat((v.t / totais[i] * 100).toFixed(1)) : 0)];
 
   if (graficoMixBravirTercCliente) graficoMixBravirTercCliente.destroy();
   graficoMixBravirTercCliente = new Chart(canvas, {
@@ -6441,7 +6464,10 @@ function renderizarMixBravirTercCliente() {
           callbacks: {
             label: ctx => {
               const c = ctx.label;
-              const val = ctx.dataset.label === 'Bravir' ? por[c]?.b : por[c]?.t;
+              let bVal, tVal;
+              if (c === '▶ Total geral') { bVal = totalB; tVal = totalT; }
+              else { bVal = por[c]?.b; tVal = por[c]?.t; }
+              const val = ctx.dataset.label === 'Bravir' ? bVal : tVal;
               return ` ${ctx.dataset.label}: ${ctx.raw}% (${BRL(val || 0)})`;
             }
           }
@@ -6463,18 +6489,18 @@ function renderizarMargemBravirTerc() {
   const todasCh = _todasChavesGlobais();
 
   const por = {};
-  todasCh.forEach(ch => { por[ch] = { bMb: 0, bSo: 0, tMb: 0, tSo: 0 }; });
+  todasCh.forEach(ch => { por[ch] = { bMb: 0, bSi: 0, tMb: 0, tSi: 0 }; });
   dados.forEach(r => {
     const ch = `${r['Ano']}|${r['Mês']}`; if (!por[ch]) return;
-    const mb = num(r['Margem Cliente (R$)']);
-    const so = num(r['Valor (R$) Sell Out']); if (so <= 0) return;
-    if (r['Bravir / Terceiros'] === 'Bravir') { por[ch].bMb += mb; por[ch].bSo += so; }
-    else                                        { por[ch].tMb += mb; por[ch].tSo += so; }
+    const mb = num(r['Margem Contribuição Bravir (R$)']);
+    const si = num(r['Valor (R$) Sell in']); if (si <= 0) return;
+    if (r['Bravir / Terceiros'] === 'Bravir') { por[ch].bMb += mb; por[ch].bSi += si; }
+    else                                        { por[ch].tMb += mb; por[ch].tSi += si; }
   });
 
-  const meses = todasCh.filter(ch => por[ch].bSo + por[ch].tSo > 0);
-  const pctB  = meses.map(ch => por[ch].bSo > 0 ? parseFloat((por[ch].bMb / por[ch].bSo * 100).toFixed(1)) : null);
-  const pctT  = meses.map(ch => por[ch].tSo > 0 ? parseFloat((por[ch].tMb / por[ch].tSo * 100).toFixed(1)) : null);
+  const meses = todasCh.filter(ch => por[ch].bSi + por[ch].tSi > 0);
+  const pctB  = meses.map(ch => por[ch].bSi > 0 ? parseFloat((por[ch].bMb / por[ch].bSi * 100).toFixed(1)) : null);
+  const pctT  = meses.map(ch => por[ch].tSi > 0 ? parseFloat((por[ch].tMb / por[ch].tSi * 100).toFixed(1)) : null);
 
   if (graficoMargemBravirTerc) graficoMargemBravirTerc.destroy();
   graficoMargemBravirTerc = new Chart(canvas, {
@@ -6503,7 +6529,7 @@ function renderizarMargemBravirTerc() {
       scales: {
         x: { ticks: { font: { size: 10 } } },
         y: {
-          title: { display: true, text: 'Margem % ponderada' },
+          title: { display: true, text: 'Margem Bravir % sobre Sell-in' },
           ticks: { callback: v => v + '%' }
         }
       }
