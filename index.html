@@ -5896,13 +5896,28 @@ function renderizarMixMarcaCliente() {
 
   const CORES_M = ['#2b6cb0','#276749','#744210','#702459','#2c7a7b','#c05621','#553c9a','#97266d','#2d3748','#1a365d','#e53e3e'];
 
+  // Total geral por marca (denominador = soma de todos os clientes filtrados)
+  const totalPorMarca = {};
+  let totalGeral = 0;
+  marcas.forEach(m => {
+    let t = 0;
+    [...cliSet].forEach(c => { t += por[c]?.[m] || 0; });
+    totalPorMarca[m] = t;
+    totalGeral += t;
+  });
+
+  const labelsComTotal = ['▶ Total geral', ...clientes];
+
   const datasets = marcas.map((marca, i) => ({
     label: marca,
-    data: clientes.map(c => {
-      const totCli = Object.values(por[c] || {}).reduce((s, v) => s + v, 0);
-      const v = por[c]?.[marca] || 0;
-      return totCli > 0 ? parseFloat(((v / totCli) * 100).toFixed(1)) : 0;
-    }),
+    data: [
+      totalGeral > 0 ? parseFloat(((totalPorMarca[marca] / totalGeral) * 100).toFixed(1)) : 0,
+      ...clientes.map(c => {
+        const totCli = Object.values(por[c] || {}).reduce((s, v) => s + v, 0);
+        const v = por[c]?.[marca] || 0;
+        return totCli > 0 ? parseFloat(((v / totCli) * 100).toFixed(1)) : 0;
+      })
+    ],
     backgroundColor: CORES_M[i % CORES_M.length] + 'cc',
     borderColor: CORES_M[i % CORES_M.length],
     borderWidth: 1,
@@ -5911,12 +5926,14 @@ function renderizarMixMarcaCliente() {
   if (graficoMixMarcaCliente) graficoMixMarcaCliente.destroy();
   graficoMixMarcaCliente = new Chart(document.getElementById('grafico-mix-marca-cliente'), {
     type: 'bar',
-    data: { labels: clientes, datasets },
+    data: { labels: labelsComTotal, datasets },
     options: {
       indexAxis: 'y', responsive: true,
       onClick: (event, elements) => {
         if (!elements.length) return;
-        const cli   = clientes[elements[0].index];
+        const idx  = elements[0].index;
+        const cli  = labelsComTotal[idx];
+        if (cli === '▶ Total geral') return;
         const marca = graficoMixMarcaCliente.data.datasets[elements[0].datasetIndex]?.label;
         if (cli && marca) aplicarFiltroClienteMarca(cli, marca);
       },
