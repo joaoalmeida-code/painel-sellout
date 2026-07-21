@@ -781,7 +781,7 @@
     <div id="titulo-top-skus" style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">Top 10 SKUs por Faturamento</div>
     <div class="subtitulo">Faturamento sell-out total no período filtrado · Barras ordenadas do maior para o menor</div>
     <div class="como-analisar">Lista os produtos que mais geram receita no período. Identifique se há dependência excessiva de um único produto — se os 2 ou 3 primeiros SKUs representam mais de 60% do faturamento, qualquer problema de disponibilidade, preço ou concorrência neles tem impacto crítico no resultado. Os produtos no topo merecem atenção especial em termos de estoque, presença garantida na gôndola e preço competitivo.</div>
-    <canvas id="grafico-top-skus" style="max-height:400px;"></canvas>
+    <canvas id="grafico-top-skus" style="max-height:480px;"></canvas>
   </div>
 
   <!-- Evolução Top 5 SKUs -->
@@ -3000,7 +3000,7 @@ function renderizarTopSKUs(dados) {
 
   const skus    = Object.keys(agrupado).sort((a, b) => agrupado[b] - agrupado[a]).slice(0, 10);
   const valores = skus.map(s => agrupado[s]);
-  const labels  = skus.map(s => s.length > 32 ? s.slice(0, 32) + '…' : s);
+  const labels  = skus; // nome completo; quebra de linha tratada no callback do eixo Y
 
   if (graficoTopSKUs) graficoTopSKUs.destroy();
   graficoTopSKUs = new Chart(document.getElementById('grafico-top-skus'), {
@@ -3066,7 +3066,25 @@ function renderizarTopSKUs(dados) {
             }
           }
         },
-        y: { ticks: { font: { size: 11 } } }
+        y: {
+          ticks: {
+            font: { size: 9 },
+            callback: function(val) {
+              const s = this.getLabelForValue(val);
+              if (!s || s.length <= 30) return s;
+              const lines = [];
+              let rest = s;
+              while (rest.length > 30) {
+                let cut = rest.lastIndexOf(' ', 30);
+                if (cut <= 0) cut = 30;
+                lines.push(rest.slice(0, cut));
+                rest = rest.slice(cut).trim();
+              }
+              lines.push(rest);
+              return lines;
+            }
+          }
+        }
       }
     }
   });
