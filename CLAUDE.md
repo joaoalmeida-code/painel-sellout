@@ -59,3 +59,32 @@ Algumas linhas têm vazio em `Preço Sell Out`, `Margem Cliente %`,
 - Interface e comentários do código: em português.
 - Privacidade: a base tem nomes de clientes e margem por cliente. Não subir
   o arquivo para repositório público (ver .gitignore na Missão de Git).
+
+---
+
+## Estado atual do painel (jul/2026)
+
+> Para detalhes técnicos completos (funções, padrões, armadilhas), leia
+> **`CONTEXTO_TECNICO.md`** antes de qualquer edição.
+
+O painel está **em produção** em GitHub Pages. Tudo em `index.html` (~8.200 linhas).
+Dependências via CDN: Chart.js 4.4.0, SheetJS 0.18.5, Firebase Compat 10.12.0.
+
+### Seções implementadas (9)
+
+1. **Visão Geral** — KPIs (SO, SI, margem, variação YoY), Evolução Mensal (barras SO+SI + linha margem), Top 15 SKUs (tabela 12 meses), tabela detalhada.
+2. **Categorias** — Donut de mix por categoria, Evolução por Categoria.
+3. **Clientes / PDVs** — Resumo por Cliente (tabela ordenável), Venda por PDV (barras com "Mix: N SKUs"), Evolução SI por Cliente, Evolução SI por Marca.
+4. **SKUs / Produtos** — Top 10 SKUs (barras, nomes em 2 linhas, fonte 9px), Top 5 Evolução, Ranking Margem por SKU, Scatter Margem × Sell-Out.
+5. **Marcas** — Heatmap, Mix de Marcas por Cliente (com barra ▶ Total geral), Evolução de Marcas, Margem por Marca, Evolução SI por Marca, Evolução SO Bravir vs Terceiros por Cliente e por Categoria (rótulos em k), Mix Bravir × Terceiros por Cliente (rótulos % + barra ▶ Total geral), Evolução % Margem Bravir vs Terceiros (4 linhas: margem interna e do cliente para cada segmento).
+6. **Estoque & Cobertura** — Evolução de Estoque por Cliente, Cobertura em Dias.
+7. **Precificação** — Markup, Radar, Oportunidade de Repricing, Variação de Preço, Scatter Preço × PDV, Preço vs Volume, Evolução de Preço por Categoria e por Cliente.
+8. **Análises Específicas** — Elasticidade Preço × Demanda, Sell Out × Temperatura Real (barras SO + linhas temperatura, API Open-Meteo com fallback dual archive+forecast).
+9. **Previsão de Vendas** — Simulador por cliente (SO/SI/estoque projetados), sincronização Firebase, dashboard de acurácia. Responsáveis: João Almeida, Vitor Amaral, Mariana Gomes, João Wanderley, Rafael Júnior.
+
+### Bugs resolvidos (não regredir)
+- Estoque inflado: `Estoque CD + Loja` repetido por SKU — só conta a primeira ocorrência por (cliente, mês).
+- Temperatura julho vazia: gráfico agora corta no último mês com sell-out > 0.
+- Temperatura junho faltando: API ERA5 tem lag — faz fetch duplo (archive + forecast `past_days=92`) e mescla.
+- Nomes de SKU ilegíveis no Top 10: callback de tick retorna array de strings para quebrar em 2 linhas.
+- Campo `'Versão'` do Firestore migrado para `'Responsável'` via `_migrarPrevisoes()`.
