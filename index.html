@@ -2383,36 +2383,41 @@ async function buscarTemperaturaRegiao(regiao) {
   const c = COORDS_REGIAO[regiao];
   if (!c) return null;
 
-  // Último dia do mês anterior (garante dados completos; mês atual pode estar incompleto)
+  // Usa hoje como end_date: meses sem sell-out são filtrados em renderizarTemperatura de qualquer forma
   const _hoje = new Date();
-  const _fim  = new Date(_hoje.getFullYear(), _hoje.getMonth(), 0); // dia 0 = último dia do mês anterior
-  const endDate = `${_fim.getFullYear()}-${String(_fim.getMonth()+1).padStart(2,'0')}-${String(_fim.getDate()).padStart(2,'0')}`;
+  const endDate = `${_hoje.getFullYear()}-${String(_hoje.getMonth()+1).padStart(2,'0')}-${String(_hoje.getDate()).padStart(2,'0')}`;
+  const baseParams = `latitude=${c.lat}&longitude=${c.lon}&daily=temperature_2m_mean,temperature_2m_min&timezone=America%2FSao_Paulo`;
 
-  const url = `https://archive-api.open-meteo.com/v1/archive?` +
-    `latitude=${c.lat}&longitude=${c.lon}` +
-    `&start_date=2025-01-01&end_date=${endDate}` +
-    `&daily=temperature_2m_mean,temperature_2m_min` +
-    `&timezone=America%2FSao_Paulo`;
+  const agregar = (data, pm) => {
+    (data.daily?.time || []).forEach((date, i) => {
+      const chave = date.slice(0, 7); // "2026-06"
+      if (!pm[chave]) pm[chave] = { somaMed: 0, cntMed: 0, somaMin: 0, cntMin: 0 };
+      const tMed = data.daily.temperature_2m_mean[i];
+      const tMin = data.daily.temperature_2m_min[i];
+      if (tMed != null) { pm[chave].somaMed += tMed; pm[chave].cntMed++; }
+      if (tMin != null) { pm[chave].somaMin += tMin; pm[chave].cntMin++; }
+    });
+  };
 
-  const resp = await fetch(url);
-  if (!resp.ok) throw new Error(`Open-Meteo HTTP ${resp.status}`);
-  const data = await resp.json();
+  // Busca arquivo histórico (ERA5, pode ter lag de dias) e forecast (dados recentes até hoje) em paralelo
+  const [rArch, rFore] = await Promise.all([
+    fetch(`https://archive-api.open-meteo.com/v1/archive?${baseParams}&start_date=2025-01-01&end_date=${endDate}`, { cache: 'no-cache' }).catch(() => null),
+    fetch(`https://api.open-meteo.com/v1/forecast?${baseParams}&past_days=92`, { cache: 'no-cache' }).catch(() => null),
+  ]);
 
-  // Agrega diário → média mensal (para média e para mínima)
+  const pmArch = {}, pmFore = {};
+  if (rArch?.ok) { const d = await rArch.json(); agregar(d, pmArch); }
+  if (rFore?.ok) { const d = await rFore.json(); agregar(d, pmFore); }
+
+  // Para cada mês: prefere archive (mais preciso); se archive não tem dados, usa forecast
   const porMes = {};
-  (data.daily?.time || []).forEach((date, i) => {
-    const chave = date.slice(0, 7); // "2025-01"
-    if (!porMes[chave]) porMes[chave] = { somaMed: 0, cntMed: 0, somaMin: 0, cntMin: 0 };
-    const tMed = data.daily.temperature_2m_mean[i];
-    const tMin = data.daily.temperature_2m_min[i];
-    if (tMed !== null && tMed !== undefined) { porMes[chave].somaMed += tMed; porMes[chave].cntMed++; }
-    if (tMin !== null && tMin !== undefined) { porMes[chave].somaMin += tMin; porMes[chave].cntMin++; }
+  new Set([...Object.keys(pmArch), ...Object.keys(pmFore)]).forEach(ch => {
+    porMes[ch] = (pmArch[ch]?.cntMed > 0) ? pmArch[ch] : pmFore[ch];
   });
 
   const mapear = (campo, cnt) => MESES_TEMP.map(m => {
     const [ano, nomeMes] = m.split('|');
-    const mesNum = String(MESES_ORDEM[nomeMes]).padStart(2, '0');
-    const d = porMes[`${ano}-${mesNum}`];
+    const d = porMes[`${ano}-${String(MESES_ORDEM[nomeMes]).padStart(2,'0')}`];
     return d && d[cnt] > 0 ? parseFloat((d[campo] / d[cnt]).toFixed(1)) : null;
   });
 
