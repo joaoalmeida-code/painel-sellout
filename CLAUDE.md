@@ -10,14 +10,15 @@ dados reais (já limpos) da empresa.
 
 ## Os dados
 - Arquivo: `base_sellout.xlsx`, aba `Base de Dados`.
-- 2.919 linhas, 21 colunas. Período: jan/2025 a mai/2026 (17 meses).
+- 24 colunas. Período: jan/2025 a jun/2026 (18 meses).
 - Granularidade: cada linha = um SKU, em um Cliente, em um Mês.
 
-### Colunas (todas úteis — 21)
+### Colunas (todas úteis — 24)
 Identificação:
 - `Data`, `Ano`, `Mês`, `COD SKU`, `SKU`
 - `Bravir / Terceiros` — eixo marca própria (Bravir) × white label (Terceiros)
 - `Marca`, `Categoria`, `Cliente`, `Segmento`, `# PDVs Cliente`
+- `Vendedor` — responsável comercial pela conta
 
 Sell out / Sell in:
 - `Quantidade Sell Out`, `Valor (R$) Sell Out`, `Preço Sell Out`
@@ -25,11 +26,16 @@ Sell out / Sell in:
 
 Margem e outros:
 - `Margem Cliente (R$)`, `Margem Cliente %`
+- `Margem Contribuição Bravir (R$)` — margem interna Bravir sobre o sell-in
 - `Estoque CD + Loja (último dia do mês)`, `Venda Por PDV Total`
+
+Novas colunas (jul/2026):
+- `Estoque Bravir` — estoque no CD/armazém da Bravir, por SKU, último dia do mês
+- `Custo de Trade (R$)` — custo de ações de trade marketing por SKU × Cliente × Mês
 
 ### Como entender as dimensões
 - `Bravir / Terceiros`:
-  - Bravir → marcas próprias: Bendita Cânfora, Bravir Tradicional, Laby.
+  - Bravir → marcas próprias: Bendita Cânfora, Bravir Tradicional, Laby, Alivik.
   - Terceiros (white label) → a coluna `Marca` traz o nome do varejista
     (Araújo, Assifarma, DPSP, Pague Menos, Panvel, Raia / Drogasil,
     São João, Venâncio).
@@ -77,9 +83,9 @@ Dependências via CDN: Chart.js 4.4.0, SheetJS 0.18.5, Firebase Compat 10.12.0.
 3. **Clientes / PDVs** — Resumo por Cliente (tabela ordenável), Venda por PDV (barras com "Mix: N SKUs"), Evolução SI por Cliente, Evolução SI por Marca.
 4. **SKUs / Produtos** — Top 10 SKUs (barras, nomes em 2 linhas, fonte 9px), Top 5 Evolução, Ranking Margem por SKU, Scatter Margem × Sell-Out.
 5. **Marcas** — Heatmap, Mix de Marcas por Cliente (com barra ▶ Total geral), Evolução de Marcas, Margem por Marca, Evolução SI por Marca, Evolução SO Bravir vs Terceiros por Cliente e por Categoria (rótulos em k), Mix Bravir × Terceiros por Cliente (rótulos % + barra ▶ Total geral), Evolução % Margem Bravir vs Terceiros (4 linhas: margem interna e do cliente para cada segmento).
-6. **Estoque & Cobertura** — Evolução de Estoque por Cliente, Cobertura em Dias.
+6. **Estoque & Cobertura** — Evolução de Estoque por Cliente, Cobertura em Dias, Evolução Estoque Bravir por Categoria, Cobertura Bravir (dias).
 7. **Precificação** — Markup, Radar, Oportunidade de Repricing, Variação de Preço, Scatter Preço × PDV, Preço vs Volume, Evolução de Preço por Categoria e por Cliente.
-8. **Análises Específicas** — Elasticidade Preço × Demanda, Sell Out × Temperatura Real (barras SO + linhas temperatura, API Open-Meteo com fallback dual archive+forecast).
+8. **Análises Específicas** — Elasticidade Preço × Demanda, Sell Out × Temperatura Real (barras SO + linhas temperatura, API Open-Meteo com fallback dual archive+forecast), Custo de Trade por Cliente, ROI de Trade por Cliente.
 9. **Previsão de Vendas** — Simulador por cliente (SO/SI/estoque projetados), sincronização Firebase, dashboard de acurácia. Responsáveis: João Almeida, Vitor Amaral, Mariana Gomes, João Wanderley, Rafael Júnior.
 
 ### Bugs resolvidos (não regredir)

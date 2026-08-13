@@ -75,8 +75,12 @@ As colunas que o código acessa por nome (verifique sempre):
 | `Margem Cliente (R$)` | Margem do varejista em R$ |
 | `Margem Cliente %` | Margem do varejista em % |
 | `Margem Contribuição Bravir (R$)` | Margem interna Bravir em R$ |
-| `Estoque CD + Loja (último dia do mês)` | Estoque físico (total do cliente, repetido por SKU) |
+| `Estoque CD + Loja (último dia do mês)` | Estoque físico do varejista (total do cliente, repetido por SKU — requer deduplicação) |
 | `Venda Por PDV Total` | Venda por PDV (pré-calculada) |
+| `Margem Contribuição Bravir (R$)` | Margem interna Bravir (sobre sell-in) — usada em Evolução % Margem |
+| `Vendedor` | Responsável comercial pela conta — popula filtro de Vendedor |
+| `Estoque Bravir` | Estoque no CD/armazém da Bravir, por SKU, último dia do mês |
+| `Custo de Trade (R$)` | Custo de trade marketing por SKU × Cliente × Mês |
 
 ---
 
@@ -92,6 +96,7 @@ Filtros aplicados em ordem (todos são ANDs; array vazio = sem restrição):
 4. **Bravir/Terceiros** — string `filtroMarca` (`'Bravir'`, `'Terceiros'` ou `''`)
 5. **Cliente** — array `clientesSel`
 6. **SKU** — array `skusSel`
+7. **Vendedor** — array `vendedoresSel`
 
 ### `dadosFiltradosSemPeriodo()`
 Igual a `filtrarDados()` mas sem o filtro de período (etapa 1).
@@ -114,6 +119,9 @@ Exceções documentadas:
 - `renderizarTop15SKUs` chama `dadosFiltradosSemPeriodo()` adicionalmente para calcular o % YTD
 - `renderizarTemperatura` é `async` (faz fetch para a API Open-Meteo)
 - `popularSKUs` chama `dadosFiltradosSemPeriodo()` para listar todos os SKUs sem corte de período
+- `renderizarEstoque` e `renderizarCobertura` chamam `filtrarDados()` internamente (exceções históricas)
+- `renderizarEstoqueBravir`, `renderizarCoberturaBravir` chamam `filtrarDados()` internamente
+- `renderizarCustoTrade`, `renderizarROITrade` recebem `dados` como parâmetro (padrão correto)
 
 ### Destruição de instâncias
 Antes de criar um gráfico, destrua a instância anterior:
@@ -212,12 +220,18 @@ if (!porMesCli[chave][cli]) {
 }
 ```
 
-### 7.2 Cobertura ignora filtro de SKU — intencional
+### 7.2 Estoque Bravir ≠ Estoque CD + Loja — não confundir
+`Estoque CD + Loja` = estoque do **varejista** (total do cliente, repetido por SKU — exige deduplicação).
+`Estoque Bravir` = estoque no **armazém da Bravir** (por SKU — soma direta, sem deduplicação).
+São perspectivas opostas da cadeia. `Estoque Bravir` baixo = risco de não abastecer o varejista.
+`Estoque CD + Loja` baixo = risco de ruptura na gôndola do consumidor.
+
+### 7.3 Cobertura ignora filtro de SKU — intencional
 A cobertura de estoque representa o inventário físico total do cliente.
 Não faz sentido dividir por SKU individual. A função aplica todos os filtros
 **exceto** `skusSel`. Não "corrija" esse comportamento — seria um bug de subestimação.
 
-### 7.3 YoY por offset de array, não subtração de ano
+### 7.4 YoY por offset de array, não subtração de ano
 ```js
 const idx = todasChavesGlobais.indexOf(chAtual);
 const chAnoAnterior = todasChavesGlobais[idx - 12]; // mesmo mês, ano anterior
@@ -225,12 +239,12 @@ const chAnoAnterior = todasChavesGlobais[idx - 12]; // mesmo mês, ano anterior
 Robusto para dados contínuos. Com gaps mensais (meses sem nenhuma venda),
 o offset pode apontar para o mês errado. Não há correção aplicada — comportamento esperado.
 
-### 7.4 Campo 'Versão' → 'Responsável' no Firestore
+### 7.5 Campo 'Versão' → 'Responsável' no Firestore
 Previsões antigas salvas no Firestore usavam o campo `'Versão'`.
 A função `_migrarPrevisoes(hist)` converte automaticamente ao carregar.
 Qualquer consulta a dados históricos de previsão deve passar por esse helper.
 
-### 7.5 Temperatura: archive API tem lag — RESOLVIDO
+### 7.6 Temperatura: archive API tem lag — RESOLVIDO
 `archive-api.open-meteo.com` (ERA5) pode ter atraso de dias no processamento de meses recentes.
 Fix aplicado: busca em paralelo nos dois endpoints e usa forecast como fallback:
 
@@ -242,7 +256,7 @@ const [rArch, rFore] = await Promise.all([
 // Para cada mês: prefere archive (mais preciso histórico); se não tem dados usa forecast
 ```
 
-### 7.6 Gráfico temperatura: julho aparecia vazio — RESOLVIDO
+### 7.7 Gráfico temperatura: julho aparecia vazio — RESOLVIDO
 `MESES_TEMP` incluía o mês atual (julho) mesmo sem dados de sell-out.
 Fix em `renderizarTemperatura`: corta os meses no último com sell-out > 0.
 
@@ -251,16 +265,16 @@ const ultimoComSO = MESES_TEMP.reduce((last, m, i) => (porMes[m] > 0 ? i : last)
 const mesesEfetivos = MESES_TEMP.slice(0, ultimoComSO + 1);
 ```
 
-### 7.7 Top 15 SKUs não seguia filtros — RESOLVIDO
+### 7.8 Top 15 SKUs não seguia filtros — RESOLVIDO
 O cálculo YTD usava `dadosGlobais` em vez de `dadosFiltradosSemPeriodo()`.
 Corrigido: o loop de YTD agora respeita todos os filtros ativos exceto período.
 
-### 7.8 Simulador: bloco 'scall' depende dos filhos
+### 7.9 Simulador: bloco 'scall' depende dos filhos
 O bloco "Todos os Clientes" (`ns = 'scall'`) soma `siProj` e `estFim` dos blocos individuais.
 `recalcularSimulador('scall')` só faz sentido **após** todos os blocos filhos recalculados.
 O código já garante isso — não quebrar essa ordem ao modificar o simulador.
 
-### 7.9 `ocultarCardsIrrelevantes()` usa `dataset.filtroOculto`
+### 7.10 `ocultarCardsIrrelevantes()` usa `dataset.filtroOculto`
 Cards ocultados programaticamente recebem `element.dataset.filtroOculto = 'true'`.
 O sistema de toggle só atua nesses elementos — não em cards com `display:none` no HTML estático.
 
