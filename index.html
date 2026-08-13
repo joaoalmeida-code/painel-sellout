@@ -1734,6 +1734,19 @@ function limparFiltros() {
   atualizarGrafico();
 }
 
+// Exibe mensagem quando não há dados para um gráfico (coluna ainda não preenchida)
+function _msgSemDados(canvas, msg) {
+  if (!canvas) return;
+  canvas.height = 60;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#a0aec0';
+  ctx.font = '13px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(msg, canvas.width / 2, 30);
+}
+
 // Helpers de cursor reutilizáveis
 function _onHoverCursor(event, elements) {
   const el = event.native?.target;
@@ -3084,6 +3097,7 @@ function renderizarEstoqueBravir() {
 
   if (!cats.length) {
     if (graficoEstoqueBravir) { graficoEstoqueBravir.destroy(); graficoEstoqueBravir = null; }
+    _msgSemDados(canvas, "Sem dados — adicione a coluna 'Estoque Bravir' na planilha");
     return;
   }
 
@@ -3156,6 +3170,7 @@ function renderizarCoberturaBravir() {
 
   if (!cats.length) {
     if (graficoCoberturaBravir) { graficoCoberturaBravir.destroy(); graficoCoberturaBravir = null; }
+    _msgSemDados(canvas, "Sem dados — adicione a coluna 'Estoque Bravir' na planilha");
     return;
   }
 
@@ -3232,6 +3247,7 @@ function renderizarCustoTrade(dados) {
   const canvas = document.getElementById('grafico-custo-trade');
   if (!clientes.length) {
     if (graficoCustoTrade) { graficoCustoTrade.destroy(); graficoCustoTrade = null; }
+    _msgSemDados(canvas, "Sem dados — adicione a coluna 'Custo de Trade (R$)' na planilha");
     return;
   }
 
@@ -3315,6 +3331,7 @@ function renderizarROITrade(dados) {
   const canvas = document.getElementById('grafico-roi-trade');
   if (!clientes.length) {
     if (graficoROITrade) { graficoROITrade.destroy(); graficoROITrade = null; }
+    _msgSemDados(canvas, "Sem dados — adicione a coluna 'Custo de Trade (R$)' na planilha");
     return;
   }
 
