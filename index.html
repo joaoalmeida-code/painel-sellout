@@ -1145,7 +1145,7 @@
     <!-- Ranking de Acurácia de Previsão -->
     <div id="area-acuracia-previsao" style="display:none;margin-bottom:1.2rem;padding:1rem;background:#f7fafc;border:1px solid #e2e8f0;border-radius:7px;">
       <div style="font-size:.95rem;font-weight:600;color:#2d3748;margin-bottom:.25rem;">🎯 Ranking de Acurácia de Previsão</div>
-      <div class="subtitulo">Sell-in previsto vs realizado · Só meses já disponíveis na base · M+0 válido apenas até dia 10</div>
+      <div class="subtitulo">Sell-in previsto vs realizado · Só meses já disponíveis na base</div>
       <div id="dashboard-acuracia" style="margin-top:.75rem;"></div>
     </div>
 
@@ -8955,15 +8955,7 @@ async function avaliarPrevisoes() {
       const { responsavel, sku, mesReferencia, timestamp } = prev;
       if (!responsavel || !sku || !mesReferencia) return;
 
-      // Dia da previsão (para regra M+0)
-      let diaPrevisao = 0;
-      if (timestamp) {
-        try { diaPrevisao = new Date(timestamp).getDate(); } catch(e) {}
-      }
-
       prev.meses.forEach((mes, posicao) => {
-        // Regra M+0: só válido se a previsão foi feita até dia 10
-        if (posicao === 0 && diaPrevisao > 10) return;
 
         const chave = _rotuloParaCh(mes.rotulo);
         if (!chave) return;
