@@ -9147,7 +9147,7 @@ async function migrarLocalParaFirebase() {
   const fbEl = document.getElementById('previsao-feedback');
   if (fbEl) { fbEl.textContent = `Migrando ${local.length} previsão(ões)…`; fbEl.style.color = '#2b6cb0'; }
 
-  let ok = 0, erros = 0;
+  let ok = 0, erros = 0, primeiroErro = null;
   for (const p of local) {
     try {
       const meses = [];
@@ -9174,6 +9174,7 @@ async function migrarLocalParaFirebase() {
       ok++;
     } catch(e) {
       console.error('Erro migrando SKU', p['SKU'], e);
+      if (!primeiroErro) primeiroErro = e;
       erros++;
     }
   }
@@ -9181,9 +9182,10 @@ async function migrarLocalParaFirebase() {
   atualizarContadorPrevisoes();
   if (ok > 0) { const btn = document.getElementById('btn-migrar-local'); if (btn) btn.style.display = 'none'; }
   if (fbEl) {
-    fbEl.textContent = `✓ ${ok} previsão(ões) migrada(s) para o Firebase${erros ? ` · ${erros} erro(s)` : ''}`;
+    const msgErro = primeiroErro ? ` — ${primeiroErro.code || primeiroErro.message || primeiroErro}` : '';
+    fbEl.textContent = `✓ ${ok} previsão(ões) migrada(s) para o Firebase${erros ? ` · ${erros} erro(s)${msgErro}` : ''}`;
     fbEl.style.color = ok > 0 ? '#276749' : '#c53030';
-    setTimeout(() => { fbEl.textContent = ''; }, 5000);
+    setTimeout(() => { fbEl.textContent = ''; }, 15000);
   }
 }
 </script>
