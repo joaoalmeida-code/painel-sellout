@@ -9158,10 +9158,9 @@ async function migrarLocalParaFirebase() {
 
       const snap = await db.collection('previsoes')
         .where('responsavel', '==', p['Responsável'])
-        .where('sku',         '==', p['SKU'])
         .get();
       const batch = db.batch();
-      snap.forEach(d => batch.delete(d.ref));
+      snap.forEach(d => { if (d.data().sku === p['SKU']) batch.delete(d.ref); });
       await batch.commit();
 
       await db.collection('previsoes').add({
